@@ -1,0 +1,5311 @@
+[
+  {
+    "name": "air",
+    "id": 0,
+    "flags": 130,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "air",
+    "props": [],
+    "states": [],
+    "defaultState": 0
+  },
+  {
+    "name": "stone",
+    "id": 1,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "rock",
+    "props": [
+      "variant"
+    ],
+    "states": [
+      "stone",
+      "granite",
+      "smooth_granite",
+      "diorite",
+      "smooth_diorite",
+      "andesite",
+      "smooth_andesite"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "grass",
+    "id": 2,
+    "flags": 29,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "grass",
+    "props": [
+      "snowy"
+    ],
+    "states": [
+      "false"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "dirt",
+    "id": 3,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "ground",
+    "props": [
+      "snowy",
+      "variant"
+    ],
+    "states": [
+      "false,dirt",
+      "false,coarse_dirt",
+      "false,podzol"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "cobblestone",
+    "id": 4,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "rock",
+    "props": [],
+    "states": [],
+    "defaultState": 0
+  },
+  {
+    "name": "planks",
+    "id": 5,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "wood",
+    "props": [
+      "variant"
+    ],
+    "states": [
+      "oak",
+      "spruce",
+      "birch",
+      "jungle",
+      "acacia",
+      "dark_oak"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "sapling",
+    "id": 6,
+    "flags": 18,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "plants",
+    "props": [
+      "stage",
+      "type"
+    ],
+    "states": [
+      "0,oak",
+      "0,spruce",
+      "0,birch",
+      "0,jungle",
+      "0,acacia",
+      "0,dark_oak",
+      null,
+      null,
+      "1,oak",
+      "1,spruce",
+      "1,birch",
+      "1,jungle",
+      "1,acacia",
+      "1,dark_oak"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "bedrock",
+    "id": 7,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "rock",
+    "props": [],
+    "states": [],
+    "defaultState": 0
+  },
+  {
+    "name": "flowing_water",
+    "id": 8,
+    "flags": 16,
+    "opacity": 3,
+    "emittance": 0,
+    "material": "water",
+    "props": [
+      "level"
+    ],
+    "states": [
+      "0",
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9",
+      "10",
+      "11",
+      "12",
+      "13",
+      "14",
+      "15"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "water",
+    "id": 9,
+    "flags": 0,
+    "opacity": 3,
+    "emittance": 0,
+    "material": "water",
+    "props": [
+      "level"
+    ],
+    "states": [
+      "0",
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9",
+      "10",
+      "11",
+      "12",
+      "13",
+      "14",
+      "15"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "flowing_lava",
+    "id": 10,
+    "flags": 16,
+    "opacity": 0,
+    "emittance": 15,
+    "material": "lava",
+    "props": [
+      "level"
+    ],
+    "states": [
+      "0",
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9",
+      "10",
+      "11",
+      "12",
+      "13",
+      "14",
+      "15"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "lava",
+    "id": 11,
+    "flags": 16,
+    "opacity": 0,
+    "emittance": 15,
+    "material": "lava",
+    "props": [
+      "level"
+    ],
+    "states": [
+      "0",
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9",
+      "10",
+      "11",
+      "12",
+      "13",
+      "14",
+      "15"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "sand",
+    "id": 12,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "sand",
+    "props": [
+      "variant"
+    ],
+    "states": [
+      "sand",
+      "red_sand"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "gravel",
+    "id": 13,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "sand",
+    "props": [],
+    "states": [],
+    "defaultState": 0
+  },
+  {
+    "name": "gold_ore",
+    "id": 14,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "rock",
+    "props": [],
+    "states": [],
+    "defaultState": 0
+  },
+  {
+    "name": "iron_ore",
+    "id": 15,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "rock",
+    "props": [],
+    "states": [],
+    "defaultState": 0
+  },
+  {
+    "name": "coal_ore",
+    "id": 16,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "rock",
+    "props": [],
+    "states": [],
+    "defaultState": 0
+  },
+  {
+    "name": "log",
+    "id": 17,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "wood",
+    "props": [
+      "axis",
+      "variant"
+    ],
+    "states": [
+      "y,oak",
+      "y,spruce",
+      "y,birch",
+      "y,jungle",
+      "x,oak",
+      "x,spruce",
+      "x,birch",
+      "x,jungle",
+      "z,oak",
+      "z,spruce",
+      "z,birch",
+      "z,jungle",
+      "none,oak",
+      "none,spruce",
+      "none,birch",
+      "none,jungle"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "leaves",
+    "id": 18,
+    "flags": 28,
+    "opacity": 1,
+    "emittance": 0,
+    "material": "leaves",
+    "props": [
+      "check_decay",
+      "decayable",
+      "variant"
+    ],
+    "states": [
+      "false,true,oak",
+      "false,true,spruce",
+      "false,true,birch",
+      "false,true,jungle",
+      "false,false,oak",
+      "false,false,spruce",
+      "false,false,birch",
+      "false,false,jungle",
+      "true,true,oak",
+      "true,true,spruce",
+      "true,true,birch",
+      "true,true,jungle",
+      "true,false,oak",
+      "true,false,spruce",
+      "true,false,birch",
+      "true,false,jungle"
+    ],
+    "defaultState": 8
+  },
+  {
+    "name": "sponge",
+    "id": 19,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "sponge",
+    "props": [
+      "wet"
+    ],
+    "states": [
+      "false",
+      "true"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "glass",
+    "id": 20,
+    "flags": 0,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "glass",
+    "props": [],
+    "states": [],
+    "defaultState": 0
+  },
+  {
+    "name": "lapis_ore",
+    "id": 21,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "rock",
+    "props": [],
+    "states": [],
+    "defaultState": 0
+  },
+  {
+    "name": "lapis_block",
+    "id": 22,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "iron",
+    "props": [],
+    "states": [],
+    "defaultState": 0
+  },
+  {
+    "name": "dispenser",
+    "id": 23,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "rock",
+    "props": [
+      "facing",
+      "triggered"
+    ],
+    "states": [
+      "down,false",
+      "up,false",
+      "north,false",
+      "south,false",
+      "west,false",
+      "east,false",
+      null,
+      null,
+      "down,true",
+      "up,true",
+      "north,true",
+      "south,true",
+      "west,true",
+      "east,true"
+    ],
+    "defaultState": 2
+  },
+  {
+    "name": "sandstone",
+    "id": 24,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "rock",
+    "props": [
+      "type"
+    ],
+    "states": [
+      "sandstone",
+      "chiseled_sandstone",
+      "smooth_sandstone"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "noteblock",
+    "id": 25,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "wood",
+    "props": [],
+    "states": [],
+    "defaultState": 0
+  },
+  {
+    "name": "bed",
+    "id": 26,
+    "flags": 1,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "cloth",
+    "props": [
+      "facing",
+      "occupied",
+      "part"
+    ],
+    "states": [
+      "south,false,foot",
+      "west,false,foot",
+      "north,false,foot",
+      "east,false,foot",
+      null,
+      null,
+      null,
+      null,
+      "south,false,head",
+      "west,false,head",
+      "north,false,head",
+      "east,false,head",
+      "south,true,head",
+      "west,true,head",
+      "north,true,head",
+      "east,true,head"
+    ],
+    "defaultState": 2
+  },
+  {
+    "name": "golden_rail",
+    "id": 27,
+    "flags": 2,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "circuits",
+    "props": [
+      "powered",
+      "shape"
+    ],
+    "states": [
+      "false,north_south",
+      "false,east_west",
+      "false,ascending_east",
+      "false,ascending_west",
+      "false,ascending_north",
+      "false,ascending_south",
+      null,
+      null,
+      "true,north_south",
+      "true,east_west",
+      "true,ascending_east",
+      "true,ascending_west",
+      "true,ascending_north",
+      "true,ascending_south"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "detector_rail",
+    "id": 28,
+    "flags": 50,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "circuits",
+    "props": [
+      "powered",
+      "shape"
+    ],
+    "states": [
+      "false,north_south",
+      "false,east_west",
+      "false,ascending_east",
+      "false,ascending_west",
+      "false,ascending_north",
+      "false,ascending_south",
+      null,
+      null,
+      "true,north_south",
+      "true,east_west",
+      "true,ascending_east",
+      "true,ascending_west",
+      "true,ascending_north",
+      "true,ascending_south"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "sticky_piston",
+    "id": 29,
+    "flags": 1,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "piston",
+    "props": [
+      "extended",
+      "facing"
+    ],
+    "states": [
+      "false,down",
+      "false,up",
+      "false,north",
+      "false,south",
+      "false,west",
+      "false,east",
+      null,
+      null,
+      "true,down",
+      "true,up",
+      "true,north",
+      "true,south",
+      "true,west",
+      "true,east"
+    ],
+    "defaultState": 2
+  },
+  {
+    "name": "web",
+    "id": 30,
+    "flags": 0,
+    "opacity": 1,
+    "emittance": 0,
+    "material": "web",
+    "props": [],
+    "states": [],
+    "defaultState": 0
+  },
+  {
+    "name": "tallgrass",
+    "id": 31,
+    "flags": 18,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "vine",
+    "props": [
+      "type"
+    ],
+    "states": [
+      "dead_bush",
+      "tall_grass",
+      "fern"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "deadbush",
+    "id": 32,
+    "flags": 18,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "vine",
+    "props": [],
+    "states": [],
+    "defaultState": 0
+  },
+  {
+    "name": "piston",
+    "id": 33,
+    "flags": 1,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "piston",
+    "props": [
+      "extended",
+      "facing"
+    ],
+    "states": [
+      "false,down",
+      "false,up",
+      "false,north",
+      "false,south",
+      "false,west",
+      "false,east",
+      null,
+      null,
+      "true,down",
+      "true,up",
+      "true,north",
+      "true,south",
+      "true,west",
+      "true,east"
+    ],
+    "defaultState": 2
+  },
+  {
+    "name": "piston_head",
+    "id": 34,
+    "flags": 1,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "piston",
+    "props": [
+      "facing",
+      "short",
+      "type"
+    ],
+    "states": [
+      "down,false,normal",
+      "up,false,normal",
+      "north,false,normal",
+      "south,false,normal",
+      "west,false,normal",
+      "east,false,normal",
+      null,
+      null,
+      "down,false,sticky",
+      "up,false,sticky",
+      "north,false,sticky",
+      "south,false,sticky",
+      "west,false,sticky",
+      "east,false,sticky"
+    ],
+    "defaultState": 2
+  },
+  {
+    "name": "wool",
+    "id": 35,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "cloth",
+    "props": [
+      "color"
+    ],
+    "states": [
+      "white",
+      "orange",
+      "magenta",
+      "light_blue",
+      "yellow",
+      "lime",
+      "pink",
+      "gray",
+      "silver",
+      "cyan",
+      "purple",
+      "blue",
+      "brown",
+      "green",
+      "red",
+      "black"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "piston_extension",
+    "id": 36,
+    "flags": 1,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "piston",
+    "props": [
+      "facing",
+      "type"
+    ],
+    "states": [
+      "down,normal",
+      "up,normal",
+      "north,normal",
+      "south,normal",
+      "west,normal",
+      "east,normal",
+      null,
+      null,
+      "down,sticky",
+      "up,sticky",
+      "north,sticky",
+      "south,sticky",
+      "west,sticky",
+      "east,sticky"
+    ],
+    "defaultState": 2
+  },
+  {
+    "name": "yellow_flower",
+    "id": 37,
+    "flags": 18,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "plants",
+    "props": [
+      "type"
+    ],
+    "states": [
+      "dandelion"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "red_flower",
+    "id": 38,
+    "flags": 18,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "plants",
+    "props": [
+      "type"
+    ],
+    "states": [
+      "poppy",
+      "blue_orchid",
+      "allium",
+      "houstonia",
+      "red_tulip",
+      "orange_tulip",
+      "white_tulip",
+      "pink_tulip",
+      "oxeye_daisy"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "brown_mushroom",
+    "id": 39,
+    "flags": 18,
+    "opacity": 0,
+    "emittance": 1,
+    "material": "plants",
+    "props": [],
+    "states": [],
+    "defaultState": 0
+  },
+  {
+    "name": "red_mushroom",
+    "id": 40,
+    "flags": 18,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "plants",
+    "props": [],
+    "states": [],
+    "defaultState": 0
+  },
+  {
+    "name": "gold_block",
+    "id": 41,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "iron",
+    "props": [],
+    "states": [],
+    "defaultState": 0
+  },
+  {
+    "name": "iron_block",
+    "id": 42,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "iron",
+    "props": [],
+    "states": [],
+    "defaultState": 0
+  },
+  {
+    "name": "double_stone_slab",
+    "id": 43,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "rock",
+    "props": [
+      "seamless",
+      "variant"
+    ],
+    "states": [
+      "false,stone",
+      "false,sandstone",
+      "false,wood_old",
+      "false,cobblestone",
+      "false,brick",
+      "false,stone_brick",
+      "false,nether_brick",
+      "false,quartz",
+      "true,stone",
+      "true,sandstone",
+      "true,wood_old",
+      "true,cobblestone",
+      "true,brick",
+      "true,stone_brick",
+      "true,nether_brick",
+      "true,quartz"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "stone_slab",
+    "id": 44,
+    "flags": 1,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "rock",
+    "props": [
+      "half",
+      "variant"
+    ],
+    "states": [
+      "bottom,stone",
+      "bottom,sandstone",
+      "bottom,wood_old",
+      "bottom,cobblestone",
+      "bottom,brick",
+      "bottom,stone_brick",
+      "bottom,nether_brick",
+      "bottom,quartz",
+      "top,stone",
+      "top,sandstone",
+      "top,wood_old",
+      "top,cobblestone",
+      "top,brick",
+      "top,stone_brick",
+      "top,nether_brick",
+      "top,quartz"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "brick_block",
+    "id": 45,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "rock",
+    "props": [],
+    "states": [],
+    "defaultState": 0
+  },
+  {
+    "name": "tnt",
+    "id": 46,
+    "flags": 12,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "tnt",
+    "props": [
+      "explode"
+    ],
+    "states": [
+      "false",
+      "true"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "bookshelf",
+    "id": 47,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "wood",
+    "props": [],
+    "states": [],
+    "defaultState": 0
+  },
+  {
+    "name": "mossy_cobblestone",
+    "id": 48,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "rock",
+    "props": [],
+    "states": [],
+    "defaultState": 0
+  },
+  {
+    "name": "obsidian",
+    "id": 49,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "rock",
+    "props": [],
+    "states": [],
+    "defaultState": 0
+  },
+  {
+    "name": "torch",
+    "id": 50,
+    "flags": 18,
+    "opacity": 0,
+    "emittance": 14,
+    "material": "circuits",
+    "props": [
+      "facing"
+    ],
+    "states": [
+      null,
+      "east",
+      "west",
+      "south",
+      "north",
+      "up"
+    ],
+    "defaultState": 5
+  },
+  {
+    "name": "fire",
+    "id": 51,
+    "flags": 18,
+    "opacity": 0,
+    "emittance": 15,
+    "material": "fire",
+    "props": [
+      "age",
+      "east",
+      "north",
+      "south",
+      "up",
+      "west"
+    ],
+    "states": [
+      "0,false,false,false,false,false",
+      "1,false,false,false,false,false",
+      "2,false,false,false,false,false",
+      "3,false,false,false,false,false",
+      "4,false,false,false,false,false",
+      "5,false,false,false,false,false",
+      "6,false,false,false,false,false",
+      "7,false,false,false,false,false",
+      "8,false,false,false,false,false",
+      "9,false,false,false,false,false",
+      "10,false,false,false,false,false",
+      "11,false,false,false,false,false",
+      "12,false,false,false,false,false",
+      "13,false,false,false,false,false",
+      "14,false,false,false,false,false",
+      "15,false,false,false,false,false"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "mob_spawner",
+    "id": 52,
+    "flags": 5,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "rock",
+    "props": [],
+    "states": [],
+    "defaultState": 0
+  },
+  {
+    "name": "oak_stairs",
+    "id": 53,
+    "flags": 1,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "wood",
+    "props": [
+      "facing",
+      "half",
+      "shape"
+    ],
+    "states": [
+      "east,bottom,straight",
+      "west,bottom,straight",
+      "south,bottom,straight",
+      "north,bottom,straight",
+      "east,top,straight",
+      "west,top,straight",
+      "south,top,straight",
+      "north,top,straight"
+    ],
+    "defaultState": 3
+  },
+  {
+    "name": "chest",
+    "id": 54,
+    "flags": 1,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "wood",
+    "props": [
+      "facing"
+    ],
+    "states": [
+      null,
+      null,
+      "north",
+      "south",
+      "west",
+      "east"
+    ],
+    "defaultState": 2
+  },
+  {
+    "name": "redstone_wire",
+    "id": 55,
+    "flags": 34,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "circuits",
+    "props": [
+      "east",
+      "north",
+      "power",
+      "south",
+      "west"
+    ],
+    "states": [
+      "none,none,0,none,none",
+      "none,none,1,none,none",
+      "none,none,2,none,none",
+      "none,none,3,none,none",
+      "none,none,4,none,none",
+      "none,none,5,none,none",
+      "none,none,6,none,none",
+      "none,none,7,none,none",
+      "none,none,8,none,none",
+      "none,none,9,none,none",
+      "none,none,10,none,none",
+      "none,none,11,none,none",
+      "none,none,12,none,none",
+      "none,none,13,none,none",
+      "none,none,14,none,none",
+      "none,none,15,none,none"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "diamond_ore",
+    "id": 56,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "rock",
+    "props": [],
+    "states": [],
+    "defaultState": 0
+  },
+  {
+    "name": "diamond_block",
+    "id": 57,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "iron",
+    "props": [],
+    "states": [],
+    "defaultState": 0
+  },
+  {
+    "name": "crafting_table",
+    "id": 58,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "wood",
+    "props": [],
+    "states": [],
+    "defaultState": 0
+  },
+  {
+    "name": "wheat",
+    "id": 59,
+    "flags": 18,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "plants",
+    "props": [
+      "age"
+    ],
+    "states": [
+      "0",
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "farmland",
+    "id": 60,
+    "flags": 17,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "ground",
+    "props": [
+      "moisture"
+    ],
+    "states": [
+      "0",
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "furnace",
+    "id": 61,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "rock",
+    "props": [
+      "facing"
+    ],
+    "states": [
+      null,
+      null,
+      "north",
+      "south",
+      "west",
+      "east"
+    ],
+    "defaultState": 2
+  },
+  {
+    "name": "lit_furnace",
+    "id": 62,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 13,
+    "material": "rock",
+    "props": [
+      "facing"
+    ],
+    "states": [
+      null,
+      null,
+      "north",
+      "south",
+      "west",
+      "east"
+    ],
+    "defaultState": 2
+  },
+  {
+    "name": "standing_sign",
+    "id": 63,
+    "flags": 1,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "wood",
+    "props": [
+      "rotation"
+    ],
+    "states": [
+      "0",
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9",
+      "10",
+      "11",
+      "12",
+      "13",
+      "14",
+      "15"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "wooden_door",
+    "id": 64,
+    "flags": 1,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "wood",
+    "props": [
+      "facing",
+      "half",
+      "hinge",
+      "open",
+      "powered"
+    ],
+    "states": [
+      "east,lower,left,false,false",
+      "south,lower,left,false,false",
+      "west,lower,left,false,false",
+      "north,lower,left,false,false",
+      "east,lower,left,true,false",
+      "south,lower,left,true,false",
+      "west,lower,left,true,false",
+      "north,lower,left,true,false",
+      "north,upper,left,false,false",
+      "north,upper,right,false,false",
+      "north,upper,left,false,true",
+      "north,upper,right,false,true"
+    ],
+    "defaultState": 3
+  },
+  {
+    "name": "ladder",
+    "id": 65,
+    "flags": 2,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "circuits",
+    "props": [
+      "facing"
+    ],
+    "states": [
+      null,
+      null,
+      "north",
+      "south",
+      "west",
+      "east"
+    ],
+    "defaultState": 2
+  },
+  {
+    "name": "rail",
+    "id": 66,
+    "flags": 2,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "circuits",
+    "props": [
+      "shape"
+    ],
+    "states": [
+      "north_south",
+      "east_west",
+      "ascending_east",
+      "ascending_west",
+      "ascending_north",
+      "ascending_south",
+      "south_east",
+      "south_west",
+      "north_west",
+      "north_east"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "stone_stairs",
+    "id": 67,
+    "flags": 1,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "rock",
+    "props": [
+      "facing",
+      "half",
+      "shape"
+    ],
+    "states": [
+      "east,bottom,straight",
+      "west,bottom,straight",
+      "south,bottom,straight",
+      "north,bottom,straight",
+      "east,top,straight",
+      "west,top,straight",
+      "south,top,straight",
+      "north,top,straight"
+    ],
+    "defaultState": 3
+  },
+  {
+    "name": "wall_sign",
+    "id": 68,
+    "flags": 1,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "wood",
+    "props": [
+      "facing"
+    ],
+    "states": [
+      null,
+      null,
+      "north",
+      "south",
+      "west",
+      "east"
+    ],
+    "defaultState": 2
+  },
+  {
+    "name": "lever",
+    "id": 69,
+    "flags": 34,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "circuits",
+    "props": [
+      "facing",
+      "powered"
+    ],
+    "states": [
+      "down_x,false",
+      "east,false",
+      "west,false",
+      "south,false",
+      "north,false",
+      "up_z,false",
+      "up_x,false",
+      "down_z,false",
+      "down_x,true",
+      "east,true",
+      "west,true",
+      "south,true",
+      "north,true",
+      "up_z,true",
+      "up_x,true",
+      "down_z,true"
+    ],
+    "defaultState": 4
+  },
+  {
+    "name": "stone_pressure_plate",
+    "id": 70,
+    "flags": 49,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "rock",
+    "props": [
+      "powered"
+    ],
+    "states": [
+      "false",
+      "true"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "iron_door",
+    "id": 71,
+    "flags": 1,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "iron",
+    "props": [
+      "facing",
+      "half",
+      "hinge",
+      "open",
+      "powered"
+    ],
+    "states": [
+      "east,lower,left,false,false",
+      "south,lower,left,false,false",
+      "west,lower,left,false,false",
+      "north,lower,left,false,false",
+      "east,lower,left,true,false",
+      "south,lower,left,true,false",
+      "west,lower,left,true,false",
+      "north,lower,left,true,false",
+      "north,upper,left,false,false",
+      "north,upper,right,false,false",
+      "north,upper,left,false,true",
+      "north,upper,right,false,true"
+    ],
+    "defaultState": 3
+  },
+  {
+    "name": "wooden_pressure_plate",
+    "id": 72,
+    "flags": 49,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "wood",
+    "props": [
+      "powered"
+    ],
+    "states": [
+      "false",
+      "true"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "redstone_ore",
+    "id": 73,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "rock",
+    "props": [],
+    "states": [],
+    "defaultState": 0
+  },
+  {
+    "name": "lit_redstone_ore",
+    "id": 74,
+    "flags": 29,
+    "opacity": 255,
+    "emittance": 9,
+    "material": "rock",
+    "props": [],
+    "states": [],
+    "defaultState": 0
+  },
+  {
+    "name": "unlit_redstone_torch",
+    "id": 75,
+    "flags": 50,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "circuits",
+    "props": [
+      "facing"
+    ],
+    "states": [
+      null,
+      "east",
+      "west",
+      "south",
+      "north",
+      "up"
+    ],
+    "defaultState": 5
+  },
+  {
+    "name": "redstone_torch",
+    "id": 76,
+    "flags": 50,
+    "opacity": 0,
+    "emittance": 7,
+    "material": "circuits",
+    "props": [
+      "facing"
+    ],
+    "states": [
+      null,
+      "east",
+      "west",
+      "south",
+      "north",
+      "up"
+    ],
+    "defaultState": 5
+  },
+  {
+    "name": "stone_button",
+    "id": 77,
+    "flags": 50,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "circuits",
+    "props": [
+      "facing",
+      "powered"
+    ],
+    "states": [
+      "down,false",
+      "east,false",
+      "west,false",
+      "south,false",
+      "north,false",
+      "up,false",
+      null,
+      null,
+      "down,true",
+      "east,true",
+      "west,true",
+      "south,true",
+      "north,true",
+      "up,true"
+    ],
+    "defaultState": 4
+  },
+  {
+    "name": "snow_layer",
+    "id": 78,
+    "flags": 18,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "snow",
+    "props": [
+      "layers"
+    ],
+    "states": [
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "ice",
+    "id": 79,
+    "flags": 20,
+    "opacity": 3,
+    "emittance": 0,
+    "material": "ice",
+    "props": [],
+    "states": [],
+    "defaultState": 0
+  },
+  {
+    "name": "snow",
+    "id": 80,
+    "flags": 29,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "crafted_snow",
+    "props": [],
+    "states": [],
+    "defaultState": 0
+  },
+  {
+    "name": "cactus",
+    "id": 81,
+    "flags": 16,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "cactus",
+    "props": [
+      "age"
+    ],
+    "states": [
+      "0",
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9",
+      "10",
+      "11",
+      "12",
+      "13",
+      "14",
+      "15"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "clay",
+    "id": 82,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "clay",
+    "props": [],
+    "states": [],
+    "defaultState": 0
+  },
+  {
+    "name": "reeds",
+    "id": 83,
+    "flags": 18,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "plants",
+    "props": [
+      "age"
+    ],
+    "states": [
+      "0",
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9",
+      "10",
+      "11",
+      "12",
+      "13",
+      "14",
+      "15"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "jukebox",
+    "id": 84,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "wood",
+    "props": [
+      "has_record"
+    ],
+    "states": [
+      "false",
+      "true"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "fence",
+    "id": 85,
+    "flags": 1,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "wood",
+    "props": [
+      "east",
+      "north",
+      "south",
+      "west"
+    ],
+    "states": [
+      "false,false,false,false"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "pumpkin",
+    "id": 86,
+    "flags": 29,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "gourd",
+    "props": [
+      "facing"
+    ],
+    "states": [
+      "south",
+      "west",
+      "north",
+      "east"
+    ],
+    "defaultState": 2
+  },
+  {
+    "name": "netherrack",
+    "id": 87,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "rock",
+    "props": [],
+    "states": [],
+    "defaultState": 0
+  },
+  {
+    "name": "soul_sand",
+    "id": 88,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "sand",
+    "props": [],
+    "states": [],
+    "defaultState": 0
+  },
+  {
+    "name": "glowstone",
+    "id": 89,
+    "flags": 12,
+    "opacity": 255,
+    "emittance": 15,
+    "material": "glass",
+    "props": [],
+    "states": [],
+    "defaultState": 0
+  },
+  {
+    "name": "portal",
+    "id": 90,
+    "flags": 18,
+    "opacity": 0,
+    "emittance": 11,
+    "material": "portal",
+    "props": [
+      "axis"
+    ],
+    "states": [
+      null,
+      "x",
+      "z"
+    ],
+    "defaultState": 1
+  },
+  {
+    "name": "lit_pumpkin",
+    "id": 91,
+    "flags": 29,
+    "opacity": 255,
+    "emittance": 15,
+    "material": "gourd",
+    "props": [
+      "facing"
+    ],
+    "states": [
+      "south",
+      "west",
+      "north",
+      "east"
+    ],
+    "defaultState": 2
+  },
+  {
+    "name": "cake",
+    "id": 92,
+    "flags": 17,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "cake",
+    "props": [
+      "bites"
+    ],
+    "states": [
+      "0",
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "unpowered_repeater",
+    "id": 93,
+    "flags": 34,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "circuits",
+    "props": [
+      "delay",
+      "facing",
+      "locked"
+    ],
+    "states": [
+      "1,south,false",
+      "1,west,false",
+      "1,north,false",
+      "1,east,false",
+      "2,south,false",
+      "2,west,false",
+      "2,north,false",
+      "2,east,false",
+      "3,south,false",
+      "3,west,false",
+      "3,north,false",
+      "3,east,false",
+      "4,south,false",
+      "4,west,false",
+      "4,north,false",
+      "4,east,false"
+    ],
+    "defaultState": 2
+  },
+  {
+    "name": "powered_repeater",
+    "id": 94,
+    "flags": 34,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "circuits",
+    "props": [
+      "delay",
+      "facing",
+      "locked"
+    ],
+    "states": [
+      "1,south,false",
+      "1,west,false",
+      "1,north,false",
+      "1,east,false",
+      "2,south,false",
+      "2,west,false",
+      "2,north,false",
+      "2,east,false",
+      "3,south,false",
+      "3,west,false",
+      "3,north,false",
+      "3,east,false",
+      "4,south,false",
+      "4,west,false",
+      "4,north,false",
+      "4,east,false"
+    ],
+    "defaultState": 2
+  },
+  {
+    "name": "stained_glass",
+    "id": 95,
+    "flags": 0,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "glass",
+    "props": [
+      "color"
+    ],
+    "states": [
+      "white",
+      "orange",
+      "magenta",
+      "light_blue",
+      "yellow",
+      "lime",
+      "pink",
+      "gray",
+      "silver",
+      "cyan",
+      "purple",
+      "blue",
+      "brown",
+      "green",
+      "red",
+      "black"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "trapdoor",
+    "id": 96,
+    "flags": 1,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "wood",
+    "props": [
+      "facing",
+      "half",
+      "open"
+    ],
+    "states": [
+      "north,bottom,false",
+      "south,bottom,false",
+      "west,bottom,false",
+      "east,bottom,false",
+      "north,bottom,true",
+      "south,bottom,true",
+      "west,bottom,true",
+      "east,bottom,true",
+      "north,top,false",
+      "south,top,false",
+      "west,top,false",
+      "east,top,false",
+      "north,top,true",
+      "south,top,true",
+      "west,top,true",
+      "east,top,true"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "monster_egg",
+    "id": 97,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "clay",
+    "props": [
+      "variant"
+    ],
+    "states": [
+      "stone",
+      "cobblestone",
+      "stone_brick",
+      "mossy_brick",
+      "cracked_brick",
+      "chiseled_brick"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "stonebrick",
+    "id": 98,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "rock",
+    "props": [
+      "variant"
+    ],
+    "states": [
+      "stonebrick",
+      "mossy_stonebrick",
+      "cracked_stonebrick",
+      "chiseled_stonebrick"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "brown_mushroom_block",
+    "id": 99,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "wood",
+    "props": [
+      "variant"
+    ],
+    "states": [
+      "all_inside",
+      "north_west",
+      "north",
+      "north_east",
+      "west",
+      "center",
+      "east",
+      "south_west",
+      "south",
+      "south_east",
+      "stem",
+      null,
+      null,
+      null,
+      "all_outside",
+      "all_stem"
+    ],
+    "defaultState": 14
+  },
+  {
+    "name": "red_mushroom_block",
+    "id": 100,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "wood",
+    "props": [
+      "variant"
+    ],
+    "states": [
+      "all_inside",
+      "north_west",
+      "north",
+      "north_east",
+      "west",
+      "center",
+      "east",
+      "south_west",
+      "south",
+      "south_east",
+      "stem",
+      null,
+      null,
+      null,
+      "all_outside",
+      "all_stem"
+    ],
+    "defaultState": 14
+  },
+  {
+    "name": "iron_bars",
+    "id": 101,
+    "flags": 1,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "iron",
+    "props": [
+      "east",
+      "north",
+      "south",
+      "west"
+    ],
+    "states": [
+      "false,false,false,false"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "glass_pane",
+    "id": 102,
+    "flags": 0,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "glass",
+    "props": [
+      "east",
+      "north",
+      "south",
+      "west"
+    ],
+    "states": [
+      "false,false,false,false"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "melon_block",
+    "id": 103,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "gourd",
+    "props": [],
+    "states": [],
+    "defaultState": 0
+  },
+  {
+    "name": "pumpkin_stem",
+    "id": 104,
+    "flags": 18,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "plants",
+    "props": [
+      "age",
+      "facing"
+    ],
+    "states": [
+      "0,up",
+      "1,up",
+      "2,up",
+      "3,up",
+      "4,up",
+      "5,up",
+      "6,up",
+      "7,up"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "melon_stem",
+    "id": 105,
+    "flags": 18,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "plants",
+    "props": [
+      "age",
+      "facing"
+    ],
+    "states": [
+      "0,up",
+      "1,up",
+      "2,up",
+      "3,up",
+      "4,up",
+      "5,up",
+      "6,up",
+      "7,up"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "vine",
+    "id": 106,
+    "flags": 18,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "vine",
+    "props": [
+      "east",
+      "north",
+      "south",
+      "up",
+      "west"
+    ],
+    "states": [
+      "false,false,false,false,false",
+      "false,false,true,false,false",
+      "false,false,false,false,true",
+      "false,false,true,false,true",
+      "false,true,false,false,false",
+      "false,true,true,false,false",
+      "false,true,false,false,true",
+      "false,true,true,false,true",
+      "true,false,false,false,false",
+      "true,false,true,false,false",
+      "true,false,false,false,true",
+      "true,false,true,false,true",
+      "true,true,false,false,false",
+      "true,true,true,false,false",
+      "true,true,false,false,true",
+      "true,true,true,false,true"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "fence_gate",
+    "id": 107,
+    "flags": 1,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "wood",
+    "props": [
+      "facing",
+      "in_wall",
+      "open",
+      "powered"
+    ],
+    "states": [
+      "south,false,false,false",
+      "west,false,false,false",
+      "north,false,false,false",
+      "east,false,false,false",
+      "south,false,true,false",
+      "west,false,true,false",
+      "north,false,true,false",
+      "east,false,true,false",
+      "south,false,false,true",
+      "west,false,false,true",
+      "north,false,false,true",
+      "east,false,false,true",
+      "south,false,true,true",
+      "west,false,true,true",
+      "north,false,true,true",
+      "east,false,true,true"
+    ],
+    "defaultState": 2
+  },
+  {
+    "name": "brick_stairs",
+    "id": 108,
+    "flags": 1,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "rock",
+    "props": [
+      "facing",
+      "half",
+      "shape"
+    ],
+    "states": [
+      "east,bottom,straight",
+      "west,bottom,straight",
+      "south,bottom,straight",
+      "north,bottom,straight",
+      "east,top,straight",
+      "west,top,straight",
+      "south,top,straight",
+      "north,top,straight"
+    ],
+    "defaultState": 3
+  },
+  {
+    "name": "stone_brick_stairs",
+    "id": 109,
+    "flags": 1,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "rock",
+    "props": [
+      "facing",
+      "half",
+      "shape"
+    ],
+    "states": [
+      "east,bottom,straight",
+      "west,bottom,straight",
+      "south,bottom,straight",
+      "north,bottom,straight",
+      "east,top,straight",
+      "west,top,straight",
+      "south,top,straight",
+      "north,top,straight"
+    ],
+    "defaultState": 3
+  },
+  {
+    "name": "mycelium",
+    "id": 110,
+    "flags": 29,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "grass",
+    "props": [
+      "snowy"
+    ],
+    "states": [
+      "false"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "waterlily",
+    "id": 111,
+    "flags": 18,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "plants",
+    "props": [],
+    "states": [],
+    "defaultState": 0
+  },
+  {
+    "name": "nether_brick",
+    "id": 112,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "rock",
+    "props": [],
+    "states": [],
+    "defaultState": 0
+  },
+  {
+    "name": "nether_brick_fence",
+    "id": 113,
+    "flags": 1,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "rock",
+    "props": [
+      "east",
+      "north",
+      "south",
+      "west"
+    ],
+    "states": [
+      "false,false,false,false"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "nether_brick_stairs",
+    "id": 114,
+    "flags": 1,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "rock",
+    "props": [
+      "facing",
+      "half",
+      "shape"
+    ],
+    "states": [
+      "east,bottom,straight",
+      "west,bottom,straight",
+      "south,bottom,straight",
+      "north,bottom,straight",
+      "east,top,straight",
+      "west,top,straight",
+      "south,top,straight",
+      "north,top,straight"
+    ],
+    "defaultState": 3
+  },
+  {
+    "name": "nether_wart",
+    "id": 115,
+    "flags": 18,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "plants",
+    "props": [
+      "age"
+    ],
+    "states": [
+      "0",
+      "1",
+      "2",
+      "3"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "enchanting_table",
+    "id": 116,
+    "flags": 1,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "rock",
+    "props": [],
+    "states": [],
+    "defaultState": 0
+  },
+  {
+    "name": "brewing_stand",
+    "id": 117,
+    "flags": 1,
+    "opacity": 0,
+    "emittance": 1,
+    "material": "iron",
+    "props": [
+      "has_bottle_0",
+      "has_bottle_1",
+      "has_bottle_2"
+    ],
+    "states": [
+      "false,false,false",
+      "true,false,false",
+      "false,true,false",
+      "true,true,false",
+      "false,false,true",
+      "true,false,true",
+      "false,true,true",
+      "true,true,true"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "cauldron",
+    "id": 118,
+    "flags": 1,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "iron",
+    "props": [
+      "level"
+    ],
+    "states": [
+      "0",
+      "1",
+      "2",
+      "3"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "end_portal",
+    "id": 119,
+    "flags": 2,
+    "opacity": 0,
+    "emittance": 15,
+    "material": "portal",
+    "props": [],
+    "states": [],
+    "defaultState": 0
+  },
+  {
+    "name": "end_portal_frame",
+    "id": 120,
+    "flags": 1,
+    "opacity": 0,
+    "emittance": 1,
+    "material": "rock",
+    "props": [
+      "eye",
+      "facing"
+    ],
+    "states": [
+      "false,south",
+      "false,west",
+      "false,north",
+      "false,east",
+      "true,south",
+      "true,west",
+      "true,north",
+      "true,east"
+    ],
+    "defaultState": 2
+  },
+  {
+    "name": "end_stone",
+    "id": 121,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "rock",
+    "props": [],
+    "states": [],
+    "defaultState": 0
+  },
+  {
+    "name": "dragon_egg",
+    "id": 122,
+    "flags": 1,
+    "opacity": 0,
+    "emittance": 1,
+    "material": "dragon_egg",
+    "props": [],
+    "states": [],
+    "defaultState": 0
+  },
+  {
+    "name": "redstone_lamp",
+    "id": 123,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "redstone_light",
+    "props": [],
+    "states": [],
+    "defaultState": 0
+  },
+  {
+    "name": "lit_redstone_lamp",
+    "id": 124,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 15,
+    "material": "redstone_light",
+    "props": [],
+    "states": [],
+    "defaultState": 0
+  },
+  {
+    "name": "double_wooden_slab",
+    "id": 125,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "wood",
+    "props": [
+      "variant"
+    ],
+    "states": [
+      "oak",
+      "spruce",
+      "birch",
+      "jungle",
+      "acacia",
+      "dark_oak"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "wooden_slab",
+    "id": 126,
+    "flags": 1,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "wood",
+    "props": [
+      "half",
+      "variant"
+    ],
+    "states": [
+      "bottom,oak",
+      "bottom,spruce",
+      "bottom,birch",
+      "bottom,jungle",
+      "bottom,acacia",
+      "bottom,dark_oak",
+      null,
+      null,
+      "top,oak",
+      "top,spruce",
+      "top,birch",
+      "top,jungle",
+      "top,acacia",
+      "top,dark_oak"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "cocoa",
+    "id": 127,
+    "flags": 18,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "plants",
+    "props": [
+      "age",
+      "facing"
+    ],
+    "states": [
+      "0,south",
+      "0,west",
+      "0,north",
+      "0,east",
+      "1,south",
+      "1,west",
+      "1,north",
+      "1,east",
+      "2,south",
+      "2,west",
+      "2,north",
+      "2,east"
+    ],
+    "defaultState": 2
+  },
+  {
+    "name": "sandstone_stairs",
+    "id": 128,
+    "flags": 1,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "rock",
+    "props": [
+      "facing",
+      "half",
+      "shape"
+    ],
+    "states": [
+      "east,bottom,straight",
+      "west,bottom,straight",
+      "south,bottom,straight",
+      "north,bottom,straight",
+      "east,top,straight",
+      "west,top,straight",
+      "south,top,straight",
+      "north,top,straight"
+    ],
+    "defaultState": 3
+  },
+  {
+    "name": "emerald_ore",
+    "id": 129,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "rock",
+    "props": [],
+    "states": [],
+    "defaultState": 0
+  },
+  {
+    "name": "ender_chest",
+    "id": 130,
+    "flags": 1,
+    "opacity": 0,
+    "emittance": 7,
+    "material": "rock",
+    "props": [
+      "facing"
+    ],
+    "states": [
+      null,
+      null,
+      "north",
+      "south",
+      "west",
+      "east"
+    ],
+    "defaultState": 2
+  },
+  {
+    "name": "tripwire_hook",
+    "id": 131,
+    "flags": 50,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "circuits",
+    "props": [
+      "attached",
+      "facing",
+      "powered"
+    ],
+    "states": [
+      "false,south,false",
+      "false,west,false",
+      "false,north,false",
+      "false,east,false",
+      "true,south,false",
+      "true,west,false",
+      "true,north,false",
+      "true,east,false",
+      "false,south,true",
+      "false,west,true",
+      "false,north,true",
+      "false,east,true",
+      "true,south,true",
+      "true,west,true",
+      "true,north,true",
+      "true,east,true"
+    ],
+    "defaultState": 2
+  },
+  {
+    "name": "tripwire",
+    "id": 132,
+    "flags": 18,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "circuits",
+    "props": [
+      "attached",
+      "disarmed",
+      "east",
+      "north",
+      "powered",
+      "south",
+      "west"
+    ],
+    "states": [
+      "false,false,false,false,false,false,false",
+      "false,false,false,false,true,false,false",
+      "false,false,false,false,false,false,false",
+      "false,false,false,false,true,false,false",
+      "true,false,false,false,false,false,false",
+      "true,false,false,false,true,false,false",
+      "true,false,false,false,false,false,false",
+      "true,false,false,false,true,false,false",
+      "false,true,false,false,false,false,false",
+      "false,true,false,false,true,false,false",
+      "false,true,false,false,false,false,false",
+      "false,true,false,false,true,false,false",
+      "true,true,false,false,false,false,false",
+      "true,true,false,false,true,false,false",
+      "true,true,false,false,false,false,false"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "emerald_block",
+    "id": 133,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "iron",
+    "props": [],
+    "states": [],
+    "defaultState": 0
+  },
+  {
+    "name": "spruce_stairs",
+    "id": 134,
+    "flags": 1,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "wood",
+    "props": [
+      "facing",
+      "half",
+      "shape"
+    ],
+    "states": [
+      "east,bottom,straight",
+      "west,bottom,straight",
+      "south,bottom,straight",
+      "north,bottom,straight",
+      "east,top,straight",
+      "west,top,straight",
+      "south,top,straight",
+      "north,top,straight"
+    ],
+    "defaultState": 3
+  },
+  {
+    "name": "birch_stairs",
+    "id": 135,
+    "flags": 1,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "wood",
+    "props": [
+      "facing",
+      "half",
+      "shape"
+    ],
+    "states": [
+      "east,bottom,straight",
+      "west,bottom,straight",
+      "south,bottom,straight",
+      "north,bottom,straight",
+      "east,top,straight",
+      "west,top,straight",
+      "south,top,straight",
+      "north,top,straight"
+    ],
+    "defaultState": 3
+  },
+  {
+    "name": "jungle_stairs",
+    "id": 136,
+    "flags": 1,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "wood",
+    "props": [
+      "facing",
+      "half",
+      "shape"
+    ],
+    "states": [
+      "east,bottom,straight",
+      "west,bottom,straight",
+      "south,bottom,straight",
+      "north,bottom,straight",
+      "east,top,straight",
+      "west,top,straight",
+      "south,top,straight",
+      "north,top,straight"
+    ],
+    "defaultState": 3
+  },
+  {
+    "name": "command_block",
+    "id": 137,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "iron",
+    "props": [
+      "conditional",
+      "facing"
+    ],
+    "states": [
+      "false,down",
+      "false,up",
+      "false,north",
+      "false,south",
+      "false,west",
+      "false,east",
+      null,
+      null,
+      "true,down",
+      "true,up",
+      "true,north",
+      "true,south",
+      "true,west",
+      "true,east"
+    ],
+    "defaultState": 2
+  },
+  {
+    "name": "beacon",
+    "id": 138,
+    "flags": 0,
+    "opacity": 0,
+    "emittance": 15,
+    "material": "glass",
+    "props": [],
+    "states": [],
+    "defaultState": 0
+  },
+  {
+    "name": "cobblestone_wall",
+    "id": 139,
+    "flags": 1,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "rock",
+    "props": [
+      "east",
+      "north",
+      "south",
+      "up",
+      "variant",
+      "west"
+    ],
+    "states": [
+      "false,false,false,false,cobblestone,false",
+      "false,false,false,false,mossy_cobblestone,false"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "flower_pot",
+    "id": 140,
+    "flags": 2,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "circuits",
+    "props": [
+      "contents",
+      "legacy_data"
+    ],
+    "states": [
+      "empty,0",
+      "empty,0",
+      "empty,0",
+      "empty,0",
+      "empty,0",
+      "empty,0",
+      "empty,0",
+      "empty,0",
+      "empty,0",
+      "empty,0",
+      "empty,0",
+      "empty,0",
+      "empty,0",
+      "empty,0",
+      "empty,0",
+      "empty,0"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "carrots",
+    "id": 141,
+    "flags": 18,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "plants",
+    "props": [
+      "age"
+    ],
+    "states": [
+      "0",
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "potatoes",
+    "id": 142,
+    "flags": 18,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "plants",
+    "props": [
+      "age"
+    ],
+    "states": [
+      "0",
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "wooden_button",
+    "id": 143,
+    "flags": 50,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "circuits",
+    "props": [
+      "facing",
+      "powered"
+    ],
+    "states": [
+      "down,false",
+      "east,false",
+      "west,false",
+      "south,false",
+      "north,false",
+      "up,false",
+      null,
+      null,
+      "down,true",
+      "east,true",
+      "west,true",
+      "south,true",
+      "north,true",
+      "up,true"
+    ],
+    "defaultState": 4
+  },
+  {
+    "name": "skull",
+    "id": 144,
+    "flags": 2,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "circuits",
+    "props": [
+      "facing",
+      "nodrop"
+    ],
+    "states": [
+      "down,false",
+      "up,false",
+      "north,false",
+      "south,false",
+      "west,false",
+      "east,false",
+      null,
+      null,
+      "down,true",
+      "up,true",
+      "north,true",
+      "south,true",
+      "west,true",
+      "east,true"
+    ],
+    "defaultState": 2
+  },
+  {
+    "name": "anvil",
+    "id": 145,
+    "flags": 1,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "anvil",
+    "props": [
+      "damage",
+      "facing"
+    ],
+    "states": [
+      "0,south",
+      "0,west",
+      "0,north",
+      "0,east",
+      "1,south",
+      "1,west",
+      "1,north",
+      "1,east",
+      "2,south",
+      "2,west",
+      "2,north",
+      "2,east"
+    ],
+    "defaultState": 2
+  },
+  {
+    "name": "trapped_chest",
+    "id": 146,
+    "flags": 33,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "wood",
+    "props": [
+      "facing"
+    ],
+    "states": [
+      null,
+      null,
+      "north",
+      "south",
+      "west",
+      "east"
+    ],
+    "defaultState": 2
+  },
+  {
+    "name": "light_weighted_pressure_plate",
+    "id": 147,
+    "flags": 49,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "iron",
+    "props": [
+      "power"
+    ],
+    "states": [
+      "0",
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9",
+      "10",
+      "11",
+      "12",
+      "13",
+      "14",
+      "15"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "heavy_weighted_pressure_plate",
+    "id": 148,
+    "flags": 49,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "iron",
+    "props": [
+      "power"
+    ],
+    "states": [
+      "0",
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9",
+      "10",
+      "11",
+      "12",
+      "13",
+      "14",
+      "15"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "unpowered_comparator",
+    "id": 149,
+    "flags": 34,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "circuits",
+    "props": [
+      "facing",
+      "mode",
+      "powered"
+    ],
+    "states": [
+      "south,compare,false",
+      "west,compare,false",
+      "north,compare,false",
+      "east,compare,false",
+      "south,subtract,false",
+      "west,subtract,false",
+      "north,subtract,false",
+      "east,subtract,false",
+      "south,compare,true",
+      "west,compare,true",
+      "north,compare,true",
+      "east,compare,true",
+      "south,subtract,true",
+      "west,subtract,true",
+      "north,subtract,true",
+      "east,subtract,true"
+    ],
+    "defaultState": 2
+  },
+  {
+    "name": "powered_comparator",
+    "id": 150,
+    "flags": 34,
+    "opacity": 0,
+    "emittance": 9,
+    "material": "circuits",
+    "props": [
+      "facing",
+      "mode",
+      "powered"
+    ],
+    "states": [
+      "south,compare,false",
+      "west,compare,false",
+      "north,compare,false",
+      "east,compare,false",
+      "south,subtract,false",
+      "west,subtract,false",
+      "north,subtract,false",
+      "east,subtract,false",
+      "south,compare,true",
+      "west,compare,true",
+      "north,compare,true",
+      "east,compare,true",
+      "south,subtract,true",
+      "west,subtract,true",
+      "north,subtract,true",
+      "east,subtract,true"
+    ],
+    "defaultState": 2
+  },
+  {
+    "name": "daylight_detector",
+    "id": 151,
+    "flags": 33,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "wood",
+    "props": [
+      "power"
+    ],
+    "states": [
+      "0",
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9",
+      "10",
+      "11",
+      "12",
+      "13",
+      "14",
+      "15"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "redstone_block",
+    "id": 152,
+    "flags": 45,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "iron",
+    "props": [],
+    "states": [],
+    "defaultState": 0
+  },
+  {
+    "name": "quartz_ore",
+    "id": 153,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "rock",
+    "props": [],
+    "states": [],
+    "defaultState": 0
+  },
+  {
+    "name": "hopper",
+    "id": 154,
+    "flags": 1,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "iron",
+    "props": [
+      "enabled",
+      "facing"
+    ],
+    "states": [
+      "true,down",
+      null,
+      "true,north",
+      "true,south",
+      "true,west",
+      "true,east",
+      null,
+      null,
+      "false,down",
+      null,
+      "false,north",
+      "false,south",
+      "false,west",
+      "false,east"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "quartz_block",
+    "id": 155,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "rock",
+    "props": [
+      "variant"
+    ],
+    "states": [
+      "default",
+      "chiseled",
+      "lines_y",
+      "lines_x",
+      "lines_z"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "quartz_stairs",
+    "id": 156,
+    "flags": 1,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "rock",
+    "props": [
+      "facing",
+      "half",
+      "shape"
+    ],
+    "states": [
+      "east,bottom,straight",
+      "west,bottom,straight",
+      "south,bottom,straight",
+      "north,bottom,straight",
+      "east,top,straight",
+      "west,top,straight",
+      "south,top,straight",
+      "north,top,straight"
+    ],
+    "defaultState": 3
+  },
+  {
+    "name": "activator_rail",
+    "id": 157,
+    "flags": 2,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "circuits",
+    "props": [
+      "powered",
+      "shape"
+    ],
+    "states": [
+      "false,north_south",
+      "false,east_west",
+      "false,ascending_east",
+      "false,ascending_west",
+      "false,ascending_north",
+      "false,ascending_south",
+      null,
+      null,
+      "true,north_south",
+      "true,east_west",
+      "true,ascending_east",
+      "true,ascending_west",
+      "true,ascending_north",
+      "true,ascending_south"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "dropper",
+    "id": 158,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "rock",
+    "props": [
+      "facing",
+      "triggered"
+    ],
+    "states": [
+      "down,false",
+      "up,false",
+      "north,false",
+      "south,false",
+      "west,false",
+      "east,false",
+      null,
+      null,
+      "down,true",
+      "up,true",
+      "north,true",
+      "south,true",
+      "west,true",
+      "east,true"
+    ],
+    "defaultState": 2
+  },
+  {
+    "name": "stained_hardened_clay",
+    "id": 159,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "rock",
+    "props": [
+      "color"
+    ],
+    "states": [
+      "white",
+      "orange",
+      "magenta",
+      "light_blue",
+      "yellow",
+      "lime",
+      "pink",
+      "gray",
+      "silver",
+      "cyan",
+      "purple",
+      "blue",
+      "brown",
+      "green",
+      "red",
+      "black"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "stained_glass_pane",
+    "id": 160,
+    "flags": 0,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "glass",
+    "props": [
+      "color",
+      "east",
+      "north",
+      "south",
+      "west"
+    ],
+    "states": [
+      "white,false,false,false,false",
+      "orange,false,false,false,false",
+      "magenta,false,false,false,false",
+      "light_blue,false,false,false,false",
+      "yellow,false,false,false,false",
+      "lime,false,false,false,false",
+      "pink,false,false,false,false",
+      "gray,false,false,false,false",
+      "silver,false,false,false,false",
+      "cyan,false,false,false,false",
+      "purple,false,false,false,false",
+      "blue,false,false,false,false",
+      "brown,false,false,false,false",
+      "green,false,false,false,false",
+      "red,false,false,false,false",
+      "black,false,false,false,false"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "leaves2",
+    "id": 161,
+    "flags": 28,
+    "opacity": 1,
+    "emittance": 0,
+    "material": "leaves",
+    "props": [
+      "check_decay",
+      "decayable",
+      "variant"
+    ],
+    "states": [
+      "false,true,acacia",
+      "false,true,dark_oak",
+      null,
+      null,
+      "false,false,acacia",
+      "false,false,dark_oak",
+      null,
+      null,
+      "true,true,acacia",
+      "true,true,dark_oak",
+      null,
+      null,
+      "true,false,acacia",
+      "true,false,dark_oak"
+    ],
+    "defaultState": 8
+  },
+  {
+    "name": "log2",
+    "id": 162,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "wood",
+    "props": [
+      "axis",
+      "variant"
+    ],
+    "states": [
+      "y,acacia",
+      "y,dark_oak",
+      null,
+      null,
+      "x,acacia",
+      "x,dark_oak",
+      null,
+      null,
+      "z,acacia",
+      "z,dark_oak",
+      null,
+      null,
+      "none,acacia",
+      "none,dark_oak"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "acacia_stairs",
+    "id": 163,
+    "flags": 1,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "wood",
+    "props": [
+      "facing",
+      "half",
+      "shape"
+    ],
+    "states": [
+      "east,bottom,straight",
+      "west,bottom,straight",
+      "south,bottom,straight",
+      "north,bottom,straight",
+      "east,top,straight",
+      "west,top,straight",
+      "south,top,straight",
+      "north,top,straight"
+    ],
+    "defaultState": 3
+  },
+  {
+    "name": "dark_oak_stairs",
+    "id": 164,
+    "flags": 1,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "wood",
+    "props": [
+      "facing",
+      "half",
+      "shape"
+    ],
+    "states": [
+      "east,bottom,straight",
+      "west,bottom,straight",
+      "south,bottom,straight",
+      "north,bottom,straight",
+      "east,top,straight",
+      "west,top,straight",
+      "south,top,straight",
+      "north,top,straight"
+    ],
+    "defaultState": 3
+  },
+  {
+    "name": "slime",
+    "id": 165,
+    "flags": 5,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "clay",
+    "props": [],
+    "states": [],
+    "defaultState": 0
+  },
+  {
+    "name": "barrier",
+    "id": 166,
+    "flags": 7,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "barrier",
+    "props": [],
+    "states": [],
+    "defaultState": 0
+  },
+  {
+    "name": "iron_trapdoor",
+    "id": 167,
+    "flags": 1,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "iron",
+    "props": [
+      "facing",
+      "half",
+      "open"
+    ],
+    "states": [
+      "north,bottom,false",
+      "south,bottom,false",
+      "west,bottom,false",
+      "east,bottom,false",
+      "north,bottom,true",
+      "south,bottom,true",
+      "west,bottom,true",
+      "east,bottom,true",
+      "north,top,false",
+      "south,top,false",
+      "west,top,false",
+      "east,top,false",
+      "north,top,true",
+      "south,top,true",
+      "west,top,true",
+      "east,top,true"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "prismarine",
+    "id": 168,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "rock",
+    "props": [
+      "variant"
+    ],
+    "states": [
+      "prismarine",
+      "prismarine_bricks",
+      "dark_prismarine"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "sea_lantern",
+    "id": 169,
+    "flags": 12,
+    "opacity": 255,
+    "emittance": 15,
+    "material": "glass",
+    "props": [],
+    "states": [],
+    "defaultState": 0
+  },
+  {
+    "name": "hay_block",
+    "id": 170,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "grass",
+    "props": [
+      "axis"
+    ],
+    "states": [
+      "y",
+      null,
+      null,
+      null,
+      "x",
+      null,
+      null,
+      null,
+      "z"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "carpet",
+    "id": 171,
+    "flags": 18,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "carpet",
+    "props": [
+      "color"
+    ],
+    "states": [
+      "white",
+      "orange",
+      "magenta",
+      "light_blue",
+      "yellow",
+      "lime",
+      "pink",
+      "gray",
+      "silver",
+      "cyan",
+      "purple",
+      "blue",
+      "brown",
+      "green",
+      "red",
+      "black"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "hardened_clay",
+    "id": 172,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "rock",
+    "props": [],
+    "states": [],
+    "defaultState": 0
+  },
+  {
+    "name": "coal_block",
+    "id": 173,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "rock",
+    "props": [],
+    "states": [],
+    "defaultState": 0
+  },
+  {
+    "name": "packed_ice",
+    "id": 174,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "packed_ice",
+    "props": [],
+    "states": [],
+    "defaultState": 0
+  },
+  {
+    "name": "double_plant",
+    "id": 175,
+    "flags": 18,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "vine",
+    "props": [
+      "facing",
+      "half",
+      "variant"
+    ],
+    "states": [
+      "north,lower,sunflower",
+      "north,lower,syringa",
+      "north,lower,double_grass",
+      "north,lower,double_fern",
+      "north,lower,double_rose",
+      "north,lower,paeonia",
+      null,
+      null,
+      "north,upper,sunflower",
+      "north,upper,sunflower",
+      "north,upper,sunflower",
+      "north,upper,sunflower"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "standing_banner",
+    "id": 176,
+    "flags": 1,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "wood",
+    "props": [
+      "rotation"
+    ],
+    "states": [
+      "0",
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9",
+      "10",
+      "11",
+      "12",
+      "13",
+      "14",
+      "15"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "wall_banner",
+    "id": 177,
+    "flags": 1,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "wood",
+    "props": [
+      "facing"
+    ],
+    "states": [
+      null,
+      null,
+      "north",
+      "south",
+      "west",
+      "east"
+    ],
+    "defaultState": 2
+  },
+  {
+    "name": "daylight_detector_inverted",
+    "id": 178,
+    "flags": 33,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "wood",
+    "props": [
+      "power"
+    ],
+    "states": [
+      "0",
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9",
+      "10",
+      "11",
+      "12",
+      "13",
+      "14",
+      "15"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "red_sandstone",
+    "id": 179,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "rock",
+    "props": [
+      "type"
+    ],
+    "states": [
+      "red_sandstone",
+      "chiseled_red_sandstone",
+      "smooth_red_sandstone"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "red_sandstone_stairs",
+    "id": 180,
+    "flags": 1,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "rock",
+    "props": [
+      "facing",
+      "half",
+      "shape"
+    ],
+    "states": [
+      "east,bottom,straight",
+      "west,bottom,straight",
+      "south,bottom,straight",
+      "north,bottom,straight",
+      "east,top,straight",
+      "west,top,straight",
+      "south,top,straight",
+      "north,top,straight"
+    ],
+    "defaultState": 3
+  },
+  {
+    "name": "double_stone_slab2",
+    "id": 181,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "rock",
+    "props": [
+      "seamless",
+      "variant"
+    ],
+    "states": [
+      "false,red_sandstone",
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      "true,red_sandstone"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "stone_slab2",
+    "id": 182,
+    "flags": 1,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "rock",
+    "props": [
+      "half",
+      "variant"
+    ],
+    "states": [
+      "bottom,red_sandstone",
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      "top,red_sandstone"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "spruce_fence_gate",
+    "id": 183,
+    "flags": 1,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "wood",
+    "props": [
+      "facing",
+      "in_wall",
+      "open",
+      "powered"
+    ],
+    "states": [
+      "south,false,false,false",
+      "west,false,false,false",
+      "north,false,false,false",
+      "east,false,false,false",
+      "south,false,true,false",
+      "west,false,true,false",
+      "north,false,true,false",
+      "east,false,true,false",
+      "south,false,false,true",
+      "west,false,false,true",
+      "north,false,false,true",
+      "east,false,false,true",
+      "south,false,true,true",
+      "west,false,true,true",
+      "north,false,true,true",
+      "east,false,true,true"
+    ],
+    "defaultState": 2
+  },
+  {
+    "name": "birch_fence_gate",
+    "id": 184,
+    "flags": 1,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "wood",
+    "props": [
+      "facing",
+      "in_wall",
+      "open",
+      "powered"
+    ],
+    "states": [
+      "south,false,false,false",
+      "west,false,false,false",
+      "north,false,false,false",
+      "east,false,false,false",
+      "south,false,true,false",
+      "west,false,true,false",
+      "north,false,true,false",
+      "east,false,true,false",
+      "south,false,false,true",
+      "west,false,false,true",
+      "north,false,false,true",
+      "east,false,false,true",
+      "south,false,true,true",
+      "west,false,true,true",
+      "north,false,true,true",
+      "east,false,true,true"
+    ],
+    "defaultState": 2
+  },
+  {
+    "name": "jungle_fence_gate",
+    "id": 185,
+    "flags": 1,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "wood",
+    "props": [
+      "facing",
+      "in_wall",
+      "open",
+      "powered"
+    ],
+    "states": [
+      "south,false,false,false",
+      "west,false,false,false",
+      "north,false,false,false",
+      "east,false,false,false",
+      "south,false,true,false",
+      "west,false,true,false",
+      "north,false,true,false",
+      "east,false,true,false",
+      "south,false,false,true",
+      "west,false,false,true",
+      "north,false,false,true",
+      "east,false,false,true",
+      "south,false,true,true",
+      "west,false,true,true",
+      "north,false,true,true",
+      "east,false,true,true"
+    ],
+    "defaultState": 2
+  },
+  {
+    "name": "dark_oak_fence_gate",
+    "id": 186,
+    "flags": 1,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "wood",
+    "props": [
+      "facing",
+      "in_wall",
+      "open",
+      "powered"
+    ],
+    "states": [
+      "south,false,false,false",
+      "west,false,false,false",
+      "north,false,false,false",
+      "east,false,false,false",
+      "south,false,true,false",
+      "west,false,true,false",
+      "north,false,true,false",
+      "east,false,true,false",
+      "south,false,false,true",
+      "west,false,false,true",
+      "north,false,false,true",
+      "east,false,false,true",
+      "south,false,true,true",
+      "west,false,true,true",
+      "north,false,true,true",
+      "east,false,true,true"
+    ],
+    "defaultState": 2
+  },
+  {
+    "name": "acacia_fence_gate",
+    "id": 187,
+    "flags": 1,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "wood",
+    "props": [
+      "facing",
+      "in_wall",
+      "open",
+      "powered"
+    ],
+    "states": [
+      "south,false,false,false",
+      "west,false,false,false",
+      "north,false,false,false",
+      "east,false,false,false",
+      "south,false,true,false",
+      "west,false,true,false",
+      "north,false,true,false",
+      "east,false,true,false",
+      "south,false,false,true",
+      "west,false,false,true",
+      "north,false,false,true",
+      "east,false,false,true",
+      "south,false,true,true",
+      "west,false,true,true",
+      "north,false,true,true",
+      "east,false,true,true"
+    ],
+    "defaultState": 2
+  },
+  {
+    "name": "spruce_fence",
+    "id": 188,
+    "flags": 1,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "wood",
+    "props": [
+      "east",
+      "north",
+      "south",
+      "west"
+    ],
+    "states": [
+      "false,false,false,false"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "birch_fence",
+    "id": 189,
+    "flags": 1,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "wood",
+    "props": [
+      "east",
+      "north",
+      "south",
+      "west"
+    ],
+    "states": [
+      "false,false,false,false"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "jungle_fence",
+    "id": 190,
+    "flags": 1,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "wood",
+    "props": [
+      "east",
+      "north",
+      "south",
+      "west"
+    ],
+    "states": [
+      "false,false,false,false"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "dark_oak_fence",
+    "id": 191,
+    "flags": 1,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "wood",
+    "props": [
+      "east",
+      "north",
+      "south",
+      "west"
+    ],
+    "states": [
+      "false,false,false,false"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "acacia_fence",
+    "id": 192,
+    "flags": 1,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "wood",
+    "props": [
+      "east",
+      "north",
+      "south",
+      "west"
+    ],
+    "states": [
+      "false,false,false,false"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "spruce_door",
+    "id": 193,
+    "flags": 1,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "wood",
+    "props": [
+      "facing",
+      "half",
+      "hinge",
+      "open",
+      "powered"
+    ],
+    "states": [
+      "east,lower,left,false,false",
+      "south,lower,left,false,false",
+      "west,lower,left,false,false",
+      "north,lower,left,false,false",
+      "east,lower,left,true,false",
+      "south,lower,left,true,false",
+      "west,lower,left,true,false",
+      "north,lower,left,true,false",
+      "north,upper,left,false,false",
+      "north,upper,right,false,false",
+      "north,upper,left,false,true",
+      "north,upper,right,false,true"
+    ],
+    "defaultState": 3
+  },
+  {
+    "name": "birch_door",
+    "id": 194,
+    "flags": 1,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "wood",
+    "props": [
+      "facing",
+      "half",
+      "hinge",
+      "open",
+      "powered"
+    ],
+    "states": [
+      "east,lower,left,false,false",
+      "south,lower,left,false,false",
+      "west,lower,left,false,false",
+      "north,lower,left,false,false",
+      "east,lower,left,true,false",
+      "south,lower,left,true,false",
+      "west,lower,left,true,false",
+      "north,lower,left,true,false",
+      "north,upper,left,false,false",
+      "north,upper,right,false,false",
+      "north,upper,left,false,true",
+      "north,upper,right,false,true"
+    ],
+    "defaultState": 3
+  },
+  {
+    "name": "jungle_door",
+    "id": 195,
+    "flags": 1,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "wood",
+    "props": [
+      "facing",
+      "half",
+      "hinge",
+      "open",
+      "powered"
+    ],
+    "states": [
+      "east,lower,left,false,false",
+      "south,lower,left,false,false",
+      "west,lower,left,false,false",
+      "north,lower,left,false,false",
+      "east,lower,left,true,false",
+      "south,lower,left,true,false",
+      "west,lower,left,true,false",
+      "north,lower,left,true,false",
+      "north,upper,left,false,false",
+      "north,upper,right,false,false",
+      "north,upper,left,false,true",
+      "north,upper,right,false,true"
+    ],
+    "defaultState": 3
+  },
+  {
+    "name": "acacia_door",
+    "id": 196,
+    "flags": 1,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "wood",
+    "props": [
+      "facing",
+      "half",
+      "hinge",
+      "open",
+      "powered"
+    ],
+    "states": [
+      "east,lower,left,false,false",
+      "south,lower,left,false,false",
+      "west,lower,left,false,false",
+      "north,lower,left,false,false",
+      "east,lower,left,true,false",
+      "south,lower,left,true,false",
+      "west,lower,left,true,false",
+      "north,lower,left,true,false",
+      "north,upper,left,false,false",
+      "north,upper,right,false,false",
+      "north,upper,left,false,true",
+      "north,upper,right,false,true"
+    ],
+    "defaultState": 3
+  },
+  {
+    "name": "dark_oak_door",
+    "id": 197,
+    "flags": 1,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "wood",
+    "props": [
+      "facing",
+      "half",
+      "hinge",
+      "open",
+      "powered"
+    ],
+    "states": [
+      "east,lower,left,false,false",
+      "south,lower,left,false,false",
+      "west,lower,left,false,false",
+      "north,lower,left,false,false",
+      "east,lower,left,true,false",
+      "south,lower,left,true,false",
+      "west,lower,left,true,false",
+      "north,lower,left,true,false",
+      "north,upper,left,false,false",
+      "north,upper,right,false,false",
+      "north,upper,left,false,true",
+      "north,upper,right,false,true"
+    ],
+    "defaultState": 3
+  },
+  {
+    "name": "end_rod",
+    "id": 198,
+    "flags": 2,
+    "opacity": 0,
+    "emittance": 14,
+    "material": "circuits",
+    "props": [
+      "facing"
+    ],
+    "states": [
+      "down",
+      "up",
+      "north",
+      "south",
+      "west",
+      "east"
+    ],
+    "defaultState": 1
+  },
+  {
+    "name": "chorus_plant",
+    "id": 199,
+    "flags": 2,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "plants",
+    "props": [
+      "down",
+      "east",
+      "north",
+      "south",
+      "up",
+      "west"
+    ],
+    "states": [
+      "false,false,false,false,false,false"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "chorus_flower",
+    "id": 200,
+    "flags": 18,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "plants",
+    "props": [
+      "age"
+    ],
+    "states": [
+      "0",
+      "1",
+      "2",
+      "3",
+      "4",
+      "5"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "purpur_block",
+    "id": 201,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "rock",
+    "props": [],
+    "states": [],
+    "defaultState": 0
+  },
+  {
+    "name": "purpur_pillar",
+    "id": 202,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "rock",
+    "props": [
+      "axis"
+    ],
+    "states": [
+      "y",
+      null,
+      null,
+      null,
+      "x",
+      null,
+      null,
+      null,
+      "z"
+    ],
+    "defaultState": 4
+  },
+  {
+    "name": "purpur_stairs",
+    "id": 203,
+    "flags": 1,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "rock",
+    "props": [
+      "facing",
+      "half",
+      "shape"
+    ],
+    "states": [
+      "east,bottom,straight",
+      "west,bottom,straight",
+      "south,bottom,straight",
+      "north,bottom,straight",
+      "east,top,straight",
+      "west,top,straight",
+      "south,top,straight",
+      "north,top,straight"
+    ],
+    "defaultState": 3
+  },
+  {
+    "name": "purpur_double_slab",
+    "id": 204,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "rock",
+    "props": [
+      "variant"
+    ],
+    "states": [
+      "default"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "purpur_slab",
+    "id": 205,
+    "flags": 1,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "rock",
+    "props": [
+      "half",
+      "variant"
+    ],
+    "states": [
+      "bottom,default",
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      "top,default"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "end_bricks",
+    "id": 206,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "rock",
+    "props": [],
+    "states": [],
+    "defaultState": 0
+  },
+  {
+    "name": "beetroots",
+    "id": 207,
+    "flags": 18,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "plants",
+    "props": [
+      "age"
+    ],
+    "states": [
+      "0",
+      "1",
+      "2",
+      "3"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "grass_path",
+    "id": 208,
+    "flags": 1,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "ground",
+    "props": [],
+    "states": [],
+    "defaultState": 0
+  },
+  {
+    "name": "end_gateway",
+    "id": 209,
+    "flags": 2,
+    "opacity": 0,
+    "emittance": 15,
+    "material": "portal",
+    "props": [],
+    "states": [],
+    "defaultState": 0
+  },
+  {
+    "name": "repeating_command_block",
+    "id": 210,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "iron",
+    "props": [
+      "conditional",
+      "facing"
+    ],
+    "states": [
+      "false,down",
+      "false,up",
+      "false,north",
+      "false,south",
+      "false,west",
+      "false,east",
+      null,
+      null,
+      "true,down",
+      "true,up",
+      "true,north",
+      "true,south",
+      "true,west",
+      "true,east"
+    ],
+    "defaultState": 2
+  },
+  {
+    "name": "chain_command_block",
+    "id": 211,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "iron",
+    "props": [
+      "conditional",
+      "facing"
+    ],
+    "states": [
+      "false,down",
+      "false,up",
+      "false,north",
+      "false,south",
+      "false,west",
+      "false,east",
+      null,
+      null,
+      "true,down",
+      "true,up",
+      "true,north",
+      "true,south",
+      "true,west",
+      "true,east"
+    ],
+    "defaultState": 2
+  },
+  {
+    "name": "frosted_ice",
+    "id": 212,
+    "flags": 20,
+    "opacity": 3,
+    "emittance": 0,
+    "material": "ice",
+    "props": [
+      "age"
+    ],
+    "states": [
+      "0",
+      "1",
+      "2",
+      "3"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "magma",
+    "id": 213,
+    "flags": 29,
+    "opacity": 255,
+    "emittance": 3,
+    "material": "rock",
+    "props": [],
+    "states": [],
+    "defaultState": 0
+  },
+  {
+    "name": "nether_wart_block",
+    "id": 214,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "grass",
+    "props": [],
+    "states": [],
+    "defaultState": 0
+  },
+  {
+    "name": "red_nether_brick",
+    "id": 215,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "rock",
+    "props": [],
+    "states": [],
+    "defaultState": 0
+  },
+  {
+    "name": "bone_block",
+    "id": 216,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "rock",
+    "props": [
+      "axis"
+    ],
+    "states": [
+      "y",
+      null,
+      null,
+      null,
+      "x",
+      null,
+      null,
+      null,
+      "z"
+    ],
+    "defaultState": 4
+  },
+  {
+    "name": "structure_void",
+    "id": 217,
+    "flags": 2,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "structure_void",
+    "props": [],
+    "states": [],
+    "defaultState": 0
+  },
+  {
+    "name": "observer",
+    "id": 218,
+    "flags": 45,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "rock",
+    "props": [
+      "facing",
+      "powered"
+    ],
+    "states": [
+      "down,false",
+      "up,false",
+      "north,false",
+      "south,false",
+      "west,false",
+      "east,false",
+      null,
+      null,
+      "down,true",
+      "up,true",
+      "north,true",
+      "south,true",
+      "west,true",
+      "east,true"
+    ],
+    "defaultState": 3
+  },
+  {
+    "name": "white_shulker_box",
+    "id": 219,
+    "flags": 1,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "rock",
+    "props": [
+      "facing"
+    ],
+    "states": [
+      "down",
+      "up",
+      "north",
+      "south",
+      "west",
+      "east"
+    ],
+    "defaultState": 1
+  },
+  {
+    "name": "orange_shulker_box",
+    "id": 220,
+    "flags": 1,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "rock",
+    "props": [
+      "facing"
+    ],
+    "states": [
+      "down",
+      "up",
+      "north",
+      "south",
+      "west",
+      "east"
+    ],
+    "defaultState": 1
+  },
+  {
+    "name": "magenta_shulker_box",
+    "id": 221,
+    "flags": 1,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "rock",
+    "props": [
+      "facing"
+    ],
+    "states": [
+      "down",
+      "up",
+      "north",
+      "south",
+      "west",
+      "east"
+    ],
+    "defaultState": 1
+  },
+  {
+    "name": "light_blue_shulker_box",
+    "id": 222,
+    "flags": 1,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "rock",
+    "props": [
+      "facing"
+    ],
+    "states": [
+      "down",
+      "up",
+      "north",
+      "south",
+      "west",
+      "east"
+    ],
+    "defaultState": 1
+  },
+  {
+    "name": "yellow_shulker_box",
+    "id": 223,
+    "flags": 1,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "rock",
+    "props": [
+      "facing"
+    ],
+    "states": [
+      "down",
+      "up",
+      "north",
+      "south",
+      "west",
+      "east"
+    ],
+    "defaultState": 1
+  },
+  {
+    "name": "lime_shulker_box",
+    "id": 224,
+    "flags": 1,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "rock",
+    "props": [
+      "facing"
+    ],
+    "states": [
+      "down",
+      "up",
+      "north",
+      "south",
+      "west",
+      "east"
+    ],
+    "defaultState": 1
+  },
+  {
+    "name": "pink_shulker_box",
+    "id": 225,
+    "flags": 1,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "rock",
+    "props": [
+      "facing"
+    ],
+    "states": [
+      "down",
+      "up",
+      "north",
+      "south",
+      "west",
+      "east"
+    ],
+    "defaultState": 1
+  },
+  {
+    "name": "gray_shulker_box",
+    "id": 226,
+    "flags": 1,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "rock",
+    "props": [
+      "facing"
+    ],
+    "states": [
+      "down",
+      "up",
+      "north",
+      "south",
+      "west",
+      "east"
+    ],
+    "defaultState": 1
+  },
+  {
+    "name": "silver_shulker_box",
+    "id": 227,
+    "flags": 1,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "rock",
+    "props": [
+      "facing"
+    ],
+    "states": [
+      "down",
+      "up",
+      "north",
+      "south",
+      "west",
+      "east"
+    ],
+    "defaultState": 1
+  },
+  {
+    "name": "cyan_shulker_box",
+    "id": 228,
+    "flags": 1,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "rock",
+    "props": [
+      "facing"
+    ],
+    "states": [
+      "down",
+      "up",
+      "north",
+      "south",
+      "west",
+      "east"
+    ],
+    "defaultState": 1
+  },
+  {
+    "name": "purple_shulker_box",
+    "id": 229,
+    "flags": 1,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "rock",
+    "props": [
+      "facing"
+    ],
+    "states": [
+      "down",
+      "up",
+      "north",
+      "south",
+      "west",
+      "east"
+    ],
+    "defaultState": 1
+  },
+  {
+    "name": "blue_shulker_box",
+    "id": 230,
+    "flags": 1,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "rock",
+    "props": [
+      "facing"
+    ],
+    "states": [
+      "down",
+      "up",
+      "north",
+      "south",
+      "west",
+      "east"
+    ],
+    "defaultState": 1
+  },
+  {
+    "name": "brown_shulker_box",
+    "id": 231,
+    "flags": 1,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "rock",
+    "props": [
+      "facing"
+    ],
+    "states": [
+      "down",
+      "up",
+      "north",
+      "south",
+      "west",
+      "east"
+    ],
+    "defaultState": 1
+  },
+  {
+    "name": "green_shulker_box",
+    "id": 232,
+    "flags": 1,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "rock",
+    "props": [
+      "facing"
+    ],
+    "states": [
+      "down",
+      "up",
+      "north",
+      "south",
+      "west",
+      "east"
+    ],
+    "defaultState": 1
+  },
+  {
+    "name": "red_shulker_box",
+    "id": 233,
+    "flags": 1,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "rock",
+    "props": [
+      "facing"
+    ],
+    "states": [
+      "down",
+      "up",
+      "north",
+      "south",
+      "west",
+      "east"
+    ],
+    "defaultState": 1
+  },
+  {
+    "name": "black_shulker_box",
+    "id": 234,
+    "flags": 1,
+    "opacity": 0,
+    "emittance": 0,
+    "material": "rock",
+    "props": [
+      "facing"
+    ],
+    "states": [
+      "down",
+      "up",
+      "north",
+      "south",
+      "west",
+      "east"
+    ],
+    "defaultState": 1
+  },
+  {
+    "name": "white_glazed_terracotta",
+    "id": 235,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "rock",
+    "props": [
+      "facing"
+    ],
+    "states": [
+      "south",
+      "west",
+      "north",
+      "east"
+    ],
+    "defaultState": 2
+  },
+  {
+    "name": "orange_glazed_terracotta",
+    "id": 236,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "rock",
+    "props": [
+      "facing"
+    ],
+    "states": [
+      "south",
+      "west",
+      "north",
+      "east"
+    ],
+    "defaultState": 2
+  },
+  {
+    "name": "magenta_glazed_terracotta",
+    "id": 237,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "rock",
+    "props": [
+      "facing"
+    ],
+    "states": [
+      "south",
+      "west",
+      "north",
+      "east"
+    ],
+    "defaultState": 2
+  },
+  {
+    "name": "light_blue_glazed_terracotta",
+    "id": 238,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "rock",
+    "props": [
+      "facing"
+    ],
+    "states": [
+      "south",
+      "west",
+      "north",
+      "east"
+    ],
+    "defaultState": 2
+  },
+  {
+    "name": "yellow_glazed_terracotta",
+    "id": 239,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "rock",
+    "props": [
+      "facing"
+    ],
+    "states": [
+      "south",
+      "west",
+      "north",
+      "east"
+    ],
+    "defaultState": 2
+  },
+  {
+    "name": "lime_glazed_terracotta",
+    "id": 240,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "rock",
+    "props": [
+      "facing"
+    ],
+    "states": [
+      "south",
+      "west",
+      "north",
+      "east"
+    ],
+    "defaultState": 2
+  },
+  {
+    "name": "pink_glazed_terracotta",
+    "id": 241,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "rock",
+    "props": [
+      "facing"
+    ],
+    "states": [
+      "south",
+      "west",
+      "north",
+      "east"
+    ],
+    "defaultState": 2
+  },
+  {
+    "name": "gray_glazed_terracotta",
+    "id": 242,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "rock",
+    "props": [
+      "facing"
+    ],
+    "states": [
+      "south",
+      "west",
+      "north",
+      "east"
+    ],
+    "defaultState": 2
+  },
+  {
+    "name": "silver_glazed_terracotta",
+    "id": 243,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "rock",
+    "props": [
+      "facing"
+    ],
+    "states": [
+      "south",
+      "west",
+      "north",
+      "east"
+    ],
+    "defaultState": 2
+  },
+  {
+    "name": "cyan_glazed_terracotta",
+    "id": 244,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "rock",
+    "props": [
+      "facing"
+    ],
+    "states": [
+      "south",
+      "west",
+      "north",
+      "east"
+    ],
+    "defaultState": 2
+  },
+  {
+    "name": "purple_glazed_terracotta",
+    "id": 245,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "rock",
+    "props": [
+      "facing"
+    ],
+    "states": [
+      "south",
+      "west",
+      "north",
+      "east"
+    ],
+    "defaultState": 2
+  },
+  {
+    "name": "blue_glazed_terracotta",
+    "id": 246,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "rock",
+    "props": [
+      "facing"
+    ],
+    "states": [
+      "south",
+      "west",
+      "north",
+      "east"
+    ],
+    "defaultState": 2
+  },
+  {
+    "name": "brown_glazed_terracotta",
+    "id": 247,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "rock",
+    "props": [
+      "facing"
+    ],
+    "states": [
+      "south",
+      "west",
+      "north",
+      "east"
+    ],
+    "defaultState": 2
+  },
+  {
+    "name": "green_glazed_terracotta",
+    "id": 248,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "rock",
+    "props": [
+      "facing"
+    ],
+    "states": [
+      "south",
+      "west",
+      "north",
+      "east"
+    ],
+    "defaultState": 2
+  },
+  {
+    "name": "red_glazed_terracotta",
+    "id": 249,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "rock",
+    "props": [
+      "facing"
+    ],
+    "states": [
+      "south",
+      "west",
+      "north",
+      "east"
+    ],
+    "defaultState": 2
+  },
+  {
+    "name": "black_glazed_terracotta",
+    "id": 250,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "rock",
+    "props": [
+      "facing"
+    ],
+    "states": [
+      "south",
+      "west",
+      "north",
+      "east"
+    ],
+    "defaultState": 2
+  },
+  {
+    "name": "concrete",
+    "id": 251,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "rock",
+    "props": [
+      "color"
+    ],
+    "states": [
+      "white",
+      "orange",
+      "magenta",
+      "light_blue",
+      "yellow",
+      "lime",
+      "pink",
+      "gray",
+      "silver",
+      "cyan",
+      "purple",
+      "blue",
+      "brown",
+      "green",
+      "red",
+      "black"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "concrete_powder",
+    "id": 252,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "sand",
+    "props": [
+      "color"
+    ],
+    "states": [
+      "white",
+      "orange",
+      "magenta",
+      "light_blue",
+      "yellow",
+      "lime",
+      "pink",
+      "gray",
+      "silver",
+      "cyan",
+      "purple",
+      "blue",
+      "brown",
+      "green",
+      "red",
+      "black"
+    ],
+    "defaultState": 0
+  },
+  {
+    "name": "structure_block",
+    "id": 255,
+    "flags": 13,
+    "opacity": 255,
+    "emittance": 0,
+    "material": "iron",
+    "props": [
+      "mode"
+    ],
+    "states": [
+      "save",
+      "load",
+      "corner",
+      "data"
+    ],
+    "defaultState": 0
+  }
+]

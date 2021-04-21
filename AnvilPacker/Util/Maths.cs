@@ -53,21 +53,5 @@ namespace AnvilPacker.Util
         {
             return (x >> 31) | (int)((uint)(-x) >> 31);
         }
-
-        public static int GetNibble(byte[] arr, int idx)
-        {
-            //byte v = arr[idx / 2];
-            //return i % 2 == 0 ? v & 15 : v >> 4;
-
-            int s = (idx & 1) << 2; //(idx % 2) * 4
-            return (arr[idx >> 1] >> s) & 0xF;
-        }
-        public static void SetNibble(byte[] arr, int idx, int val)
-        {
-            ref byte b = ref arr[idx >> 1];
-
-            int s = (idx & 1) << 2; //(idx % 2) * 4
-            b = (byte)((b & (0xF0 >> s)) | (val << s));
-        }
     }
 }

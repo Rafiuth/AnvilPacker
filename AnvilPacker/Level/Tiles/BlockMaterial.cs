@@ -11,19 +11,21 @@ namespace AnvilPacker.Level
     {
         public static ResourceRegistry<BlockMaterial> Registry { get; } = new(64);
 
-        private static BlockMaterial Reg(string name, MaterialAttributes flags)
+        private static BlockMaterial Reg(string name, MapColor color, MaterialAttributes flags)
         {
             var mat = new BlockMaterial() {
                 Name = name,
-                Attributes = flags,
+                Color = color,
+                Attributes = flags
             };
             Registry.Add(name, mat);
             return mat;
         }
 
         public ResourceName Name { get; init; }
+        public MapColor Color { get; init; }
         public MaterialAttributes Attributes { get; init; }
-        
+
         public bool BlocksMotion    => Attributes.HasFlag(MaterialAttributes.BlocksMotion);
         public bool IsFlammable     => Attributes.HasFlag(MaterialAttributes.Flammable);
         public bool IsLiquid        => Attributes.HasFlag(MaterialAttributes.Liquid);

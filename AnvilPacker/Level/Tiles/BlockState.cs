@@ -15,12 +15,12 @@ namespace AnvilPacker.Level
     //  - Slow startup since we have to parse a huge JSON file and create thousands of objects.
     //  - Lost support for modded worlds. (still possible, but requires the hastle of updating `blocks.json`)
     //  - Requires a complete registry of every version; Mojang may add or rename a block, and I'd like to keep compatibility with all versions.
-    public class MBlockState : IBlockState, IEquatable<MBlockState>
+    public class BlockState : IEquatable<BlockState>
     {
-        public static MBlockState Air { get; internal set; }
+        public static BlockState Air { get; internal set; }
 
         public int Id { get; init; }
-        public MBlock Block { get; init; }
+        public Block Block { get; init; }
         public Dictionary<string, BlockPropertyValue> Properties { get; init; }
         public BlockAttributes Attributes { get; init; }
 
@@ -30,12 +30,12 @@ namespace AnvilPacker.Level
         {
             return Properties[name];
         }
-        public MBlockState WithProperty(string name, string value)
+        public BlockState WithProperty(string name, string value)
         {
             var prop = GetProperty(name);
             return WithProperty(prop, prop.GetIndex(value));
         }
-        private MBlockState WithProperty(BlockPropertyValue prop, int valueIndex)
+        private BlockState WithProperty(BlockPropertyValue prop, int valueIndex)
         {
             int newId = ChangeDigit(
                 x: Id - Block.MinStateId,
@@ -43,7 +43,7 @@ namespace AnvilPacker.Level
                 shift: prop.IdShift,
                 radix: prop.ValueCount
             );
-            return MBlock.StateRegistry[Block.MinStateId + newId];
+            return Block.StateRegistry[Block.MinStateId + newId];
 
             static int ChangeDigit(int x, int newVal, int shift, int radix)
             {
@@ -52,8 +52,8 @@ namespace AnvilPacker.Level
             }
         }
 
-        public bool Equals(MBlockState other)   => other.Id == Id;
-        public override bool Equals(object obj) => obj is MBlockState mb && Equals(mb);
+        public bool Equals(BlockState other)   => other.Id == Id;
+        public override bool Equals(object obj) => obj is BlockState mb && Equals(mb);
         public override int GetHashCode()       => Id;
 
         public override string ToString()
@@ -72,18 +72,5 @@ namespace AnvilPacker.Level
             }
             return sb.ToString();
         }
-    }
-
-    [Flags]
-    public enum BlockAttributes
-    {
-        None                = 0,
-        Opaque              = 1 << 0,
-        Translucent         = 1 << 1,
-        FullCube            = 1 << 2,
-        OpaqueFullCube      = 1 << 3,
-        HasRandomTicks      = 1 << 4,
-        EmitsRedstonePower  = 1 << 5,
-        IsAir               = 1 << 7
     }
 }

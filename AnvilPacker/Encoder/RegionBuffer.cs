@@ -14,6 +14,8 @@ namespace AnvilPacker.Encoder
         public readonly ChunkBase[] Chunks;
         /// <summary> Number of chunks in the X/Z axis. </summary>
         public readonly int Width, Depth;
+        /// <summary> Position of the first chunk in this region, in global world chunk coordinates. </summary>
+        public int X, Z;
 
         public RegionBuffer(int w, int d)
         {
@@ -32,29 +34,6 @@ namespace AnvilPacker.Encoder
         public void SetChunk(int x, int z, ChunkBase chunk)
         {
             Chunks[x + z * Width] = chunk;
-        }
-
-        public bool IsEmpty(Vec3i start, Vec3i end)
-        {
-            foreach (var ch in GetChunks(start, end)) {
-                if (!IsEmpty(ch.Section, ch.Start, ch.End, ch.Chunk.AirBlock)) {
-                    return false;
-                }
-            }
-            return true;
-        }
-        private bool IsEmpty(IChunkSection section, Vec3i start, Vec3i end, IBlockState air)
-        {
-            for (int y = start.Y; y < end.Y; y++) {
-                for (int z = start.Z; z < end.Z; z++) {
-                    for (int x = start.X; x < end.X; x++) {
-                        if (section.GetBlock(x & 15, y & 15, z & 15) != air) {
-                            return false;
-                        }
-                    }
-                }
-            }
-            return true;
         }
 
         /// <summary> Creates a enumerator of chunks in the specified region. </summary>
@@ -89,7 +68,7 @@ namespace AnvilPacker.Encoder
         public struct ChunkIteratorData
         {
             public ChunkBase Chunk;
-            public IChunkSection Section;
+            public ChunkSectionBase Section;
 
             /// <summary> Global position of the first block in this chunk. </summary>
             public Vec3i Start;
@@ -104,7 +83,7 @@ namespace AnvilPacker.Encoder
             public int Z1 => End.Z;
 
             /// <summary> Returns the block at the specified global coord. </summary>
-            public IBlockState GetBlock(int x, int y, int z)
+            public BlockState GetBlock(int x, int y, int z)
             {
                 return Section.GetBlock(x & 15, y & 15, z & 15);
             }

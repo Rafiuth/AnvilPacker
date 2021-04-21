@@ -44,6 +44,14 @@ namespace AnvilPacker.Data
             }
         }
 
+        public void Clear(bool releaseBuffer = false)
+        {
+            _pos = 0;
+            if (releaseBuffer) {
+                _buf = new byte[4096];
+            }
+        }
+
         public override void Dispose()
         {
         }

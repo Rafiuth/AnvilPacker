@@ -12,6 +12,11 @@ namespace AnvilPacker.Level.Versions.v1_8
     {
         private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
 
+        public ChunkBase CreateChunk(int x, int z)
+        {
+            return new Chunk(x, z);
+        }
+
         public ChunkBase Deserialize(CompoundTag level)
         {
             level = new CompoundTag(level);
@@ -28,8 +33,8 @@ namespace AnvilPacker.Level.Versions.v1_8
             chunk.IsTerrainPopulated = Pop<bool>("TerrainPopulated");
             chunk.LastUpdate = Pop<long>("LastUpdate");
             chunk.InhabitedTime = Pop<long>("InhabitedTime");
-            chunk.HeightMap = Pop<int[]>("HeightMap");
-            chunk.Biomes = Pop<byte[]>("Biomes");
+            //chunk.HeightMap = Pop<int[]>("HeightMap");
+            //chunk.Biomes = Pop<byte[]>("Biomes");
 
             chunk.TileTicks = DeserializeTileTicks(x, z, Pop<ListTag>("TileTicks"));
 
@@ -52,7 +57,7 @@ namespace AnvilPacker.Level.Versions.v1_8
             }
         }
 
-        private IChunkSection DeserializeSection(CompoundTag tag)
+        private ChunkSectionBase DeserializeSection(CompoundTag tag)
         {
             var blockId = tag.GetByteArray("Blocks");
             var blockAdd = tag.GetByteArray("Add");
@@ -62,20 +67,27 @@ namespace AnvilPacker.Level.Versions.v1_8
             var blockLight = tag.GetByteArray("BlockLight");
 
             var section = new ChunkSection();
-            var blocks = section.BlockData;
-            var lights = section.LightData;
+            
+            if (skyLight != null) {
+                section.SkyLight = new NibbleArray(skyLight);
+            }
+            if (blockLight != null) {
+                section.BlockLight = new NibbleArray(blockLight);
+            }
 
-            for (int i = 0; i < 4096; i++) {
-                int id = blockId[i] << 4 | GetNibble(blockData, i);
+            var blocks = section.Blocks;
+
+            for (int i = 0; i < 4096; i += 2) {
+                int j = i >> 1;
+                int a = (blockId[i + 0] << 4) | (blockData[j] & 15);
+                int b = (blockId[i + 1] << 4) | (blockData[j] >> 4);
+
                 if (blockAdd != null) {
-                    id |= GetNibble(blockAdd, i) << 12;
+                    a |= (blockAdd[j] & 15) << 12;
+                    b |= (blockAdd[j] >> 4) << 12;
                 }
-                blocks[i] = (ushort)id;
-
-                lights[i] = new LightState(
-                    (skyLight != null ? GetNibble(skyLight,   i) : 0) |
-                    (                   GetNibble(blockLight, i)) << 4
-                );
+                blocks[i + 0] = (ushort)a;
+                blocks[i + 1] = (ushort)b;
             }
             return section;
         }
@@ -88,12 +100,12 @@ namespace AnvilPacker.Level.Versions.v1_8
                 return list;
             }
             foreach (CompoundTag entry in tag) {
-                LBlock type;
+                Block type;
 
                 if (entry.ContainsKey("i", TagType.String)) {
-                    type = LBlock.GetFromName(entry.GetString("i"));
+                    type = LegacyBlocks.GetBlockFromName(entry.GetString("i"));
                 } else {
-                    type = LBlock.GetFromId(entry.GetInt("i"));
+                    type = LegacyBlocks.GetBlockFromId(entry.GetInt("i"));
                 }
 
                 var st = new ScheduledTick() {

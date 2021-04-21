@@ -8,6 +8,11 @@ namespace AnvilPacker.Level.Versions.v1_16_1
     //DataVersion=2578
     public class ChunkSerializer : IChunkSerializer
     {
+        public ChunkBase CreateChunk(int x, int z)
+        {
+            return new Chunk(x, z);
+        }
+
         public ChunkBase Deserialize(CompoundTag tag)
         {
             int x = tag.GetInt("xPos");
@@ -50,38 +55,45 @@ namespace AnvilPacker.Level.Versions.v1_16_1
         }
 
 
-        private static IChunkSection DeserializeSection(CompoundTag tag)
+        private static ChunkSectionBase DeserializeSection(CompoundTag tag)
         {
             var blockStates = tag.GetLongArray("BlockStates");
             var palette = ReadPalette(tag.GetList("Palette"));
+            
             var skyLight = tag.GetByteArray("SkyLight");
             var blockLight = tag.GetByteArray("BlockLight");
 
-            if (blockStates == null || (palette.Count == 1 && palette.Get(0) == MBlockState.Air)) {
+            if (blockStates == null || (palette.Count == 1 && palette.GetState(0) == BlockState.Air)) {
                 return null;
             }
             var section = new ChunkSection(palette, blockStates);
 
+            if (skyLight != null) {
+                section.SkyLight = new NibbleArray(skyLight);
+            }
+            if (blockLight != null) {
+                section.BlockLight = new NibbleArray(blockLight);
+            }
             return section;
         }
 
-        private static MBlockPalette ReadPalette(ListTag list)
+        private static BlockPalette ReadPalette(ListTag list)
         {
             if (list == null) return null;
 
-            var palette = new MBlockPalette();
+            var palette = new BlockPalette();
             foreach (CompoundTag tag in list) {
                 var name = tag.GetString("Name");
                 var props = tag.GetCompound("Properties", true);
 
-                var state = MBlock.Registry[name].DefaultState;
+                var state = Block.Registry[name].DefaultState;
 
                 if (props != null) {
                     foreach (var (k, v) in props) {
                         state = state.WithProperty(k, v.Value<string>());
                     }
                 }
-                palette.GetOrAdd(state);
+                palette.Add(state);
             }
             return palette;
         }
@@ -95,7 +107,7 @@ namespace AnvilPacker.Level.Versions.v1_16_1
             }
             foreach (CompoundTag entry in tag) {
                 var st = new ScheduledTick() {
-                    Type = MBlock.Registry[entry.GetString("i")],
+                    Type = Block.Registry[entry.GetString("i")],
                     X = entry.GetInt("x"),
                     Y = entry.GetInt("y"),
                     Z = entry.GetInt("z"),

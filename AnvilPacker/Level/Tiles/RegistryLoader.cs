@@ -9,8 +9,12 @@ using Newtonsoft.Json.Linq;
 
 namespace AnvilPacker.Level
 {
-    public class MRegistryLoader
+    public class RegistryLoader
     {
+        public static void LoadLegacy()
+        {
+            throw new NotImplementedException();
+        }
         public static void Load()
         {
             using var reader = new JsonTextReader(new StreamReader("Resources/blocks.json", Encoding.UTF8));
@@ -22,8 +26,8 @@ namespace AnvilPacker.Level
             int stateCount = json["numBlockStates"].Value<int>();
             var arr = (JArray)json["blocks"];
 
-            var states = new MBlockState[stateCount];
-            var blocks = new ResourceRegistry<MBlock>(arr.Count);
+            var states = new BlockState[stateCount];
+            var blocks = new ResourceRegistry<Block>(arr.Count);
 
             var propCache = new HashSet<BlockProperty>();
 
@@ -35,7 +39,7 @@ namespace AnvilPacker.Level
                 var props = ParseProperties(jb["properties"], propCache);
                 var materialName = jb["material"].Value<string>();
 
-                var block = new MBlock() {
+                var block = new Block() {
                     Name = name,
                     MinStateId = minStateId,
                     MaxStateId = maxStateId,
@@ -51,7 +55,7 @@ namespace AnvilPacker.Level
                     var flags = (stateFlags is JArray ? stateFlags[i] : stateFlags).Value<int>();
                     var light = (stateLight is JArray ? stateLight[i] : stateLight).Value<int>();
 
-                    states[id] = new MBlockState() {
+                    states[id] = new BlockState() {
                         Id = id,
                         Block = block,
                         Attributes = (BlockAttributes)flags,
@@ -65,10 +69,10 @@ namespace AnvilPacker.Level
                 block.DefaultState = states[defaultStateId];
                 blocks.Add(name, block);
             }
-            MBlock.Registry = blocks.Freeze();
-            MBlock.StateRegistry = new IndexedMap<MBlockState>(states);
+            Block.Registry = blocks.Freeze();
+            Block.StateRegistry = new IndexedMap<BlockState>(states);
 
-            MBlockState.Air = blocks["air"].DefaultState;
+            BlockState.Air = blocks["air"].DefaultState;
         }
 
         private static List<BlockProperty> ParseProperties(JToken jprops, HashSet<BlockProperty> cache)

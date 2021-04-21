@@ -11,7 +11,7 @@ namespace AnvilPacker.Encoder
 {
     using static ArithmCoderConsts;
 
-    public static class EncoderUtils
+    public static class CodecPrimitives
     {
         public static void WriteVLC(this BitWriter bw, int val)
         {
@@ -66,6 +66,66 @@ namespace AnvilPacker.Encoder
             return 1 + BitOperations.Log2((uint)val) / 7;
         }
         public static int VarIntSize(ushort val) => VarIntSize((int)val);
+
+        public static void RunLengthEncode(int length, Func<int, int, bool> compare, Action<int> writeLiteral, Action<int, int> writeRunLen)
+        {
+            int literals = 0;
+            int i = 0;
+            while (i < length) {
+                //calculate run length
+                int j = i + 1;
+                while (j < length && compare(i, j)) j++;
+
+                int len = j - i;
+                bool isRun = len >= 2;
+
+                if (isRun && literals > 0) {
+                    //encode pending literals
+                    Encode(i - literals, literals, true);
+                    literals = 0;
+                }
+                if (isRun) {
+                    Encode(i, len, false);
+                } else {
+                    literals += len;
+                }
+                i = j;
+            }
+            if (literals > 0) {
+                //encode last pending literals
+                Encode(length - literals, literals, true);
+            }
+            void Encode(int start, int count, bool isLiteral)
+            {
+                int numLiterals = isLiteral ? count : 2;
+                for (int i = 0; i < numLiterals; i++) {
+                    writeLiteral(start + i);
+                }
+                if (!isLiteral) {
+                    writeRunLen(start, count - 2);
+                }
+            }
+        }
+        public static void RunLengthDecode<T>(int length, Func<T> readLiteral, Func<int> readRunLen, Action<int, T> consume) where T : IEquatable<T>
+        {
+            T prev = default;
+
+            for (int i = 0; i < length; ) {
+                var val = readLiteral();
+                consume(i, val);
+                i++;
+
+                if (i > 1 && prev.Equals(val)) {
+                    int reps = readRunLen();
+
+                    for (int j = 0; j < reps; j++) {
+                        consume(i + j, val);
+                    }
+                    i += reps;
+                }
+                prev = val;
+            }
+        }
     }
 
     public class NzContext
@@ -77,22 +137,20 @@ namespace AnvilPacker.Encoder
         public BitChance[] Exp = new BitChance[(bits - 1) * 2];
         public BitChance[] Mant = new BitChance[bits];
 
-        private static readonly ushort[] DefaultExpChances = new ushort[17] {
-            1000, 1200, 1500, 1750, 2000, 2300, 2800, 2400, 2300,
-            2048, 2048, 2048, 2048, 2048, 2048, 2048, 2048
+        private static readonly ushort[] DefaultExpChances = new ushort[16] {
+            1000, 1200, 1500, 1750, 2000, 2300, 2800, 2400, 
+            2300, 2048, 2048, 2048, 2048, 2048, 2048, 2048,
         };
-        private static readonly ushort[] DefaultMantChances = new ushort[18] {
-            1900, 1850, 1800, 1750, 1650, 1600, 1600, 2048, 2048,
-            2048, 2048, 2048, 2048, 2048, 2048, 2048, 2048, 2048
+        private static readonly ushort[] DefaultMantChances = new ushort[16] {
+            1900, 1850, 1800, 1750, 1650, 1600, 1600, 2048, 
+            2048, 2048, 2048, 2048, 2048, 2048, 2048, 2048,
         };
 
         public NzContext()
         {
             static BitChance R(int x)
             {
-                return new BitChance() {
-                    Value = (ushort)(x * K / 4096)
-                };
+                return new BitChance(x * K / 4096);
             }
             Zero = R(1000);
             Sign = R(2048);
@@ -106,8 +164,8 @@ namespace AnvilPacker.Encoder
             }
         }
 
-        public BitChance ExpProb(int i, bool sign)
-            => Exp[(i << 1) + (sign ? 1 : 0)];
+        private ref BitChance ExpProb(int i, bool sign)
+            => ref Exp[(i << 1) + (sign ? 1 : 0)];
 
         public void Write(ArithmEncoder ac, int value, int min, int max)
         {
@@ -119,29 +177,29 @@ namespace AnvilPacker.Encoder
             if (min == max) return;
 
             if (value == 0) { // value is zero
-                Write(ac, 1, Zero);
+                Zero.Write(ac, true);
                 return;
             }
             if (min <= 0 && max >= 0) {
                 // only output zero bit if value could also have been zero
-                Write(ac, 0, Zero);
+                Zero.Write(ac, false);
             }
 
             bool sign = value > 0;
             if (min < 0 && max > 0) {
                 // only output sign bit if value can be both pos and neg
-                Write(ac, sign, Sign);
+                Sign.Write(ac, sign);
             }
             if (sign) min = 1;
             if (!sign) max = -1;
 
             int a = Abs(value);
             int e = Log2(a);
-            int amin = 1;
+            int amin = sign ? Abs(min) : Abs(max);
             int amax = sign ? Abs(max) : Abs(min);
 
             int emax = Log2(amax);
-            int i = 0;
+            int i = Log2(amin);
 
             for (; i < emax; i++) {
                 // if exponent >i is impossible, we are done
@@ -149,7 +207,7 @@ namespace AnvilPacker.Encoder
                 Debug.Assert(!((1 << (i + 1)) > amax));
 
                 // if exponent i is possible, output the exponent bit
-                Write(ac, i == e, ExpProb(i, sign));
+                ExpProb(i, sign).Write(ac, i == e);
                 if (i == e) break;
             }
 
@@ -165,7 +223,7 @@ namespace AnvilPacker.Encoder
                     bit = 0;
                 } else if (maxabs0 >= amin) { // 0-bit and 1-bit are both possible
                     bit = (a >> pos) & 1;
-                    Write(ac, bit, Mant[pos]);
+                    Mant[pos].Write(ac, bit);
                 }
                 have |= (bit << pos);
             }
@@ -177,9 +235,9 @@ namespace AnvilPacker.Encoder
             if (min == max) return min;
 
             bool canBeZero = min <= 0 && max >= 0;
-            if (canBeZero && Read(ac, Zero)) return 0;
+            if (canBeZero && Zero.Read(ac)) return 0;
 
-            bool sign = min >= 0 || (max > 0 && Read(ac, Sign));
+            bool sign = min >= 0 || (max > 0 && Sign.Read(ac));
 
             int amin = 1;
             int amax = sign ? Abs(max) : Abs(min);
@@ -191,7 +249,7 @@ namespace AnvilPacker.Encoder
                 // if exponent >e is impossible, we are done
                 // actually that cannot happen
                 //if ((1 << (e+1)) > amax) break;
-                if (Read(ac, ExpProb(e, sign))) break;
+                if (ExpProb(e, sign).Read(ac)) break;
             }
 
             int have = (1 << e);
@@ -205,27 +263,11 @@ namespace AnvilPacker.Encoder
                     continue;
                 } else if (maxabs0 >= amin) { // 0-bit and 1-bit are both possible
                                               //bit = coder.read(BIT_MANT,pos);
-                    if (Read(ac, Mant[pos])) have = minabs1;
+                    if (Mant[pos].Read(ac)) have = minabs1;
                 } // else 0-bit is impossible, so bit stays 1
                 else have = minabs1;
             }
             return (sign ? have : -have);
-        }
-
-        private void Write(ArithmEncoder ac, bool bit, BitChance prob)
-        {
-            ac.Write(bit, prob.Value);
-            prob.Update(bit);
-        }
-        private void Write(ArithmEncoder ac, int bit, BitChance prob)
-        {
-            Write(ac, bit != 0, prob);
-        }
-        private bool Read(ArithmDecoder ac, BitChance prob)
-        {
-            bool bit = ac.ReadBool(prob.Value);
-            prob.Update(bit);
-            return bit;
         }
 
         private static int Abs(int x) => Maths.Abs(x);
@@ -241,9 +283,36 @@ namespace AnvilPacker.Encoder
         }
     }
 
-    public class BitChance //TODO: this should be a struct
+    public struct BitChance //TODO: this should be a struct
     {
         public ushort Value;
+
+        public BitChance(int value)
+        {
+            Debug.Assert(value is >= 0 and < K);
+            Value = (ushort)value;
+        }
+        public BitChance(double value)
+        {
+            Debug.Assert(value is >= 0 and < 1.0);
+            Value = (ushort)(value * K + 0.5);
+        }
+
+        public void Write(ArithmEncoder ac, bool bit)
+        {
+            ac.Write(bit, Value);
+            Update(bit);
+        }
+        public void Write(ArithmEncoder ac, int bit)
+        {
+            Write(ac, bit != 0);
+        }
+        public bool Read(ArithmDecoder ac)
+        {
+            bool bit = ac.ReadBool(Value);
+            Update(bit);
+            return bit;
+        }
 
         public void Update(bool bit)
         {
