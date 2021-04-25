@@ -19,7 +19,7 @@ namespace AnvilPacker.Level
     /// </remarks>
     public class AnvilWriter : IDisposable
     {
-        private readonly StreamDataWriter _s;
+        private readonly DataWriter _s;
         // Chunk index table. each entry is encoded as: `sectorId << 8 | sectorCount`
         private int[] _locations = new int[1024];
         private bool _headerDirty = true;
@@ -30,7 +30,8 @@ namespace AnvilPacker.Level
         }
         public AnvilWriter(string filename)
         {
-            _s = new StreamDataWriter(File.Create(filename));
+            //disabling buffer allows passing BaseStream without seeking twice
+            _s = new DataWriter(File.Create(filename), false, 0);
             _s.Position = 8192;
         }
 
@@ -43,12 +44,12 @@ namespace AnvilPacker.Level
 
             _s.Position = 0;
             for (int i = 0; i < 1024; i++) {
-                _s.WriteInt(_locations[i]);
+                _s.WriteIntBE(_locations[i]);
             }
             //Write timestamps (unused by Minecraft)
             int timestamp = (int)DateTimeOffset.UtcNow.ToUnixTimeSeconds(); //only good for another 15 years lol.
             for (int i = 0; i < 1024; i++) {
-                _s.WriteInt(timestamp);
+                _s.WriteIntBE(timestamp);
             }
 
             _s.Position = _s.Length;
@@ -73,7 +74,7 @@ namespace AnvilPacker.Level
             _s.Position = startPos + HDR_LEN;
 
             using (var stream = new_ZlibStream(_s.BaseStream, CompressionLevel.Optimal, true)) {
-                NbtIO.Write(tag, new StreamDataWriter(stream));
+                NbtIO.Write(tag, new DataWriter(stream));
             }
             long endPos = _s.Position;
             int totalLen = (int)(endPos - startPos);
@@ -86,7 +87,7 @@ namespace AnvilPacker.Level
 
             loc = PackLocation(startPos, totalLen);
 
-            _s.WriteInt(totalLen - HDR_LEN); //length
+            _s.WriteIntBE(totalLen - HDR_LEN); //length
             _s.WriteByte(2); //compressionMethod: zlib
 
             _s.Position = endPos;

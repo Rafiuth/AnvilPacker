@@ -22,30 +22,30 @@ namespace AnvilPacker.Data
 
             switch (type) {
                 case TagType.Byte:      return NewPrim(din.ReadByte());
-                case TagType.Short:     return NewPrim(din.ReadShort());
-                case TagType.Int:       return NewPrim(din.ReadInt());
-                case TagType.Long:      return NewPrim(din.ReadLong());
-                case TagType.Float:     return NewPrim(din.ReadFloat());
-                case TagType.Double:    return NewPrim(din.ReadDouble());
+                case TagType.Short:     return NewPrim(din.ReadShortBE());
+                case TagType.Int:       return NewPrim(din.ReadIntBE());
+                case TagType.Long:      return NewPrim(din.ReadLongBE());
+                case TagType.Float:     return NewPrim(din.ReadFloatBE());
+                case TagType.Double:    return NewPrim(din.ReadDoubleBE());
                 case TagType.String:    return NewPrim(din.ReadString());
-                case TagType.ByteArray: return NewPrim(din.ReadBytes(din.ReadInt()));
+                case TagType.ByteArray: return NewPrim(din.ReadBytes(din.ReadIntBE()));
                 case TagType.IntArray: {
-                    var arr = new int[din.ReadInt()];
+                    var arr = new int[din.ReadIntBE()];
                     for (int i = 0; i < arr.Length; i++) {
-                        arr[i] = din.ReadInt();
+                        arr[i] = din.ReadIntBE();
                     }
                     return NewPrim(arr);
                 }
                 case TagType.LongArray: {
-                    var arr = new long[din.ReadInt()];
+                    var arr = new long[din.ReadIntBE()];
                     for (int i = 0; i < arr.Length; i++) {
-                        arr[i] = din.ReadLong();
+                        arr[i] = din.ReadLongBE();
                     }
                     return NewPrim(arr);
                 }
                 case TagType.List: {
                     TagType tagType = (TagType)din.ReadByte();
-                    int count = din.ReadInt();
+                    int count = din.ReadIntBE();
 
                     ListTag list = new ListTag(count);
                     for (int i = 0; i < count; i++) {
@@ -77,38 +77,38 @@ namespace AnvilPacker.Data
 
             switch (tag.Type) {
                 case TagType.Byte:   dout.WriteByte(GetPrim<byte>()); break;
-                case TagType.Short:  dout.WriteShort(GetPrim<short>()); break;
-                case TagType.Int:    dout.WriteInt(GetPrim<int>()); break;
-                case TagType.Long:   dout.WriteLong(GetPrim<long>()); break;
-                case TagType.Float:  dout.WriteFloat(GetPrim<float>()); break;
-                case TagType.Double: dout.WriteDouble(GetPrim<double>()); break;
+                case TagType.Short:  dout.WriteShortBE(GetPrim<short>()); break;
+                case TagType.Int:    dout.WriteIntBE(GetPrim<int>()); break;
+                case TagType.Long:   dout.WriteLongBE(GetPrim<long>()); break;
+                case TagType.Float:  dout.WriteFloatBE(GetPrim<float>()); break;
+                case TagType.Double: dout.WriteDoubleBE(GetPrim<double>()); break;
                 case TagType.String: dout.WriteString(GetPrim<string>()); break;
                 case TagType.ByteArray: {
                     var arr = GetPrim<byte[]>();
-                    dout.WriteInt(arr.Length);
+                    dout.WriteIntBE(arr.Length);
                     dout.WriteBytes(arr);
                     break;
                 }
                 case TagType.IntArray: {
                     var arr = GetPrim<int[]>();
-                    dout.WriteInt(arr.Length);
+                    dout.WriteIntBE(arr.Length);
                     for (int i = 0; i < arr.Length; i++) {
-                        dout.WriteInt(arr[i]);
+                        dout.WriteIntBE(arr[i]);
                     }
                     break;
                 }
                 case TagType.LongArray: {
                     var arr = GetPrim<long[]>();
-                    dout.WriteInt(arr.Length);
+                    dout.WriteIntBE(arr.Length);
                     for (int i = 0; i < arr.Length; i++) {
-                        dout.WriteLong(arr[i]);
+                        dout.WriteLongBE(arr[i]);
                     }
                     break;
                 }
                 case TagType.List: {
                     var list = (ListTag)tag;
                     dout.WriteByte((byte)list.ElementType);
-                    dout.WriteInt(list.Count);
+                    dout.WriteIntBE(list.Count);
                     foreach (NbtTag entry in list) {
                         Write(entry, dout, depth);
                     }
@@ -432,19 +432,19 @@ namespace AnvilPacker.Data
         /// <summary> Reads a GZIP compressed tag. </summary>
         public static CompoundTag ReadCompressed(Stream input, bool leaveOpen = true)
         {
-            using var dis = new BufferedStreamDataReader(new GZipStream(input, CompressionMode.Decompress, leaveOpen));
+            using var dis = new DataReader(new GZipStream(input, CompressionMode.Decompress, leaveOpen));
             return Read(dis);
         }
         /// <summary> Writes a GZIP compressed tag. </summary>
         public static void WriteCompressed(CompoundTag tag, Stream output, bool leaveOpen = true)
         {
-            using var dos = new StreamDataWriter(new GZipStream(output, CompressionMode.Compress, leaveOpen));
+            using var dos = new DataWriter(new GZipStream(output, CompressionMode.Compress, leaveOpen));
             Write(tag, dos);
         }
         /// <summary> Reads a GZIP compressed tag. </summary>
         public static CompoundTag ReadCompressed(string filename)
         {
-            using var dis = new BufferedStreamDataReader(new GZipStream(File.OpenRead(filename), CompressionMode.Decompress, leaveOpen: false));
+            using var dis = new DataReader(new GZipStream(File.OpenRead(filename), CompressionMode.Decompress, leaveOpen: false));
             return Read(dis);
         }
         /// <summary> Writes a GZIP compressed tag. </summary>
@@ -452,7 +452,7 @@ namespace AnvilPacker.Data
         {
             var tmpFilename = filename + ".tmp";
 
-            using var dos = new StreamDataWriter(new GZipStream(File.Create(tmpFilename), CompressionMode.Compress, leaveOpen: false));
+            using var dos = new DataWriter(new GZipStream(File.Create(tmpFilename), CompressionMode.Compress, leaveOpen: false));
             try {
                 Write(tag, dos);
             } catch {
@@ -465,14 +465,14 @@ namespace AnvilPacker.Data
         /// <summary> Reads a GZIP compressed tag. </summary>
         public static CompoundTag Decompress(byte[] buffer)
         {
-            using var dis = new BufferedStreamDataReader(new GZipStream(new MemoryStream(buffer), CompressionMode.Decompress, false));
+            using var dis = new DataReader(new GZipStream(new MemoryStream(buffer), CompressionMode.Decompress, false));
             return Read(dis);
         }
         /// <summary> Writes a GZIP compressed tag. </summary>
         public static byte[] Compress(CompoundTag tag)
         {
             using var mem = new MemoryStream();
-            using var dos = new StreamDataWriter(new GZipStream(mem, CompressionMode.Compress, true));
+            using var dos = new DataWriter(new GZipStream(mem, CompressionMode.Compress, true));
             Write(tag, dos);
             return mem.ToArray();
         }

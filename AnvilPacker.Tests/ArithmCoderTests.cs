@@ -24,19 +24,17 @@ namespace AnvilPacker.Tests
             }
             p0 = (int)(p0 * (long)ArithmCoderConsts.K / data.Length);
 
-            var s = new MemoryStream();
-
-            var enc = new ArithmEncoder(new StreamDataWriter(s));
+            var writer = new MemoryDataWriter();
+            var enc = new ArithmEncoder(writer);
 
             for (int i = 0; i < data.Length; i++) {
                 enc.Write(data[i], p0);
             }
             enc.Flush();
+            writer.Flush();
             //Console.WriteLine($"Encoded size: {s.Length} Ratio: {s.Length / (data.Length / 8.0)}");
 
-            var dec = new ArithmDecoder();
-            s.Position = 0;
-            dec.Init(s);
+            var dec = new ArithmDecoder(new DataReader(writer.BaseStream));
 
             for (int i = 0; i < data.Length; i++) {
                 int expected = data[i] ? 1 : 0;

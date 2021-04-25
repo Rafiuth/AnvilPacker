@@ -13,7 +13,7 @@ namespace AnvilPacker.Tests
         public void TestReadWrite()
         {
             var mem = new MemoryStream();
-            var bw = new BitWriter(new StreamDataWriter(mem));
+            var bw = new BitWriter(new DataWriter(mem, true, 0));
 
             const int COUNT = 65536;
 

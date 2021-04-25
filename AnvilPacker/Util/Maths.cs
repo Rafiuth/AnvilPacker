@@ -14,6 +14,10 @@ namespace AnvilPacker.Util
         {
             return x == 0 ? 0 : BitOperations.Log2((uint)x - 1) + 1;
         }
+        public static int Log2(int x)
+        {
+            return BitOperations.Log2((uint)x);
+        }
 
         public static bool IsPow2(int x)
         {

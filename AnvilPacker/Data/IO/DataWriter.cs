@@ -1,52 +1,145 @@
 ﻿using System;
+using System.IO;
+using System.Runtime.CompilerServices;
 using System.Text;
 using AnvilPacker.Util;
 
 namespace AnvilPacker.Data
 {
-    /// <summary> Big-endian binary primitive writer </summary>
-    public abstract class DataWriter : IDisposable
+    /// <summary> Provides an efficient binary data writer over <see cref="Stream" />. </summary>
+    public class DataWriter : IDisposable
     {
-        public abstract long Position { get; set; }
+        private const MethodImplOptions Inline = MethodImplOptions.AggressiveInlining;
 
-        /// <summary> Writes a primitive value (size &lt;= 8), in big endian order to the output. </summary>
-        public virtual void Write<T>(T value) where T : unmanaged
+        private byte[] _buf;
+        private int _bufPos;
+
+        private bool _leaveOpen;
+
+        public Stream BaseStream { get; }
+
+        public long Position
+        {
+            get => BaseStream.Position + _bufPos;
+            set {
+                Flush();
+                BaseStream.Position = value;
+            }
+        }
+        public long Length
+        {
+            get => BaseStream.Length + _bufPos;
+            set {
+                Flush();
+                BaseStream.SetLength(Length);
+            }
+        }
+        /// <param name="leaveOpen">If true, <paramref name="stream"/> will be disposed when <see cref="Dispose"/> is called. </param>
+        /// <param name="bufferSize">Size of the internal buffer. Can be disabled by setting it to 0, but note that disabling buffering will increase overhead when working small primitives. </param>
+        public DataWriter(Stream stream, bool leaveOpen = false, int bufferSize = 4096)
+        {
+            BaseStream = stream;
+            _buf = new byte[bufferSize];
+            _bufPos = 0;
+            _leaveOpen = leaveOpen;
+        }
+
+        public void WriteBytes(ReadOnlySpan<byte> data)
+        {
+            if (data.Length < _buf.Length - _bufPos) {
+                data.CopyTo(_buf.AsSpan(_bufPos));
+                _bufPos += data.Length;
+            } else {
+                Flush();
+                BaseStream.Write(data);
+            }
+        }
+
+        public void Flush()
+        {
+            BaseStream.Write(_buf, 0, _bufPos);
+            _bufPos = 0;
+        }
+
+        [MethodImpl(Inline)]
+        private unsafe void Write<T>(T value) where T : unmanaged
+        {
+            if (_bufPos + sizeof(T) < _buf.Length) {
+                Mem.Write<T>(_buf, _bufPos, value);
+                _bufPos += sizeof(T);
+                return;
+            }
+            WriteBytes(Mem.CreateSpan<T, byte>(ref value, 1));
+        }
+        [MethodImpl(Inline)]
+        private void WriteLE<T>(T value) where T : unmanaged
+        {
+            if (!BitConverter.IsLittleEndian) {
+                value = Mem.BSwap(value);
+            }
+            Write(value);
+        }
+        [MethodImpl(Inline)]
+        private void WriteBE<T>(T value) where T : unmanaged
         {
             if (BitConverter.IsLittleEndian) {
                 value = Mem.BSwap(value);
             }
-            WriteBytes(Mem.CreateSpan<T, byte>(ref value, 1));
+            Write(value);
         }
-        public abstract void WriteBytes(ReadOnlySpan<byte> buf);
 
-        public abstract void Dispose();
+        public void Dispose()
+        {
+            Flush();
+            if (!_leaveOpen) {
+                BaseStream.Dispose();
+            }
+        }
 
-        public void WriteByte(int v)    => Write((byte)v);
-        public void WriteShort(int v)   => Write((short)v);
-        public void WriteInt(int v)     => Write((int)v);
-        public void WriteLong(long v)   => Write((long)v);
+        //Convenience functions
+        public void WriteByte(int x)        => Write((byte)x);
+        public void WriteSByte(int x)       => Write((sbyte)x);
 
-        //using casts to reduce generic overloading bloat
-        public void WriteSByte(int v)       => Write((byte)v);
-        public void WriteUShort(int v)      => Write((short)v);
-        public void WriteUInt(uint v)       => Write((int)v);
-        public void WriteULong(ulong v)     => Write((long)v);
-        public void WriteFloat(float v)     => Write(BitConverter.SingleToInt32Bits(v));
-        public void WriteDouble(double v)   => Write(BitConverter.DoubleToInt64Bits(v));
+        public void WriteShortLE(int x)     => WriteLE((short)x);
+        public void WriteIntLE(int x)       => WriteLE((int)x);
+        public void WriteLongLE(long x)     => WriteLE((long)x);
+        
+        public void WriteUShortLE(int x)    => WriteLE((ushort)x);
+        public void WriteUIntLE(uint x)     => WriteLE((uint)x);
+        public void WriteULongLE(ulong x)   => WriteLE((ulong)x);
+        public void WriteFloatLE(float x)   => WriteLE((float)x);
+        public void WriteDoubleLE(double x) => WriteLE((double)x);
+        
+        public void WriteShortBE(int x)     => WriteBE((short)x);
+        public void WriteIntBE(int x)       => WriteBE((int)x);
+        public void WriteLongBE(long x)     => WriteBE((long)x);
+        
+        public void WriteUShortBE(int x)    => WriteBE((ushort)x);
+        public void WriteUIntBE(uint x)     => WriteBE((uint)x);
+        public void WriteULongBE(ulong x)   => WriteBE((ulong)x);
+        public void WriteFloatBE(float x)   => WriteBE((float)x);
+        public void WriteDoubleBE(double x) => WriteBE((double)x);
 
-        /// <summary> Writes an UTF8 string prefixed with a ushort indicating its length </summary>
-        public virtual void WriteString(string v)
+        public void WriteBytes(byte[] buffer, int offset, int count)
+        {
+            WriteBytes(buffer.AsSpan(offset, count));
+        }
+
+        //Java compat
+
+        /// <summary> Writes an UTF8 string prefixed with a big-endian ushort indicating it's length. </summary>
+        public void WriteString(string str)
         {
             var enc = Encoding.UTF8;
-            int len = enc.GetByteCount(v);
+            int len = enc.GetByteCount(str);
             if (len > 65535) {
                 throw new InvalidOperationException("String cannot be larger than 65535 characters.");
             }
             var buf = len < 256 ? stackalloc byte[len] : new byte[len];
 
-            enc.GetBytes(v, buf);
+            enc.GetBytes(str, buf);
 
-            WriteUShort((ushort)len);
+            WriteUShortBE((ushort)len);
             WriteBytes(buf);
         }
     }

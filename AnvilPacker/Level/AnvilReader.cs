@@ -10,7 +10,7 @@ namespace AnvilPacker.Level
     //https://minecraft.gamepedia.com/Region_file_format
     public class AnvilReader : IDisposable
     {
-        private readonly StreamDataReader _s;
+        private readonly DataReader _s;
 
         public AnvilReader(string path, int rx, int rz)
             : this(Path.Combine(path, $"r.{rx}.{rz}.mca"))
@@ -18,7 +18,8 @@ namespace AnvilPacker.Level
         }
         public AnvilReader(string filename)
         {
-            _s = new StreamDataReader(File.OpenRead(filename));
+            //disabling buffer allows passing BaseStream without seeking twice
+            _s = new DataReader(File.OpenRead(filename), false, 0);
         }
 
         public CompoundTag Read(int x, int z)
@@ -28,7 +29,7 @@ namespace AnvilPacker.Level
                 return null;
             }
             _s.Position = offset;
-            int len = _s.ReadInt() - 1;
+            int len = _s.ReadIntBE() - 1;
             byte compressionType = _s.ReadByte();
 
             if (len > sectorCount * 4096) {
@@ -42,13 +43,13 @@ namespace AnvilPacker.Level
                 3 => rawStream,
                 _ => throw new NotSupportedException($"Chunk compression method {compressionType}")
             };
-            return NbtIO.Read(new BufferedStreamDataReader(dataStream));
+            return NbtIO.Read(new DataReader(dataStream));
         }
 
         private (int Offset, int SectorCount) ReadLocation(int x, int z)
         {
             _s.Position = GetIndex(x, z) * 4;
-            int loc = _s.ReadInt();
+            int loc = _s.ReadIntBE();
             int offset = (loc >> 8) * 4096;
             int sectors = loc & 0xFF;
             return (offset, sectors);
