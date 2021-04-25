@@ -29,6 +29,14 @@ namespace AnvilPacker.Tests
                             Assert.Equal(k, bs.Get(i));
                         }
                     }
+
+                    for (int i = len - 1; i >= 0; i--) {
+                        for (int j = 0; j < 2; j++) {
+                            int k = rng.Next(1 << b);
+                            bs.Set(i, k);
+                            Assert.Equal(k, bs.Get(i));
+                        }
+                    }
                 }
             }
         }
@@ -44,6 +52,14 @@ namespace AnvilPacker.Tests
                     for (int i = 0; i < len; i++) {
                         Assert.Equal(0, bs.Get(i));
 
+                        for (int j = 0; j < 2; j++) {
+                            int k = rng.Next(1 << b);
+                            bs.Set(i, k);
+                            Assert.Equal(k, bs.Get(i));
+                        }
+                    }
+
+                    for (int i = len - 1; i >= 0; i--) {
                         for (int j = 0; j < 2; j++) {
                             int k = rng.Next(1 << b);
                             bs.Set(i, k);

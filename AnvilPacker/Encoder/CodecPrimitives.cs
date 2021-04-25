@@ -283,7 +283,7 @@ namespace AnvilPacker.Encoder
         }
     }
 
-    public struct BitChance //TODO: this should be a struct
+    public struct BitChance
     {
         public ushort Value;
 

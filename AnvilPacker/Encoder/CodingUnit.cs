@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Numerics;
+using AnvilPacker.Level;
 using AnvilPacker.Util;
 
 namespace AnvilPacker.Encoder
@@ -11,12 +12,11 @@ namespace AnvilPacker.Encoder
         public readonly int Size;
 
         /// <summary> 
-        /// The array of blocks in this unit, each entry corresponds to a block state in the region palette. <see cref="RegionSplitter._palette"/> <para/>
+        /// The array of blocks in this unit, each entry corresponds to a index in <see cref="Palette"/>> <para/>
         /// YZX ordered. Helper function <see cref="GetIndex(int, int, int)"/> can be used to the calc index.
         /// </summary>
         public ushort[] Blocks;
-        /// <summary> Used blocks, not an actual palette. </summary>
-        public ushort[] Palette;
+        public BlockState[] Palette;
 
         public CodingUnit(Vec3i pos, int size)
         {

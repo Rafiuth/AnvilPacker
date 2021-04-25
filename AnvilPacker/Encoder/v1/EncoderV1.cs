@@ -21,7 +21,7 @@ namespace AnvilPacker.Encoder.v1
     //Benchmarks:
     //LZMA2: 1594KB, 16^3 chunks, 1 byte per block
     //BZip2: 1537KB, 16^3 chunks, 1 byte per block
-    //APv1:  1393KB, 256^3 chunks, 2^13 contexts
+    //APv1:  1407KB, 256^3 chunks, 2^13 contexts
 
     //This used to encode the palette for each context, but it adds too much overhead.
     //Maybe we could transmit just a subset, but I have no idea how to fill the rest of the contexts.
@@ -34,6 +34,7 @@ namespace AnvilPacker.Encoder.v1
         private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
         
         private RegionSplitter _splitter;
+        private Dictionary<BlockState, int> _regionPalette = new();
         private int _predAccuracySum, _predAccuracyDiv, _unitOverhead, _unitCount;
 
         public EncoderV1(RegionBuffer region)
@@ -56,7 +57,7 @@ namespace AnvilPacker.Encoder.v1
             _logger.Debug($" CuSize: {CU_SIZE} CtxBits: {CTX_BITS} Units: {_unitCount}");
             _logger.Debug($" PredAccuracy: {_predAccuracySum * 100.0 / _predAccuracyDiv:0.0}%");
             _logger.Debug($" BitsPerBlock: {bitsPerBlock:0.000}");
-            _logger.Debug($" Palette: {_splitter.Palette.Count} blocks");
+            _logger.Debug($" Palette: {_regionPalette.Count} blocks");
             _logger.Debug($" Blocks: {(buf.Position - _unitOverhead) / 1024.0:0.000}KB");
             _logger.Debug($" Overhd: {_unitOverhead / 1024.0:0.000}KB");
             _logger.Debug($" Total: {stream.Position / 1024.0:0.000}KB");
@@ -68,6 +69,8 @@ namespace AnvilPacker.Encoder.v1
             var dataBuf = new MemoryDataWriter(1024 * 128);
 
             foreach (var unit in _splitter.StreamUnits()) {
+                MergeUnitPalette(unit.Palette);
+                
                 _logger.Trace($"Encoding unit {unit.Pos} (region {_splitter.Region.X},{_splitter.Region.Z})");
 
                 var contexts = CreateContexts(unit, CTX_BITS);
@@ -78,7 +81,7 @@ namespace AnvilPacker.Encoder.v1
                 };
                 //new Transforms.HiddenBlockRemovalTransform().Apply(_splitter, unit);
                 EncodeBlocks(unit, contexts, neighbors, dataBuf);
-                EncodeUnitHeader(unit, contexts, neighbors, headerBuf);
+                WriteUnitHeader(unit, contexts, neighbors, headerBuf);
 
                 stream.WriteBytes(headerBuf.BufferSpan);
                 stream.WriteBytes(dataBuf.BufferSpan);
@@ -99,22 +102,23 @@ namespace AnvilPacker.Encoder.v1
             }
         }
 
-        private void EncodeUnitHeader(CodingUnit unit, Context[] contexts, Vec3i[] neighbors, DataWriter dw)
+        private void WriteUnitHeader(CodingUnit unit, Context[] contexts, Vec3i[] neighbors, DataWriter dw)
         {
-            dw.WriteVarInt(unit.Pos.X);
-            dw.WriteVarInt(unit.Pos.Y);
-            dw.WriteVarInt(unit.Pos.Z);
+            var unitPos = unit.Pos / CU_SIZE;
+            dw.WriteVarInt(unitPos.X);
+            dw.WriteVarInt(unitPos.Y);
+            dw.WriteVarInt(unitPos.Z);
 
             dw.WriteByte(neighbors.Length);
-            foreach (var pos in neighbors) {
-                int packed = (pos.X & 3) << 0 | // -3..0, two complement
-                             (pos.Y & 7) << 2 | // -4..3
-                             (pos.Z & 3) << 5;  // -3..0, two complement
+            foreach (var (nx, ny, nz) in neighbors) {
+                int packed = (nx & 3) << 0 | // -3..0, two complement
+                             (ny & 7) << 2 | // -4..3
+                             (nz & 3) << 5;  // -3..0, two complement
                 dw.WriteByte(packed);
             }
             dw.WriteVarInt(unit.Palette.Length);
-            foreach (var id in unit.Palette) {
-                dw.WriteVarInt(id);
+            foreach (var block in unit.Palette) {
+                dw.WriteVarInt(_regionPalette[block]);
             }
 
             dw.WriteByte(CTX_BITS);
@@ -160,28 +164,16 @@ namespace AnvilPacker.Encoder.v1
 
             ac.Flush();
         }
-        private Context[] CreateContexts(CodingUnit unit, int bits)
-        {
-            var contexts = new Context[1 << bits];
-            for (int i = 0; i < contexts.Length; i++) {
-                contexts[i] = new Context() {
-                    Palette = unit.Palette.AsSpan().ToArray()
-                };
-            }
-            return contexts;
-        }
-
         private void WriteHeader(DataWriter dw)
         {
             dw.WriteUShort(1); //data version
-            WriteGlobalPalette(dw, _splitter.InvPalette);
+            WriteGlobalPalette(dw, _regionPalette.Keys);
         }
 
-        private void WriteGlobalPalette(DataWriter dw, List<BlockState> palette)
+        private void WriteGlobalPalette(DataWriter dw, ICollection<BlockState> palette)
         {
             dw.WriteVarInt(palette.Count);
-            for (int i = 0; i < palette.Count; i++) {
-                var block = palette[i];
+            foreach (var block in palette) {
                 var name = Encoding.UTF8.GetBytes(block.ToString());
                 dw.WriteVarInt(name.Length);
                 dw.WriteBytes(name);
@@ -189,5 +181,28 @@ namespace AnvilPacker.Encoder.v1
                 dw.WriteVarInt((int)block.Attributes);
             }
         }
+
+        private void MergeUnitPalette(BlockState[] palette)
+        {
+            foreach (var block in palette) {
+                _regionPalette.TryAdd(block, _regionPalette.Count);
+            }
+        }
+        private Context[] CreateContexts(CodingUnit unit, int bits)
+        {
+            var palette = new ushort[unit.Palette.Length];
+            for (int i = 0; i < palette.Length; i++) {
+                palette[i] = (ushort)i;
+            }
+
+            var contexts = new Context[1 << bits];
+            for (int i = 0; i < contexts.Length; i++) {
+                contexts[i] = new Context() {
+                    Palette = palette.AsSpan().ToArray()
+                };
+            }
+            return contexts;
+        }
+
     }
 }

@@ -8,7 +8,7 @@ namespace AnvilPacker.Level
 {
     //TODO: support for external chunks aka '.mcc' files
     //https://minecraft.gamepedia.com/Region_file_format
-    public unsafe class AnvilReader : IDisposable
+    public class AnvilReader : IDisposable
     {
         private readonly StreamDataReader _s;
 

@@ -8,7 +8,7 @@ namespace AnvilPacker.Encoder.Transforms
 {
     public abstract class BlockTransform
     {
-        public abstract void Apply(RegionSplitter splitter, CodingUnit unit);
+        public abstract void Apply(CodingUnit unit);
 
         public static void RegisterTransforms()
         {

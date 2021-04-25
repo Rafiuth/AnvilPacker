@@ -72,7 +72,7 @@ namespace AnvilPacker
             using var encRegion = new StreamDataWriter(File.Create("encoded.bin"));
 
             var sw = Stopwatch.StartNew();
-            var encoder = new Encoder.v1.EncoderV1(region);
+            var encoder = new Encoder.v2.EncoderV2(region);
             
             encoder.Encode(encRegion);
             //Dump(region, "dumped.bin");
@@ -84,13 +84,21 @@ namespace AnvilPacker
         private static void Dump(RegionBuffer buf, string filename)
         {
             var splitter = new RegionSplitter(buf, 16);
+            var globalPalette = new Dictionary<int, byte>();
 
             using var fs = File.Create(filename);
             foreach (var unit in splitter.StreamUnits()) {
-                Debug.Assert(splitter.InvPalette.Count < 256);
+                var palette = unit.Palette;
+                for (int i = 0; i < palette.Length; i++) {
+                    globalPalette.TryAdd(palette[i].Id, (byte)globalPalette.Count);
+                }
+                if (globalPalette.Count > 256) {
+                    throw new InvalidOperationException("Palette won't fit in 8 bits");
+                }
 
                 foreach (var block in unit.Blocks) {
-                    fs.WriteByte((byte)block);
+                    int stateId = palette[block].Id;
+                    fs.WriteByte(globalPalette[stateId]);
                 }
             }
         }

@@ -18,24 +18,19 @@ namespace AnvilPacker.Encoder
         /// <summary> Unit size, in all 3 axis. </summary>
         public readonly int Size;
 
-        public readonly DictionarySlim<int, ushort> Palette = new(512); //block state id -> internal id
-        public readonly List<BlockState> InvPalette = new(512);  //internal id -> block state id
-
         public RegionSplitter(RegionBuffer region, int size)
         {
-            if (!Maths.IsPow2(size)) {
-                throw new ArgumentException("Unit size must be a power of two.");
+            if (size <= 0) {
+                throw new ArgumentException("Unit size must be greater than 0.");
             }
             Region = region;
             Size = size;
-
-            GetPaletteId(BlockState.Air); //force 0th palette entry to be air
         }
 
         public IEnumerable<CodingUnit> StreamUnits()
         {
-            int width = (Region.Width * 16) / Size;
-            int depth = (Region.Depth * 16) / Size;
+            int width = Maths.CeilDiv(Region.Width * 16, Size);
+            int depth = Maths.CeilDiv(Region.Depth * 16, Size);
 
             for (int z = 0; z < depth; z++) {
                 for (int x = 0; x < width; x++) {
@@ -53,8 +48,8 @@ namespace AnvilPacker.Encoder
         {
             int cx1 = ux * Size / 16;
             int cz1 = uz * Size / 16;
-            int cx2 = (ux + 1) * Size / 16;
-            int cz2 = (uz + 1) * Size / 16;
+            int cx2 = Maths.CeilDiv((ux + 1) * Size, 16);
+            int cz2 = Maths.CeilDiv((uz + 1) * Size, 16);
 
             int minY = 1024, maxY = -1024;
             for (int z = cz1; z < cz2; z++) {
@@ -78,7 +73,7 @@ namespace AnvilPacker.Encoder
         public CodingUnit CreateUnit(Vec3i pos)
         {
             var unit = new CodingUnit(pos, Size);
-            var palette = new DictionarySlim<ushort, int>();
+            var palette = new Palette();
 
             foreach (var chunk in Region.GetChunks(pos, pos + Size)) {
 
@@ -86,48 +81,65 @@ namespace AnvilPacker.Encoder
                     for (int z = chunk.Z0; z < chunk.Z1; z++) {
                         for (int x = chunk.X0; x < chunk.X1; x++) {
                             var block = chunk.GetBlock(x, y, z);
-                            ushort id = GetPaletteId(block);
+                            ushort id = palette.Get(block);
 
                             unit.SetBlock(x - pos.X, y - pos.Y, z - pos.Z, id);
-                            palette.GetOrAddValueRef(id)++;
                         }
                     }
                 }
             }
 
-            if (palette.Count == 0) {
+            if (palette.IsEmptyOrAllAir()) {
                 return null;
             }
-            if (palette.Count == 1) {
-                var type = palette.First().Key;
-                if (GetPaletteState(type).Material == BlockMaterial.Air) {
-                    return null;
-                }
-            }
-            //ordering by frequency helps the MTF a bit
-            unit.Palette = palette.OrderByDescending(v => v.Value).Select(v => v.Key).ToArray();
+            unit.Palette = palette.ToArray();
             
             return unit;
         }
 
-        /// <summary> Gets or adds a block to the palette. </summary>
-        public ushort GetPaletteId(BlockState block)
+
+        private class Palette
         {
-            if (Palette.TryGetValue(block.Id, out ushort id)) {
+            private DictionarySlim<int, ushort> _entries = new(256);
+            private int[] _freqs = new int[256];
+
+            public ushort Get(BlockState block)
+            {
+                if (_entries.TryGetValue(block.Id, out ushort id)) {
+                    _freqs[id]++;
+                    return id;
+                }
+                if (_entries.Count > MAX_PALETTE_ID) {
+                    //unrealistic for now, vanilla 1.16 have ~18K block states.
+                    throw new NotSupportedException("Unit palette cannot have more than 64K entries.");
+                }
+                id = (ushort)_entries.Count;
+                _entries.GetOrAddValueRef(block.Id) = id;
+                if (_freqs.Length < _entries.Count) {
+                    Array.Resize(ref _freqs, _entries.Count * 2);
+                }
                 return id;
             }
-            if (InvPalette.Count > MAX_PALETTE_ID) {
-                //unrealistic for now, vanilla 1.16 contains ~18K block states.
-                throw new NotSupportedException("Region palette cannot have more than 64K entries.");
+
+            public BlockState[] ToArray()
+            {
+                return _entries.OrderByDescending(v => _freqs[v.Value])
+                               .Select(v => Block.StateRegistry[v.Key])
+                               .ToArray();
             }
-            id = (ushort)InvPalette.Count;
-            InvPalette.Add(block);
-            Palette.GetOrAddValueRef(block.Id) = id;
-            return id;
-        }
-        public BlockState GetPaletteState(ushort id)
-        {
-            return InvPalette[id];
+
+            public bool IsEmptyOrAllAir()
+            {
+                if (_entries.Count == 0) {
+                    return true;
+                }
+                if (_entries.Count == 1) {
+                    var stateId = _entries.First().Key;
+                    var state = Block.StateRegistry[stateId];
+                    return state.Material == BlockMaterial.Air;
+                }
+                return false;
+            }
         }
     }
 }

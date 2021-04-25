@@ -42,14 +42,14 @@ namespace AnvilPacker.Encoder.Transforms
             new(0, 0, +1),
         };
 
-        public override void Apply(RegionSplitter splitter, CodingUnit unit)
+        public override void Apply(CodingUnit unit)
         {
             int size = unit.Size;
             Debug.Assert(Maths.IsPow2(size)); //because our (uint)+OR bounds check below
 
-            var palette = splitter.InvPalette;
+            var palette = unit.Palette;
             var isOpaque = BuildOpaquenessTable(palette);
-            var freqs = new int[palette.Count];
+            var freqs = new int[palette.Length];
             ushort mostFrequent = 0;
 
             var neighbors = GetNeighbors();
@@ -106,10 +106,10 @@ namespace AnvilPacker.Encoder.Transforms
             }
         }
 
-        private static bool[] BuildOpaquenessTable(List<BlockState> palette)
+        private static bool[] BuildOpaquenessTable(BlockState[] palette)
         {
-            var isOpaque = new bool[palette.Count];
-            for (int i = 0; i < palette.Count; i++) {
+            var isOpaque = new bool[palette.Length];
+            for (int i = 0; i < palette.Length; i++) {
                 //Attributes required to be true
                 const BlockAttributes AttrMaskT = BlockAttributes.OpaqueFullCube;
                 //Attributes required to be false
@@ -136,6 +136,7 @@ namespace AnvilPacker.Encoder.Transforms
             }
             var rng = new Random(12345);
             points.Shuffle(rng.Next);
+            //TODO: ensure points are at least some distance appart each other (poisson sampling)
             return points.Except(SelfAndImmediateNeighbors)
                          .Take(Samples)
                          .OrderBy(v => (v.X + r) + (v.Y + r) * rs + (v.Z + r) * (rs * rs)) //improve cache coherency

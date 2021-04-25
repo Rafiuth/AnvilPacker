@@ -33,6 +33,9 @@ namespace AnvilPacker.Encoder
         }
         public void SetChunk(int x, int z, ChunkBase chunk)
         {
+            if ((uint)x >= (uint)Width || (uint)z >= (uint)Depth) {
+                throw new ArgumentOutOfRangeException();
+            }
             Chunks[x + z * Width] = chunk;
         }
 
