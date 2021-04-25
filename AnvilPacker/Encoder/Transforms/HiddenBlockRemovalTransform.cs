@@ -23,6 +23,28 @@ namespace AnvilPacker.Encoder.Transforms
         public int Radius = 2;
         /// <summary> Don't clear frequency table for each block. If enabled, fewer samples can be used. Generally improves compression. </summary>
         public bool CummulativeFreqs = true;
+        /// <summary> If not null, specifies which blocks can be replaced. </summary>
+        public HashSet<BlockState> Whitelist;
+
+        public HiddenBlockRemovalTransform()
+        {
+            string[] names = {
+                "granite", "polished_granite", "diorite", "polished_diorite", "andesite", 
+                "polished_andesite", "bedrock", "gravel", "gold_ore", "iron_ore", "coal_ore", 
+                "nether_gold_ore", "redstone_ore", "lapis_ore", "diamond_ore", "emerald_ore", 
+                "nether_quartz_ore",
+                //this will destroy near surface noisy patterns, but greatly improve compression (1500KB -> 517KB)
+                //(seems that omitting stone and only keeping the blocks above will increase file size, bug?)
+                "stone", "dirt", "sand", "sandstone"
+            };
+            Whitelist = new();
+            foreach (var name in names) {
+                var block = Block.Registry[name];
+                for (int i = block.MinStateId; i <= block.MaxStateId; i++) {
+                    Whitelist.Add(Block.StateRegistry[i]);
+                }
+            }
+        }
 
         // S | R | Cum | File Size | time
         //    off      | 1074.439KB| 3s
@@ -54,7 +76,7 @@ namespace AnvilPacker.Encoder.Transforms
 
             var neighbors = GetNeighbors();
 
-            int simplifiedCount = 0;
+            int numChanges = 0;
             //exclude borders because we only ever know one unit.
             for (int y = 1; y < size - 1; y++) {
                 for (int z = 1; z < size - 1; z++) {
@@ -74,15 +96,15 @@ namespace AnvilPacker.Encoder.Transforms
 
                             UpdateFreq(unit.GetBlock(nx, ny, nz));
                         }
-                        if (freqs[mostFrequent] >= 2 && mostFrequent != unit.GetBlock(x, y, z)) {
+                        if (mostFrequent != unit.GetBlock(x, y, z)) {
                             unit.SetBlock(x, y, z, mostFrequent);
-                            simplifiedCount++;
+                            numChanges++;
                         }
                     }
                 }
                 freqs.Clear(); //forget old freqs when CummulativeFreqs == true
             }
-            _logger.Debug($"Removed {simplifiedCount} hidden blocks. ({simplifiedCount * 100L / (size * size * size)}%) blocks.");
+            _logger.Debug($"Removed {numChanges} hidden blocks. ({numChanges * 100L / (size * size * size)}%) blocks.");
 
             //Check if the block is surrounded by opaque blocks
             bool IsHidden(int x, int y, int z)
@@ -106,7 +128,7 @@ namespace AnvilPacker.Encoder.Transforms
             }
         }
 
-        private static bool[] BuildOpaquenessTable(BlockState[] palette)
+        private bool[] BuildOpaquenessTable(BlockState[] palette)
         {
             var isOpaque = new bool[palette.Length];
             for (int i = 0; i < palette.Length; i++) {
@@ -117,6 +139,10 @@ namespace AnvilPacker.Encoder.Transforms
 
                 var attrs = palette[i].Attributes;
                 isOpaque[i] = (attrs & (AttrMaskT | AttrMaskF)) == AttrMaskT;
+
+                if (Whitelist != null && !Whitelist.Contains(palette[i])) {
+                    isOpaque[i] = false;
+                }
             }
             return isOpaque;
         }

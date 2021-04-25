@@ -9,6 +9,7 @@ using System.Text;
 using AnvilPacker.Data;
 using AnvilPacker.Data.Entropy;
 using AnvilPacker.Encoder;
+using AnvilPacker.Encoder.Transforms;
 using AnvilPacker.Level;
 using AnvilPacker.Util;
 using CommandLine;
@@ -32,7 +33,7 @@ namespace AnvilPacker
         {
             var config = new NLog.Config.LoggingConfiguration();
             var consoleTarget = new NLog.Targets.ConsoleTarget("console");
-            consoleTarget.Layout = "[${time} ${level:uppercase=true}] ${logger:shortName=true}: ${replace-newlines:replacement=\n:${message}} ${exception:format=toString}";
+            consoleTarget.Layout = "[${level:uppercase=true} ${logger:shortName=true}] ${replace-newlines:replacement=\n:${message}} ${exception:format=toString}";
             config.AddRule(LogLevel.Trace, LogLevel.Fatal, consoleTarget);
             NLog.LogManager.Configuration = config;
 
@@ -43,8 +44,8 @@ namespace AnvilPacker
 
             var reader = new AnvilReader(file);
 
-            var serializer = new Level.Versions.v1_16_1.ChunkSerializer();
-            var region = new RegionBuffer(32, 32);
+            var serializer = new Level.Versions.v1_16.ChunkSerializer();
+            var region = new RegionBuffer();
             var rng = new Random(4567);
 
             for (int z = 0; z < 32; z++) {
@@ -69,10 +70,10 @@ namespace AnvilPacker
                     }
                 }
             }
-            using var encRegion = new StreamDataWriter(File.Create("encoded.bin"));
+            using var encRegion = new DataWriter(File.Create("encoded.bin"));
 
             var sw = Stopwatch.StartNew();
-            var encoder = new Encoder.v2.EncoderV2(region);
+            var encoder = new Encoder.v1.EncoderV1(region);
             
             encoder.Encode(encRegion);
             //Dump(region, "dumped.bin");
@@ -114,6 +115,10 @@ namespace AnvilPacker
 
             var palette = new Dictionary<int, int>();
 
+            ApplyTransforms(buf,
+                new Encoder.Transforms.HiddenBlockRemovalTransform()
+            );
+
             for (int y = 0; y < 256; y++) {
                 for (int z = 0; z < 512; z++) {
                     for (int x = 0; x < 512; x++) {
@@ -137,6 +142,31 @@ namespace AnvilPacker
                     }
                 }
                 File.WriteAllBytes($"{path}/{y}.ppm", data);
+            }
+        }
+
+        private static void ApplyTransforms(RegionBuffer buf, params BlockTransform[] transforms)
+        {
+            var splitter = new RegionSplitter(buf, 128);
+            foreach (var unit in splitter.StreamUnits()) {
+                foreach (var transform in transforms) {
+                    transform.Apply(unit);
+                }
+                for (int y = 0; y < unit.Size; y++) {
+                    for (int z = 0; z < unit.Size; z++) {
+                        for (int x = 0; x < unit.Size; x++) {
+                            var chunk = buf.GetChunk((x + unit.Pos.X) >> 4, (z + unit.Pos.Z) >> 4);
+                            var section = chunk?.GetSection((unit.Pos.Y + y) >> 4);
+                            //we don't want to use chunk.SetBlock() directly because when a 
+                            //new section is created, it won't be filled with air but instead 
+                            //the first block set (because storage is filled with 0s and palette[0] != air)
+                            if (section != null) {
+                                var block = unit.Palette[unit.GetBlock(x, y, z)];
+                                section.SetBlock(x & 15, (unit.Pos.Y + y) & 15, z & 15, block);
+                            }
+                        }
+                    }
+                }
             }
         }
     }

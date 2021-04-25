@@ -4,8 +4,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using AnvilPacker.Data;
+using AnvilPacker.Util;
+using NLog;
 
-namespace AnvilPacker.Level.Serializer
+namespace AnvilPacker.Level
 {
     public interface IChunkSerializer
     {

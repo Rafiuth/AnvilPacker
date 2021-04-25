@@ -63,7 +63,9 @@ namespace AnvilPacker.Level
 
             if (Properties.Count > 0) {
                 sb.Append('[');
+                int i = 0;
                 foreach (var (k, v) in Properties) {
+                    sb.Append(i++ == 0 ? "" : ",");
                     sb.Append(k);
                     sb.Append('=');
                     sb.Append(v.GetValue());

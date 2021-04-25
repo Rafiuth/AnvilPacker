@@ -2,7 +2,7 @@
 using AnvilPacker.Data;
 using AnvilPacker.Util;
 
-namespace AnvilPacker.Level.Versions.v1_16_1
+namespace AnvilPacker.Level.Versions.v1_16
 {
     public class Chunk : ChunkBase
     {
@@ -13,18 +13,20 @@ namespace AnvilPacker.Level.Versions.v1_16_1
 
         protected override ChunkSectionBase CreateSection()
         {
-            throw new NotImplementedException();
+            var section = new ChunkSection();
+            section.Palette.Add(BlockState.Air);
+            return section;
         }
     }
     public class ChunkSection : ChunkSectionBase
     {
         public SparseBitStorage BlockData { get; private set; }
-        public BlockPalette Palette{ get; private set; }
+        public BlockPalette Palette { get; private set; }
 
-        public ChunkSection(BlockPalette palette, int bits)
+        public ChunkSection()
         {
-            Palette = palette;
-            BlockData = new SparseBitStorage(4096, bits);
+            Palette = new BlockPalette(16);
+            BlockData = new SparseBitStorage(4096, 4);
         }
         public ChunkSection(BlockPalette palette, long[] blockData)
         {
@@ -53,7 +55,7 @@ namespace AnvilPacker.Level.Versions.v1_16_1
 
         private void AddPaletteEntry(BlockState state)
         {
-            int bits = Math.Max(4, Maths.CeilLog2(Palette.Count + 1));
+            int bits = GetPaletteBits(Palette.Count + 1);
             if (BlockData.BitsPerElement != bits) {
                 var newPalette = new BlockPalette(1 << bits);
                 var newData = new SparseBitStorage(4096, bits);

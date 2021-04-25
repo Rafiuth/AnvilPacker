@@ -12,70 +12,58 @@ namespace AnvilPacker.Encoder
     public class RegionSplitter
     {
         public const ushort MAX_PALETTE_ID = ushort.MaxValue - 1; //65535 is reserved
+        public const int MIN_UNIT_SIZE = 16;
 
         public readonly RegionBuffer Region;
 
-        /// <summary> Unit size, in all 3 axis. </summary>
-        public readonly int Size;
+        /// <summary> Max unit size, in block steps. </summary>
+        public readonly int MaxSize;
+        /// <summary> Whether to try minimize unit sizes. </summary>
+        public readonly bool SubDivide;
 
-        public RegionSplitter(RegionBuffer region, int size)
+        public RegionSplitter(RegionBuffer region, int maxSize, bool subDivide = false)
         {
-            if (size <= 0) {
-                throw new ArgumentException("Unit size must be greater than 0.");
-            }
+            Ensure.That(maxSize >= MIN_UNIT_SIZE && Maths.IsPow2(maxSize), $"Max unit size must be >= {MIN_UNIT_SIZE} and a power of two.");
             Region = region;
-            Size = size;
+            MaxSize = maxSize;
+            SubDivide = subDivide;
         }
 
         public IEnumerable<CodingUnit> StreamUnits()
         {
-            int width = Maths.CeilDiv(Region.Width * 16, Size);
-            int depth = Maths.CeilDiv(Region.Depth * 16, Size);
+            int regionSize = Region.Size;
+            int step = MaxSize / 16;
+            Ensure.That(step > 0, "MaxSize must be smaller than the region size.");
 
-            for (int z = 0; z < depth; z++) {
-                for (int x = 0; x < width; x++) {
-                    var (minY, maxY) = GetChunkYBounds(x, z);
-                    for (int y = minY; y < maxY; y++) {
-                        var unit = CreateUnit(new Vec3i(x, y, z) * Size);
-                        if (unit != null) {
+            for (int z = 0; z < regionSize; z += step) {
+                for (int x = 0; x < regionSize; x += step) {
+                    var (y1, y2) = GetChunkYExtents(x, z, x + step, z + step);
+
+                    for (int y = y1; y < y2; y += step) {
+                        var unit = CreateUnit(new Vec3i(x, y, z) * 16, MaxSize);
+
+                        if (unit != null && SubDivide) {
+                            foreach (var subunit in SubDivideUnit(unit)) {
+                                yield return subunit;
+                            }
+                        } else if (unit != null) {
                             yield return unit;
                         }
                     }
                 }
             }
         }
-        private (int Min, int Max) GetChunkYBounds(int ux, int uz)
+        private IEnumerable<CodingUnit> SubDivideUnit(CodingUnit unit)
         {
-            int cx1 = ux * Size / 16;
-            int cz1 = uz * Size / 16;
-            int cx2 = Maths.CeilDiv((ux + 1) * Size, 16);
-            int cz2 = Maths.CeilDiv((uz + 1) * Size, 16);
-
-            int minY = 1024, maxY = -1024;
-            for (int z = cz1; z < cz2; z++) {
-                for (int x = cx1; x < cx2; x++) {
-                    var chunk = Region.GetChunk(x, z);
-                    if (chunk == null) continue;
-
-                    for (int i = 0; i < chunk.Sections.Length; i++) {
-                        if (chunk.Sections[i] != null) {
-                            minY = Math.Min(minY, i);
-                            maxY = Math.Max(maxY, i);
-                        }
-                    }
-                }
-            }
-            minY = minY * 16 / Size;
-            maxY = Maths.CeilDiv((maxY + 1) * 16, Size);
-            return (minY, maxY);
+            throw new NotImplementedException();
         }
 
-        public CodingUnit CreateUnit(Vec3i pos)
+        public CodingUnit CreateUnit(Vec3i pos, int size)
         {
-            var unit = new CodingUnit(pos, Size);
+            var unit = new CodingUnit(pos, size);
             var palette = new Palette();
 
-            foreach (var chunk in Region.GetChunks(pos, pos + Size)) {
+            foreach (var chunk in Region.GetChunks(pos, pos + size)) {
 
                 for (int y = chunk.Y0; y < chunk.Y1; y++) {
                     for (int z = chunk.Z0; z < chunk.Z1; z++) {
@@ -93,37 +81,50 @@ namespace AnvilPacker.Encoder
                 return null;
             }
             unit.Palette = palette.ToArray();
-            
+
             return unit;
         }
+        private (int Min, int Max) GetChunkYExtents(int x1, int z1, int x2, int z2)
+        {
+            int y1 = int.MaxValue, y2 = int.MinValue;
 
+            for (int z = z1; z < z2; z++) {
+                for (int x = x1; x < x2; x++) {
+                    var chunk = Region.GetChunk(x, z);
+                    if (chunk == null) continue;
+
+                    for (int y = chunk.MinSectionY; y < chunk.MaxSectionY; y++) {
+                        if (chunk.GetSection(y) != null) {
+                            y1 = Math.Min(y1, y);
+                            y2 = Math.Max(y2, y);
+                        }
+                    }
+                }
+            }
+            return (y1, y2 + 1);
+        }
 
         private class Palette
         {
             private DictionarySlim<int, ushort> _entries = new(256);
-            private int[] _freqs = new int[256];
 
             public ushort Get(BlockState block)
             {
                 if (_entries.TryGetValue(block.Id, out ushort id)) {
-                    _freqs[id]++;
                     return id;
                 }
-                if (_entries.Count > MAX_PALETTE_ID) {
-                    //unrealistic for now, vanilla 1.16 have ~18K block states.
-                    throw new NotSupportedException("Unit palette cannot have more than 64K entries.");
-                }
+                Ensure.That(_entries.Count <= MAX_PALETTE_ID, "Unit palette cannot have more than 64K entries.");
+                
                 id = (ushort)_entries.Count;
                 _entries.GetOrAddValueRef(block.Id) = id;
-                if (_freqs.Length < _entries.Count) {
-                    Array.Resize(ref _freqs, _entries.Count * 2);
-                }
+
                 return id;
             }
 
             public BlockState[] ToArray()
             {
-                return _entries.OrderByDescending(v => _freqs[v.Value])
+                //TODO: ordering by frequency requires reindexing the block array
+                return _entries.OrderBy(v => v.Value)
                                .Select(v => Block.StateRegistry[v.Key])
                                .ToArray();
             }

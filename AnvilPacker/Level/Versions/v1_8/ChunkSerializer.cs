@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using AnvilPacker.Data;
-using AnvilPacker.Level.Serializer;
+using AnvilPacker.Level;
 using NLog;
 using static AnvilPacker.Util.Maths;
 

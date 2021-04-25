@@ -27,10 +27,15 @@ namespace AnvilPacker.Level
         /// <summary> Data that the encoder doesn't know how to process. Contents are left unmodified. </summary>
         public CompoundTag? OpaqueData;
 
+        /// <summary> Section Y extents, in chunk coordinates (blockPos / 16). Max is exclusive. </summary>
+        public readonly int MinSectionY, MaxSectionY;
+
         public ChunkBase(int x, int z)
         {
             X = x;
             Z = z;
+            MinSectionY = 0;
+            MaxSectionY = 16;
         }
 
         /// <param name="y">Section Y coord (blockY >> 4)</param>

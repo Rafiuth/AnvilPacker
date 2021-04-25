@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using AnvilPacker.Data;
-using AnvilPacker.Level.Serializer;
 
-namespace AnvilPacker.Level.Versions.v1_16_1
+namespace AnvilPacker.Level.Versions.v1_16
 {
-    //DataVersion=2578
     public class ChunkSerializer : IChunkSerializer
     {
         public ChunkBase CreateChunk(int x, int z)

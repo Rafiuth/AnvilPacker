@@ -17,29 +17,26 @@ using NLog;
 namespace AnvilPacker.Encoder.v1
 {
     //Version 1 uses a fixed size context table. The context is selected based on a hash
-    //generated using neighbor blocks. Move-To-Front transform is used along arithmetic coding.
+    //generated using neighbor blocks. Blocks are Move-to-Front transformed on the context palette then encoded using arithmetic coding.
     //Benchmarks:
     //LZMA2: 1594KB, 16^3 chunks, 1 byte per block
     //BZip2: 1537KB, 16^3 chunks, 1 byte per block
     //APv1:  1407KB, 256^3 chunks, 2^13 contexts
-
-    //This used to encode the palette for each context, but it adds too much overhead.
-    //Maybe we could transmit just a subset, but I have no idea how to fill the rest of the contexts.
-    //A O(n^3) loop would be simply too slow for big palettes.
+    //paq8:  1225KB, 16^3 chunks, 1 byte per block (very slow, -5 took ~20min)
     public class EncoderV1
     {
-        public const int CU_SIZE = 256; //must be a power of 2
+        public const int MAX_CU_SIZE = 256; //must be a power of 2
         public const int CTX_BITS = 13;
 
         private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
         
         private RegionSplitter _splitter;
         private Dictionary<BlockState, int> _regionPalette = new();
-        private int _predAccuracySum, _predAccuracyDiv, _unitOverhead, _unitCount;
+        private int _predAccuracySum, _predAccuracyDiv, _unitOverhead, _blockCount;
 
         public EncoderV1(RegionBuffer region)
         {
-            _splitter = new RegionSplitter(region, CU_SIZE);
+            _splitter = new RegionSplitter(region, MAX_CU_SIZE);
         }
 
         public void Encode(DataWriter stream)
@@ -50,11 +47,10 @@ namespace AnvilPacker.Encoder.v1
             WriteHeader(stream);
             stream.WriteBytes(buf.BufferSpan);
 
-            long totalBlocks = (CU_SIZE * CU_SIZE * CU_SIZE) * (long)_unitCount;
-            double bitsPerBlock = (buf.Position - _unitOverhead) * 8.0 / totalBlocks;
+            double bitsPerBlock = (buf.Position - _unitOverhead) * 8.0 / _blockCount;
 
             _logger.Debug($"Stats for region {_splitter.Region.X},{_splitter.Region.Z}");
-            _logger.Debug($" CuSize: {CU_SIZE} CtxBits: {CTX_BITS} Units: {_unitCount}");
+            _logger.Debug($" CtxBits: {CTX_BITS}");
             _logger.Debug($" PredAccuracy: {_predAccuracySum * 100.0 / _predAccuracyDiv:0.0}%");
             _logger.Debug($" BitsPerBlock: {bitsPerBlock:0.000}");
             _logger.Debug($" Palette: {_regionPalette.Count} blocks");
@@ -68,18 +64,20 @@ namespace AnvilPacker.Encoder.v1
             var headerBuf = new MemoryDataWriter(1024 * 32);
             var dataBuf = new MemoryDataWriter(1024 * 128);
 
+            var contexts = new Context[1 << CTX_BITS];
             foreach (var unit in _splitter.StreamUnits()) {
                 MergeUnitPalette(unit.Palette);
                 
                 _logger.Trace($"Encoding unit {unit.Pos} (region {_splitter.Region.X},{_splitter.Region.Z})");
 
-                var contexts = CreateContexts(unit, CTX_BITS);
+                //new Transforms.HiddenBlockRemovalTransform().Apply(unit);
+
+                ResizePalettes(contexts, unit);
                 Vec3i[] neighbors = {
                     new(-1, 0, 0),
                     new(0, -1, 0),
                     new(0, 0, -1),
                 };
-                //new Transforms.HiddenBlockRemovalTransform().Apply(_splitter, unit);
                 EncodeBlocks(unit, contexts, neighbors, dataBuf);
                 WriteUnitHeader(unit, contexts, neighbors, headerBuf);
 
@@ -90,7 +88,7 @@ namespace AnvilPacker.Encoder.v1
                 headerBuf.Clear();
                 dataBuf.Clear();
 
-                _unitCount++;
+                _blockCount += unit.Size * unit.Size * unit.Size;
 
                 /*if (false) {
                     int rw = _splitter.Region.Width * 16;
@@ -104,10 +102,11 @@ namespace AnvilPacker.Encoder.v1
 
         private void WriteUnitHeader(CodingUnit unit, Context[] contexts, Vec3i[] neighbors, DataWriter dw)
         {
-            var unitPos = unit.Pos / CU_SIZE;
-            dw.WriteVarInt(unitPos.X);
-            dw.WriteVarInt(unitPos.Y);
-            dw.WriteVarInt(unitPos.Z);
+            var (ux, uy, uz) = unit.Pos;
+            dw.WriteVarInt(ux);
+            dw.WriteVarInt(uy);
+            dw.WriteVarInt(uz);
+            dw.WriteVarInt(Maths.Log2(unit.Size));
 
             dw.WriteByte(neighbors.Length);
             foreach (var (nx, ny, nz) in neighbors) {
@@ -130,7 +129,6 @@ namespace AnvilPacker.Encoder.v1
 
             var ac = new ArithmEncoder(dw);
             int size = unit.Size;
-            var blocks = unit.Blocks;
 
             for (int y = 0; y < size; y++) {
                 for (int z = 0; z < size; z++) {
@@ -144,14 +142,12 @@ namespace AnvilPacker.Encoder.v1
                             int nz = z + rel.Z;
 
                             if ((uint)(nx | ny | nz) < (uint)size) {
-                                key.s[i] = blocks[unit.GetIndex(nx, ny, nz)];
+                                key.s[i] = unit.GetBlock(nx, ny, nz);
                             }
                         }
-                        int slot = key.GetSlot(CTX_BITS);
-                        var ctx = contexts[slot];
+                        var ctx = contexts[key.GetSlot(CTX_BITS)];
 
-                        int idx = unit.GetIndex(x, y, z);
-                        var id = blocks[idx];
+                        var id = unit.GetBlock(x, y, z);
 
                         int delta = ctx.PredictForward(id);
                         ctx.Nz.Write(ac, delta, 0, ctx.Palette.Length - 1);
@@ -166,7 +162,7 @@ namespace AnvilPacker.Encoder.v1
         }
         private void WriteHeader(DataWriter dw)
         {
-            dw.WriteUShort(1); //data version
+            dw.WriteUShortBE(1); //data version
             WriteGlobalPalette(dw, _regionPalette.Keys);
         }
 
@@ -188,20 +184,22 @@ namespace AnvilPacker.Encoder.v1
                 _regionPalette.TryAdd(block, _regionPalette.Count);
             }
         }
-        private Context[] CreateContexts(CodingUnit unit, int bits)
+        private void ResizePalettes(Context[] contexts, CodingUnit unit)
         {
-            var palette = new ushort[unit.Palette.Length];
-            for (int i = 0; i < palette.Length; i++) {
-                palette[i] = (ushort)i;
-            }
-
-            var contexts = new Context[1 << bits];
             for (int i = 0; i < contexts.Length; i++) {
-                contexts[i] = new Context() {
-                    Palette = palette.AsSpan().ToArray()
-                };
+                var ctx = contexts[i] ??= new Context();
+                
+                ctx.Palette ??= Array.Empty<ushort>();
+                
+                int oldLen = ctx.Palette.Length;
+                int newLen = unit.Palette.Length;
+                if (oldLen < newLen) {
+                    Array.Resize(ref ctx.Palette, newLen);
+                    for (int j = oldLen; j < newLen; j++) {
+                        ctx.Palette[j] = (ushort)j;
+                    }
+                }
             }
-            return contexts;
         }
 
     }

@@ -26,5 +26,29 @@ namespace AnvilPacker.Util
                 list[j] = tmp;
             }
         }
+
+        public static int BinarySearch<T>(this IList<T> list, Func<T, int, int> compare)
+        {
+            return BinarySearch(list, 0, list.Count, compare);
+        }
+        public static int BinarySearch<T>(this IList<T> list, int start, int count, Func<T, int, int> compare)
+        {
+            if (start < 0 || count < 0 || start + count > list.Count) {
+                throw new ArgumentOutOfRangeException();
+            }
+            int end = start + count - 1;
+            while (start <= end) {
+                int mid = start + (end - start) / 2;
+                int c = compare(list[mid], mid);
+                if (c < 0) {
+                    end = mid - 1;
+                } else if (c > 0) {
+                    start = mid + 1;
+                } else {
+                    return mid;
+                }
+            }
+            return ~start;
+        }
     }
 }
