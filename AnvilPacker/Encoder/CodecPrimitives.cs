@@ -68,7 +68,7 @@ namespace AnvilPacker.Encoder
         }
         public static int VarIntSize(ushort val) => VarIntSize((int)val);
 
-        public static void RunLengthEncode(int length, Func<int, int, bool> compare, Action<int> writeLiteral, Action<int, int> writeRunLen)
+        public static void RunLengthEncode(int length, Func<int, int, bool> compare, Action<int> writeLiteral, Action<int> writeRunLen)
         {
             int literals = 0;
             int i = 0;
@@ -103,7 +103,7 @@ namespace AnvilPacker.Encoder
                     writeLiteral(start + i);
                 }
                 if (!isLiteral) {
-                    writeRunLen(start, count - 2);
+                    writeRunLen(count - 2);
                 }
             }
         }
@@ -128,7 +128,7 @@ namespace AnvilPacker.Encoder
             }
         }
     }
-
+    //Note: stolen from FLIF's symbol.hpp
     public class NzContext
     {
         private const int bits = 16; //max value bits
@@ -138,30 +138,19 @@ namespace AnvilPacker.Encoder
         public BitChance[] Exp = new BitChance[(bits - 1) * 2];
         public BitChance[] Mant = new BitChance[bits];
 
-        private static readonly ushort[] DefaultExpChances = new ushort[16] {
-            1000, 1200, 1500, 1750, 2000, 2300, 2800, 2400, 
-            2300, 2048, 2048, 2048, 2048, 2048, 2048, 2048,
-        };
-        private static readonly ushort[] DefaultMantChances = new ushort[16] {
-            1900, 1850, 1800, 1750, 1650, 1600, 1600, 2048, 
-            2048, 2048, 2048, 2048, 2048, 2048, 2048, 2048,
-        };
-
+        /// <summary> Creates a new nz context and initializes all bit chances to 50%.</summary>
         public NzContext()
         {
-            static BitChance R(int x)
-            {
-                return new BitChance(x * K / 4096);
-            }
-            Zero = R(1000);
-            Sign = R(2048);
+            static BitChance Dp() => new BitChance(0.5);
+            Zero = Dp();
+            Sign = Dp();
 
             for (int i = 0; i < bits - 1; i++) {
-                Exp[i * 2 + 0] = R(DefaultExpChances[i]);
-                Exp[i * 2 + 1] = R(DefaultExpChances[i]);
+                Exp[i * 2 + 0] = Dp();
+                Exp[i * 2 + 1] = Dp();
             }
             for (int i = 0; i < bits; i++) {
-                Mant[i] = R(DefaultMantChances[i]);
+                Mant[i] = Dp();
             }
         }
 
@@ -287,16 +276,19 @@ namespace AnvilPacker.Encoder
     public struct BitChance
     {
         public ushort Value;
+        public ushort Count;
 
         public BitChance(int value)
         {
             Debug.Assert(value is >= 0 and < K);
             Value = (ushort)value;
+            Count = 0;
         }
         public BitChance(double value)
         {
-            Debug.Assert(value is >= 0 and < 1.0);
-            Value = (ushort)(value * K + 0.5);
+            Debug.Assert(value is >= 0 and <= 1.0);
+            Value = (ushort)(value * K);
+            Count = 0;
         }
 
         public void Write(ArithmEncoder ac, bool bit)
@@ -317,18 +309,14 @@ namespace AnvilPacker.Encoder
 
         public void Update(bool bit)
         {
-            Value = (ushort)Adapt(bit, Value, 1.0 / 64);
-        }
-        //https://fgiesen.wordpress.com/2015/05/26/models-for-adaptive-arithmetic-coding/
-        private static int Adapt(bool bit, int prob, double factor)
-        {
-            if (bit) {
-                return Maths.Max(1, (int)(prob * (1 - factor)));
-            } else {
-                return Maths.Min(K - 1, (int)(prob * (1 - factor) + factor * K));
-            }
-        }
+            const int DELTA = 3;
+            const int LIMIT = 29;
 
+            if (Count < LIMIT) Count++;
+
+            int n = bit ? 0 : K;
+            Value += (ushort)((n - Value) / (Count + DELTA));
+        }
         //private static readonly double[] AdaptRates = { 0.005, 0.015, 0.025, 0.05 };
 
         //public void Update(bool bit)

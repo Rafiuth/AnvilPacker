@@ -8,6 +8,7 @@ using System.Text;
 
 namespace AnvilPacker.Data
 {
+    //Note: all tags must have a public constructor that takes no arguments.
     public abstract class NbtTag
     {
         public abstract TagType Type { get; }
@@ -167,8 +168,8 @@ namespace AnvilPacker.Data
         public int Count => _tags.Count;
         public override NbtTag this[string name]
         {
-            set => _tags[name] = value;
-            get => _tags.TryGetValue(name, out NbtTag tag) ? tag : null;
+            get => Get<NbtTag>(name, TagGetMode.Throw);
+            set => Set(name, value);
         }
 
         public CompoundTag()
@@ -180,77 +181,51 @@ namespace AnvilPacker.Data
             _tags = new(tags);
         }
 
-        public bool ContainsKey(string key) => _tags.ContainsKey(key);
-        public bool ContainsKey(string key, TagType type) => TryGetTag(key, out var tag) && tag.Type == type;
-
-        public bool TryGetTag(string name, out NbtTag tag)
+        /// <summary> Tries to gets a tag, or the value of a primitive tag. </summary>
+        /// <returns> Whether the operation was successfull. </returns>
+        public bool TryGet<T>(string name, out T value)
         {
-            return _tags.TryGetValue(name, out tag);
-        }
-        public bool TryGetTag<TTag>(string name, out TTag tag) where TTag : NbtTag
-        {
-            if (_tags.TryGetValue(name, out var btag) && btag is TTag) {
-                tag = (TTag)btag;
-                return true;
+            if (_tags.TryGetValue(name, out NbtTag tag)) {
+                if (typeof(NbtTag).IsAssignableFrom(typeof(T))) {
+                    value = (T)(object)tag;
+                    return true;
+                }
+                if (tag is PrimitiveTag prim) {
+                    value = prim.Value<T>();
+                    return true;
+                }
             }
-            tag = default;
+            value = default;
             return false;
         }
-        public bool Remove(string name)
+        /// <summary>  Gets a tag, or the value of a primitive tag. </summary>
+        /// <param name="mode">The action to take if the tag doesn't exist. </param>
+        public T Get<T>(string name, TagGetMode mode = TagGetMode.Throw)
         {
-            return _tags.Remove(name);
-        }
-
-        public ListTag GetList(string name, bool returnNullIfNotFound = false)
-        {
-            if (_tags.TryGetValue(name, out NbtTag tag) && tag is ListTag tl) {
-                return tl;
+            if (_tags.TryGetValue(name, out NbtTag tag)) {
+                if (typeof(NbtTag).IsAssignableFrom(typeof(T))) {
+                    return (T)(object)tag;
+                }
+                if (tag is PrimitiveTag prim) {
+                    return prim.Value<T>();
+                }
+                throw new InvalidCastException($"Cannot cast tag '{name}' value from {tag.Type} to {typeof(T)}");
             }
-            return returnNullIfNotFound ? null : new ListTag();
-        }
-        public CompoundTag GetCompound(string name, bool returnNullIfNotFound = false)
-        {
-            if (_tags.TryGetValue(name, out NbtTag tag) && tag is CompoundTag tc) {
-                return tc;
+            switch (mode) {
+                default:
+                case TagGetMode.Throw:
+                    throw new KeyNotFoundException($"Tag '{name}' not found.");
+                case TagGetMode.Null: 
+                    return default;
+                case TagGetMode.Create: {
+                    if (!typeof(NbtTag).IsAssignableFrom(typeof(T))) {
+                        throw new InvalidOperationException("Mode cannot be 'Create' for primitive values.");
+                    }
+                    var val = Activator.CreateInstance<T>();
+                    _tags.Add(name, (NbtTag)(object)val);
+                    return val;
+                }
             }
-            return returnNullIfNotFound ? null : new CompoundTag();
-        }
-
-        public void SetList(string name, ListTag value) => _tags[name] = value;
-        public void SetCompound(string name, CompoundTag value) => _tags[name] = value;
-
-        // primitives
-        public byte GetByte(string name) => Get<byte>(name);
-        public short GetShort(string name) => Get<short>(name);
-        public int GetInt(string name) => Get<int>(name);
-        public long GetLong(string name) => Get<long>(name);
-        public float GetFloat(string name) => Get<float>(name);
-        public double GetDouble(string name) => Get<double>(name);
-        public byte[] GetByteArray(string name) => Get<byte[]>(name);
-        public string GetString(string name) => Get<string>(name);
-        public int[] GetIntArray(string name) => Get<int[]>(name);
-        public long[] GetLongArray(string name) => Get<long[]>(name);
-        public bool GetBool(string name) => Get<byte>(name) != 0;
-
-        public void SetByte(string name, byte value) => Set(name, value);
-        public void SetShort(string name, short value) => Set(name, value);
-        public void SetInt(string name, int value) => Set(name, value);
-        public void SetLong(string name, long value) => Set(name, value);
-        public void SetFloat(string name, float value) => Set(name, value);
-        public void SetDouble(string name, double value) => Set(name, value);
-        public void SetByteArray(string name, byte[] value) => Set(name, value);
-        public void SetString(string name, string value) => Set(name, value);
-        public void SetIntArray(string name, int[] value) => Set(name, value);
-        public void SetLongArray(string name, long[] value) => Set(name, value);
-        public void SetBool(string name, bool value) => Set(name, (byte)(value ? 1 : 0));
-
-        /// <summary> Gets the value of a primitive tag or returns the default value of T if not found. </summary>
-        public T Get<T>(string name)
-        {
-            if (_tags.TryGetValue(name, out NbtTag tag) && tag is PrimitiveTag prim) {
-                return prim.Value<T>();
-            }
-            return default;
         }
         /// <summary> Sets the value of a tag. </summary>
         public void Set<T>(string name, T value)
@@ -267,6 +242,51 @@ namespace AnvilPacker.Data
             }
             _tags[name] = PrimitiveTag.Create(value);
         }
+        public bool Remove(string name)
+        {
+            return _tags.Remove(name);
+        }
+
+        #region Get/Set Aliases
+        public ListTag GetList(string name, TagGetMode mode = TagGetMode.Throw)
+        {
+            return Get<ListTag>(name, mode);
+        }
+        public CompoundTag GetCompound(string name, TagGetMode mode = TagGetMode.Throw)
+        {
+            return Get<CompoundTag>(name, mode);
+        }
+
+        public void SetList(string name, ListTag value) => _tags[name] = value;
+        public void SetCompound(string name, CompoundTag value) => _tags[name] = value;
+
+        // primitives
+        public byte GetByte(string name, TagGetMode mode = TagGetMode.Throw) => Get<byte>(name, mode);
+        public sbyte GetSByte(string name, TagGetMode mode = TagGetMode.Throw) => Get<sbyte>(name, mode);
+        public short GetShort(string name, TagGetMode mode = TagGetMode.Throw) => Get<short>(name, mode);
+        public int GetInt(string name, TagGetMode mode = TagGetMode.Throw) => Get<int>(name, mode);
+        public long GetLong(string name, TagGetMode mode = TagGetMode.Throw) => Get<long>(name, mode);
+        public float GetFloat(string name, TagGetMode mode = TagGetMode.Throw) => Get<float>(name, mode);
+        public double GetDouble(string name, TagGetMode mode = TagGetMode.Throw) => Get<double>(name, mode);
+        public byte[] GetByteArray(string name, TagGetMode mode = TagGetMode.Throw) => Get<byte[]>(name, mode);
+        public string GetString(string name, TagGetMode mode = TagGetMode.Throw) => Get<string>(name, mode);
+        public int[] GetIntArray(string name, TagGetMode mode = TagGetMode.Throw) => Get<int[]>(name, mode);
+        public long[] GetLongArray(string name, TagGetMode mode = TagGetMode.Throw) => Get<long[]>(name, mode);
+        public bool GetBool(string name, TagGetMode mode = TagGetMode.Throw) => Get<byte>(name, mode) != 0;
+
+        public void SetByte(string name, byte value) => Set(name, value);
+        public void SetSByte(string name, sbyte value) => Set(name, value);
+        public void SetShort(string name, short value) => Set(name, value);
+        public void SetInt(string name, int value) => Set(name, value);
+        public void SetLong(string name, long value) => Set(name, value);
+        public void SetFloat(string name, float value) => Set(name, value);
+        public void SetDouble(string name, double value) => Set(name, value);
+        public void SetByteArray(string name, byte[] value) => Set(name, value);
+        public void SetString(string name, string value) => Set(name, value);
+        public void SetIntArray(string name, int[] value) => Set(name, value);
+        public void SetLongArray(string name, long[] value) => Set(name, value);
+        public void SetBool(string name, bool value) => Set(name, (byte)(value ? 1 : 0));
+        #endregion
 
         public IEnumerator<KeyValuePair<string, NbtTag>> GetEnumerator() => _tags.GetEnumerator();
         IEnumerator IEnumerable.GetEnumerator() => _tags.GetEnumerator();
@@ -289,13 +309,14 @@ namespace AnvilPacker.Data
                 _tags[index] = value;
             }
         }
+        public ListTag() : this(4) { }
         public ListTag(List<NbtTag> list)
         {
             foreach (var tag in list) {
                 Add(tag);
             }
         }
-        public ListTag(int initialCapacity = 4)
+        public ListTag(int initialCapacity)
         {
             _tags = new List<NbtTag>(initialCapacity);
         }
@@ -400,6 +421,7 @@ namespace AnvilPacker.Data
 
         public T Value;
 
+        public PrimitiveTag() { }
         public PrimitiveTag(T value)
         {
             Value = value;
@@ -427,6 +449,16 @@ namespace AnvilPacker.Data
         LongArray = 12
     }
     
+    public enum TagGetMode
+    {
+        /// <summary> Throw <see cref="KeyNotFoundException"/> if the tag doesn't exist. </summary>
+        Throw,
+        /// <summary> Return null if the tag doesn't exist. </summary>
+        Null,
+        /// <summary> Create and add a new tag if it doesn't exist. </summary>
+        Create
+    }
+
     public class NbtIO
     {
         /// <summary> Reads a GZIP compressed tag. </summary>

@@ -23,7 +23,7 @@ namespace AnvilPacker
     public class Program
     {
         private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
-        
+
         static void Main(string[] args)
         {
             Test();
@@ -34,7 +34,7 @@ namespace AnvilPacker
             var config = new NLog.Config.LoggingConfiguration();
             var consoleTarget = new NLog.Targets.ConsoleTarget("console");
             consoleTarget.Layout = "[${level:uppercase=true} ${logger:shortName=true}] ${replace-newlines:replacement=\n:${message}} ${exception:format=toString}";
-            config.AddRule(LogLevel.Trace, LogLevel.Fatal, consoleTarget);
+            config.AddRule(LogLevel.Debug, LogLevel.Fatal, consoleTarget);
             NLog.LogManager.Configuration = config;
 
             RegistryLoader.Load();
@@ -46,6 +46,7 @@ namespace AnvilPacker
 
             var serializer = new Level.Versions.v1_16.ChunkSerializer();
             var region = new RegionBuffer();
+            (region.X, region.Z) = (0, -1);
             var rng = new Random(4567);
 
             for (int z = 0; z < 32; z++) {
@@ -70,35 +71,38 @@ namespace AnvilPacker
                     }
                 }
             }
-            using var encRegion = new DataWriter(File.Create("encoded.bin"));
-
             var sw = Stopwatch.StartNew();
+            if (false) {
+                new Encoder.Transforms.HiddenBlockRemovalTransform().Apply(region);
+                Console.WriteLine($"Transform took {sw.ElapsedMilliseconds}ms");
+                sw.Restart();
+            }
+
             var encoder = new Encoder.v1.EncoderV1(region);
-            
+            using var encRegion = new DataWriter(File.Create("encoded.bin"));
             encoder.Encode(encRegion);
+
             //Dump(region, "dumped.bin");
             //DumpImages(region, "layers", false);
-            Console.WriteLine($"Analysis took {sw.ElapsedMilliseconds}ms");
+            Console.WriteLine($"Encoding took {sw.ElapsedMilliseconds}ms");
         }
 
-
-        private static void Dump(RegionBuffer buf, string filename)
+        private static void Dump(RegionBuffer region, string filename)
         {
-            var splitter = new RegionSplitter(buf, 16);
             var globalPalette = new Dictionary<int, byte>();
 
             using var fs = File.Create(filename);
-            foreach (var unit in splitter.StreamUnits()) {
-                var palette = unit.Palette;
-                for (int i = 0; i < palette.Length; i++) {
-                    globalPalette.TryAdd(palette[i].Id, (byte)globalPalette.Count);
+            foreach (var section in ChunkIterator.GetSections(region)) {
+                var palette = section.Palette;
+                foreach (var block in palette) {
+                    globalPalette.TryAdd(block.Id, (byte)globalPalette.Count);
                 }
                 if (globalPalette.Count > 256) {
                     throw new InvalidOperationException("Palette won't fit in 8 bits");
                 }
 
-                foreach (var block in unit.Blocks) {
-                    int stateId = palette[block].Id;
+                foreach (var block in section.Blocks) {
+                    int stateId = palette.GetState(block).Id;
                     fs.WriteByte(globalPalette[stateId]);
                 }
             }
@@ -115,9 +119,7 @@ namespace AnvilPacker
 
             var palette = new Dictionary<int, int>();
 
-            ApplyTransforms(buf,
-                new Encoder.Transforms.HiddenBlockRemovalTransform()
-            );
+            //new Encoder.Transforms.HiddenBlockRemovalTransform().Apply(buf);
 
             for (int y = 0; y < 256; y++) {
                 for (int z = 0; z < 512; z++) {
@@ -142,31 +144,6 @@ namespace AnvilPacker
                     }
                 }
                 File.WriteAllBytes($"{path}/{y}.ppm", data);
-            }
-        }
-
-        private static void ApplyTransforms(RegionBuffer buf, params BlockTransform[] transforms)
-        {
-            var splitter = new RegionSplitter(buf, 128);
-            foreach (var unit in splitter.StreamUnits()) {
-                foreach (var transform in transforms) {
-                    transform.Apply(unit);
-                }
-                for (int y = 0; y < unit.Size; y++) {
-                    for (int z = 0; z < unit.Size; z++) {
-                        for (int x = 0; x < unit.Size; x++) {
-                            var chunk = buf.GetChunk((x + unit.Pos.X) >> 4, (z + unit.Pos.Z) >> 4);
-                            var section = chunk?.GetSection((unit.Pos.Y + y) >> 4);
-                            //we don't want to use chunk.SetBlock() directly because when a 
-                            //new section is created, it won't be filled with air but instead 
-                            //the first block set (because storage is filled with 0s and palette[0] != air)
-                            if (section != null) {
-                                var block = unit.Palette[unit.GetBlock(x, y, z)];
-                                section.SetBlock(x & 15, (unit.Pos.Y + y) & 15, z & 15, block);
-                            }
-                        }
-                    }
-                }
             }
         }
     }

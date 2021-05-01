@@ -2,25 +2,29 @@ using System;
 using System.Collections;
 using System.Numerics;
 using System.Runtime.CompilerServices;
+using AnvilPacker.Level;
 using AnvilPacker.Util;
 
 namespace AnvilPacker.Encoder.v1
 {
     public class Context
     {
-        public ushort[] Palette;
-
+        public BlockId[] Palette = Array.Empty<BlockId>();
         public NzContext Nz = new NzContext();
 
-        public int PredictForward(ushort value)
+        public int PredictForward(BlockId value)
         {
+            if (Palette[0] == value) {
+                //avoid IndexOf() overhead as this should be very likely
+                return 0;
+            }
             int index = Array.IndexOf(Palette, value);
             MoveToFront(index);
             return index;
         }
-        public ushort PredictBackward(int delta)
+        public BlockId PredictBackward(int delta)
         {
-            ushort id = Palette[delta];
+            var id = Palette[delta];
             MoveToFront(delta);
             return id;
         }
@@ -28,7 +32,7 @@ namespace AnvilPacker.Encoder.v1
         private void MoveToFront(int index)
         {
             if (index != 0) {
-                ushort actual = Palette[index];
+                var actual = Palette[index];
                 Array.Copy(Palette, 0, Palette, 1, index);
                 Palette[0] = actual;
             }
@@ -41,9 +45,9 @@ namespace AnvilPacker.Encoder.v1
         public fixed ushort s[MAX_SAMPLES];
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public int GetSlot(int bits)
+        public readonly int GetSlot(int bits)
         {
-            ref byte data = ref Unsafe.As<ushort, byte>(ref s[0]);
+            ref byte data = ref Unsafe.As<ushort, byte>(ref Unsafe.AsRef(in s[0]));
             ulong w0 = Mem.ReadLE<ulong>(ref data, 0);
 
             ulong hash = Hash(w0);

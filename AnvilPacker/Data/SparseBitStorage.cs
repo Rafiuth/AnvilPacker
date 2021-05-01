@@ -75,5 +75,31 @@ namespace AnvilPacker.Data
             ref long v = ref Mem.GetRef(Data, dataIndex);
             v = (v & ~(mask << shift)) | (value & mask) << shift;
         }
+
+        /// <summary> 
+        /// Copies the elements from this storage to <paramref name="dst"/>.
+        /// Elements are truncated to the dest storage bit size.
+        /// An exception is thrown if the dest storage count is smaller than this instance's.
+        /// </summary>
+        public void CopyTo(SparseBitStorage dst)
+        {
+            Ensure.That(dst.Count >= Count, "Destination must be at least as large as source.");
+
+            if (BitsPerElement == dst.BitsPerElement) {
+                int count = Math.Min(Data.Length, dst.Data.Length);
+                Data.AsSpan(0, count).CopyTo(dst.Data);
+                return;
+            }
+            for (int i = 0; i < Data.Length; i++) {
+                int bitPos = i * valuesPerLong;
+                int elemCount = Math.Min(Count - bitPos, valuesPerLong);
+                long elems = Data[i];
+
+                for (int j = 0; j < elemCount; j++) {
+                    dst[bitPos + j] = (int)(elems & mask);
+                    elems >>= BitsPerElement;
+                }
+            }
+        }
     }
 }

@@ -11,196 +11,235 @@ using AnvilPacker.Data;
 using AnvilPacker.Data.Entropy;
 using AnvilPacker.Level;
 using AnvilPacker.Util;
-using Microsoft.Collections.Extensions;
 using NLog;
 
 namespace AnvilPacker.Encoder.v1
 {
-    //Version 1 uses a fixed size context table. The context is selected based on a hash
-    //generated using neighbor blocks. Blocks are Move-to-Front transformed on the context palette then encoded using arithmetic coding.
+    //Version 1 uses a fixed size context table. For each block, a context is selected
+    //based on a hash generated using neighbor blocks. The context contains a palette,
+    //which will be used by a move to front transform. The index of the block in the palette
+    //is encoded using adaptive binary arithmetic coding. Last, the block is moved to the
+    //front of the context's palette (MTF).
+
     //Benchmarks:
-    //LZMA2: 1594KB, 16^3 chunks, 1 byte per block
-    //BZip2: 1537KB, 16^3 chunks, 1 byte per block
-    //APv1:  1407KB, 256^3 chunks, 2^13 contexts
-    //paq8:  1225KB, 16^3 chunks, 1 byte per block (very slow, -5 took ~20min)
+    // meth    size     notes
+    // raw    20396KB  1 byte per block, YZX order. chunk size is 16^3, empty chunks are not included.
+    //BZip2   2038KB
+    //Deflate 1864KB
+    //LZMA2   1569KB
+    //APv1    1280KB   block data only.
+    //paq8l   1225KB   very slow, -5 took ~20min.
     public class EncoderV1
     {
-        public const int MAX_CU_SIZE = 256; //must be a power of 2
-        public const int CTX_BITS = 13;
+        private const int CTX_BITS = 13;
+        private static readonly Vec3i[] CTX_NEIGHBORS = {
+            //new(-1, 0, 0),
+            new(0, -1, 0),
+            new(0, 0, -1),
+            new(-1, 1, 0),
+        };
 
         private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
         
-        private RegionSplitter _splitter;
-        private Dictionary<BlockState, int> _regionPalette = new();
-        private int _predAccuracySum, _predAccuracyDiv, _unitOverhead, _blockCount;
+        private RegionBuffer _region;
+        private DictionarySlim<BlockState, BlockId> _palette = new();
+        private int _predAccuracySum, _blockCount;
 
         public EncoderV1(RegionBuffer region)
         {
-            _splitter = new RegionSplitter(region, MAX_CU_SIZE);
+            _region = region;
         }
 
         public void Encode(DataWriter stream)
         {
             var buf = new MemoryDataWriter(1024 * 1024 * 4);
-            EncodeUnits(buf);
+            EncodeChunks(buf);
 
+            long startPos = stream.Position;
             WriteHeader(stream);
+            long headerLen = stream.Position - startPos;
+
             stream.WriteBytes(buf.BufferSpan);
 
-            double bitsPerBlock = (buf.Position - _unitOverhead) * 8.0 / _blockCount;
+            double bitsPerBlock = buf.Position * 8.0 / _blockCount;
 
-            _logger.Debug($"Stats for region {_splitter.Region.X},{_splitter.Region.Z}");
-            _logger.Debug($" CtxBits: {CTX_BITS}");
-            _logger.Debug($" PredAccuracy: {_predAccuracySum * 100.0 / _predAccuracyDiv:0.0}%");
+            _logger.Debug($"Stats for region {_region.X} {_region.Z}");
+            _logger.Debug($" NumBlocks: {_blockCount / 1000000.0:0.0}M Palette: {_palette.Count}");
+            _logger.Debug($" EncSize: {stream.Position / 1024.0:0.000}KB Overhead: {headerLen / 1024.0:0.000}KB");
             _logger.Debug($" BitsPerBlock: {bitsPerBlock:0.000}");
-            _logger.Debug($" Palette: {_regionPalette.Count} blocks");
-            _logger.Debug($" Blocks: {(buf.Position - _unitOverhead) / 1024.0:0.000}KB");
-            _logger.Debug($" Overhd: {_unitOverhead / 1024.0:0.000}KB");
-            _logger.Debug($" Total: {stream.Position / 1024.0:0.000}KB");
+            _logger.Debug($" PredAccuracy: {_predAccuracySum * 100.0 / _blockCount:0.0}% NumContexts: 2^{CTX_BITS}");
         }
 
-        private void EncodeUnits(DataWriter stream)
+        private void EncodeChunks(DataWriter stream)
         {
-            var headerBuf = new MemoryDataWriter(1024 * 32);
-            var dataBuf = new MemoryDataWriter(1024 * 128);
-
             var contexts = new Context[1 << CTX_BITS];
-            foreach (var unit in _splitter.StreamUnits()) {
-                MergeUnitPalette(unit.Palette);
-                
-                _logger.Trace($"Encoding unit {unit.Pos} (region {_splitter.Region.X},{_splitter.Region.Z})");
+            var ac = new ArithmEncoder(stream);
+            var paletteCache = new (BlockId[] Palette, int Y)[_region.Size, _region.Size];
 
-                //new Transforms.HiddenBlockRemovalTransform().Apply(unit);
+            foreach (var (chunk, y) in ChunkIterator.CreateLayered(_region)) {
+                var palette = GetCachedPalette(paletteCache, chunk);
 
-                ResizePalettes(contexts, unit);
-                Vec3i[] neighbors = {
-                    new(-1, 0, 0),
-                    new(0, -1, 0),
-                    new(0, 0, -1),
-                };
-                EncodeBlocks(unit, contexts, neighbors, dataBuf);
-                WriteUnitHeader(unit, contexts, neighbors, headerBuf);
+                if (chunk.X % 32 == 0) {
+                    _logger.Trace($"Encoding chunk {chunk.X} {chunk.Y} {chunk.Z}");
+                }
+                EncodeBlocks(chunk, y, palette, contexts, CTX_NEIGHBORS, ac);
 
-                stream.WriteBytes(headerBuf.BufferSpan);
-                stream.WriteBytes(dataBuf.BufferSpan);
-
-                _unitOverhead += (int)headerBuf.Position;
-                headerBuf.Clear();
-                dataBuf.Clear();
-
-                _blockCount += unit.Size * unit.Size * unit.Size;
-
-                /*if (false) {
-                    int rw = _splitter.Region.Width * 16;
-                    int rd = _splitter.Region.Depth * 16;
-
-                    int index = (unit.Pos.X / unit.Size) + (unit.Pos.Z / unit.Size) * rw;
-                    int progress = index * 100 / (rw * rd);
-                }*/
+                _blockCount += 16 * 16;
             }
+            ac.Flush();
         }
 
-        private void WriteUnitHeader(CodingUnit unit, Context[] contexts, Vec3i[] neighbors, DataWriter dw)
-        {
-            var (ux, uy, uz) = unit.Pos;
-            dw.WriteVarInt(ux);
-            dw.WriteVarInt(uy);
-            dw.WriteVarInt(uz);
-            dw.WriteVarInt(Maths.Log2(unit.Size));
-
-            dw.WriteByte(neighbors.Length);
-            foreach (var (nx, ny, nz) in neighbors) {
-                int packed = (nx & 3) << 0 | // -3..0, two complement
-                             (ny & 7) << 2 | // -4..3
-                             (nz & 3) << 5;  // -3..0, two complement
-                dw.WriteByte(packed);
-            }
-            dw.WriteVarInt(unit.Palette.Length);
-            foreach (var block in unit.Palette) {
-                dw.WriteVarInt(_regionPalette[block]);
-            }
-
-            dw.WriteByte(CTX_BITS);
-        }
-
-        private unsafe void EncodeBlocks(CodingUnit unit, Context[] contexts, Vec3i[] neighbors, DataWriter dw)
+        private unsafe void EncodeBlocks(ChunkIterator chunk, int y, BlockId[] palette, Context[] contexts, Vec3i[] neighbors, ArithmEncoder ac)
         {
             Debug.Assert(neighbors.Length <= ContextKey.MAX_SAMPLES);
 
-            var ac = new ArithmEncoder(dw);
-            int size = unit.Size;
+            var key = new ContextKey();
 
-            for (int y = 0; y < size; y++) {
-                for (int z = 0; z < size; z++) {
-                    for (int x = 0; x < size; x++) {
-                        var key = new ContextKey();
+            for (int z = 0; z < 16; z++) {
+                for (int x = 0; x < 16; x++) {
 
-                        for (int i = 0; i < neighbors.Length; i++) {
-                            var rel = neighbors[i];
-                            int nx = x + rel.X;
-                            int ny = y + rel.Y;
-                            int nz = z + rel.Z;
+                    for (int i = 0; i < neighbors.Length; i++) {
+                        var rel = neighbors[i];
+                        int nx = x + rel.X;
+                        int ny = y + rel.Y;
+                        int nz = z + rel.Z;
 
-                            if ((uint)(nx | ny | nz) < (uint)size) {
-                                key.s[i] = unit.GetBlock(nx, ny, nz);
-                            }
+                        if ((uint)(nx | ny | nz) < 16u) {
+                            key.s[i] = GetBlockId(nx, ny, nz);
+                        } else {
+                            key.s[i] = GetInterBlockId(nx, ny, nz);
                         }
-                        var ctx = contexts[key.GetSlot(CTX_BITS)];
+                    }
+                    var ctx = GetContext(contexts, in key);
+                    var id = GetBlockId(x, y, z);
 
-                        var id = unit.GetBlock(x, y, z);
+                    int delta = ctx.PredictForward(id);
+                    ctx.Nz.Write(ac, delta, 0, ctx.Palette.Length - 1);
 
-                        int delta = ctx.PredictForward(id);
-                        ctx.Nz.Write(ac, delta, 0, ctx.Palette.Length - 1);
+                    _predAccuracySum += delta == 0 ? 1 : 0;
+                }
+            }
+            ushort GetBlockId(int x, int y, int z)
+            {
+                return palette[chunk.GetBlockIdFast(x, y, z)];
+            }
+            ushort GetInterBlockId(int x, int y, int z)
+            {
+                var block = chunk.GetInterBlock(x, y, z);
+                return _palette.GetOrAdd(block, (BlockId)_palette.Count);
+            }
+        }
 
-                        _predAccuracySum += delta == 0 ? 1 : 0;
+        private BlockId[] GetCachedPalette((BlockId[] Palette, int Y)[,] cache, ChunkIterator chunk)
+        {
+            int rx = _region.X * _region.Size;
+            int rz = _region.Z * _region.Size;
+            ref var cached = ref cache[chunk.X - rx, chunk.Z - rz];
+
+            if (cached.Palette != null && cached.Y == chunk.Y) {
+                return cached.Palette;
+            }
+            var palette = new BlockId[chunk.Palette.Count];
+            for (int i = 0; i < palette.Length; i++) {
+                var block = chunk.Palette.GetState((BlockId)i);
+
+                if (!_palette.TryGetValue(block, out var id)) {
+                    id = (BlockId)_palette.Count;
+                    _palette.Add(block, id);
+                }
+                palette[i] = id;
+            }
+            cached = (palette, chunk.Y);
+            return palette;
+        }
+        private Context GetContext(Context[] contexts, in ContextKey key)
+        {
+            int slot = key.GetSlot(CTX_BITS);
+            var ctx = contexts[slot] ??= new Context();
+
+            //resize palette if necessary
+            int oldLen = ctx.Palette.Length;
+            int newLen = _palette.Count;
+            if (oldLen < newLen) {
+                Array.Resize(ref ctx.Palette, newLen);
+                for (int i = oldLen; i < newLen; i++) {
+                    ctx.Palette[i] = (BlockId)i;
+                }
+            }
+            return ctx;
+        }
+
+        private void WriteHeader(DataWriter stream)
+        {
+            stream.WriteUShortBE(1); //data version
+
+            stream.WriteByte(_region.Size / 32);
+
+            WritePalette(stream);
+            WriteChunkBitmap(stream);
+        }
+
+        private void WriteChunkBitmap(DataWriter stream)
+        {
+            //find Y extents
+            int minY = int.MaxValue, maxY = int.MinValue;
+            foreach (var chunk in _region.Chunks) {
+                if (chunk == null) continue;
+
+                for (int y = chunk.MinSectionY; y <= chunk.MaxSectionY; y++) {
+                    if (chunk.GetSection(y) != null) {
+                        minY = Math.Min(minY, y);
+                        maxY = Math.Max(maxY, y);
                     }
                 }
             }
-            _predAccuracyDiv += size * size * size;
+            //create bitmap
+            int length = (maxY - minY + 1) * (_region.Size * _region.Size);
+            var bitmap = new BitArray(length);
+            int i = 0;
 
-            ac.Flush();
-        }
-        private void WriteHeader(DataWriter dw)
-        {
-            dw.WriteUShortBE(1); //data version
-            WriteGlobalPalette(dw, _regionPalette.Keys);
-        }
+            for (int y = minY; y <= maxY; y++) {
+                for (int z = 0; z < _region.Size; z++) {
+                    for (int x = 0; x < _region.Size; x++) {
+                        bitmap[i++] = _region.GetSection(x, y, z) != null;
+                    }
+                }
+            }
 
-        private void WriteGlobalPalette(DataWriter dw, ICollection<BlockState> palette)
+            //encode it
+            //TODO: improve bitmap encoding (maybe)
+            //worst cases:
+            // - 1.16 at 32x16x32 chunks = 16K bits = 2KB
+            // - 1.17 at 32x64x32 chunks = 64K bits = 8KB
+            //RLE gives ~200 bytes at 32x5x32 (normal overworld)
+            stream.WriteVarInt(minY);
+            stream.WriteVarInt(maxY);
+
+            var bw = new BitWriter(stream);
+            CodecPrimitives.RunLengthEncode(
+                length,
+                compare: (i, j) => bitmap[i] == bitmap[j],
+                writeLiteral: i => bw.WriteBit(bitmap[i]),
+                writeRunLen: l => bw.WriteVLC(l)
+            );
+            bw.Flush();
+        }
+        private void WritePalette(DataWriter stream)
         {
-            dw.WriteVarInt(palette.Count);
-            foreach (var block in palette) {
+            var palette = _palette;
+            stream.WriteVarInt(palette.Count);
+
+            int expectedId = 0;
+            foreach (var (block, id) in palette) {
+                Debug.Assert(id == expectedId++);
+
                 var name = Encoding.UTF8.GetBytes(block.ToString());
-                dw.WriteVarInt(name.Length);
-                dw.WriteBytes(name);
+                stream.WriteVarInt(name.Length);
+                stream.WriteBytes(name);
 
-                dw.WriteVarInt((int)block.Attributes);
+                stream.WriteVarInt((int)block.Attributes);
+                stream.WriteByte(0); //opacity << 4 | emittance
             }
         }
-
-        private void MergeUnitPalette(BlockState[] palette)
-        {
-            foreach (var block in palette) {
-                _regionPalette.TryAdd(block, _regionPalette.Count);
-            }
-        }
-        private void ResizePalettes(Context[] contexts, CodingUnit unit)
-        {
-            for (int i = 0; i < contexts.Length; i++) {
-                var ctx = contexts[i] ??= new Context();
-                
-                ctx.Palette ??= Array.Empty<ushort>();
-                
-                int oldLen = ctx.Palette.Length;
-                int newLen = unit.Palette.Length;
-                if (oldLen < newLen) {
-                    Array.Resize(ref ctx.Palette, newLen);
-                    for (int j = oldLen; j < newLen; j++) {
-                        ctx.Palette[j] = (ushort)j;
-                    }
-                }
-            }
-        }
-
     }
 }

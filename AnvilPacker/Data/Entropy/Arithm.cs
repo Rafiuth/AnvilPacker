@@ -12,6 +12,9 @@ namespace AnvilPacker.Data.Entropy
         /// <summary> Max probability value. </summary>
         public const int K = 1 << 16;
     }
+
+    //https://encode.su/threads/1821-Asymetric-Numeral-System/page8
+    //https://pastebin.com/FnNK4HDc
     public class ArithmEncoder
     {
         private uint low, hi;

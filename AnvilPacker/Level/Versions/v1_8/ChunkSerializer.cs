@@ -3,61 +3,48 @@ using System.Collections.Generic;
 using AnvilPacker.Data;
 using AnvilPacker.Level;
 using NLog;
-using static AnvilPacker.Util.Maths;
 
 namespace AnvilPacker.Level.Versions.v1_8
 {
     //quick ref: https://minecraft.gamepedia.com/Chunk_format?oldid=1229175
+    /// <summary> Handles chunks serialization for versions <c>1.8-1.12.2</c>. </summary>
     public class ChunkSerializer : IChunkSerializer
     {
         private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
 
-        public ChunkBase CreateChunk(int x, int z)
+        public Chunk Deserialize(CompoundTag level)
         {
-            return new Chunk(x, z);
-        }
-
-        public ChunkBase Deserialize(CompoundTag level)
-        {
-            level = new CompoundTag(level);
-
             int x = Pop<int>("xPos");
             int z = Pop<int>("zPos");
             var chunk = new Chunk(x, z);
 
-            foreach (CompoundTag section in Pop<ListTag>("Sections")) {
-                int y = section.GetByte("Y");
-                chunk.SetSection(y, DeserializeSection(section));
+            foreach (CompoundTag sectTag in Pop<ListTag>("Sections")) {
+                int y = sectTag.GetSByte("Y");
+                DeserializeSection(chunk.GetOrCreateSection(y), sectTag);
             }
-            chunk.IsLightPopulated = Pop<bool>("LightPopulated");
-            chunk.IsTerrainPopulated = Pop<bool>("TerrainPopulated");
-            chunk.LastUpdate = Pop<long>("LastUpdate");
-            chunk.InhabitedTime = Pop<long>("InhabitedTime");
+            //chunk.IsLightPopulated = Pop<bool>("LightPopulated");
+            //chunk.IsTerrainPopulated = Pop<bool>("TerrainPopulated");
+            //chunk.LastUpdate = Pop<long>("LastUpdate");
+            //chunk.InhabitedTime = Pop<long>("InhabitedTime");
             //chunk.HeightMap = Pop<int[]>("HeightMap");
             //chunk.Biomes = Pop<byte[]>("Biomes");
 
             chunk.TileTicks = DeserializeTileTicks(x, z, Pop<ListTag>("TileTicks"));
 
-            chunk.OpaqueData = level;
+            chunk.Opaque = level;
 
             return chunk;
 
             T Pop<T>(string name)
             {
-                var tag = level[name];
+                var val = level.Get<T>(name, TagGetMode.Null);
                 level.Remove(name);
-
-                if (tag is T) {
-                    return (T)(object)tag;
-                } else if (tag is PrimitiveTag pt) {
-                    return pt.Value<T>();
-                } else {
-                    return default;
-                }
+                
+                return val;
             }
         }
 
-        private ChunkSectionBase DeserializeSection(CompoundTag tag)
+        private void DeserializeSection(ChunkSection section, CompoundTag tag)
         {
             var blockId = tag.GetByteArray("Blocks");
             var blockAdd = tag.GetByteArray("Add");
@@ -65,8 +52,6 @@ namespace AnvilPacker.Level.Versions.v1_8
 
             var skyLight = tag.GetByteArray("SkyLight");
             var blockLight = tag.GetByteArray("BlockLight");
-
-            var section = new ChunkSection();
             
             if (skyLight != null) {
                 section.SkyLight = new NibbleArray(skyLight);
@@ -86,10 +71,10 @@ namespace AnvilPacker.Level.Versions.v1_8
                     a |= (blockAdd[j] & 15) << 12;
                     b |= (blockAdd[j] >> 4) << 12;
                 }
+                throw new NotImplementedException(); //need to reindex values to internal palette
                 blocks[i + 0] = (ushort)a;
                 blocks[i + 1] = (ushort)b;
             }
-            return section;
         }
 
         private List<ScheduledTick> DeserializeTileTicks(int cx, int cz, ListTag tag)
@@ -102,8 +87,8 @@ namespace AnvilPacker.Level.Versions.v1_8
             foreach (CompoundTag entry in tag) {
                 Block type;
 
-                if (entry.ContainsKey("i", TagType.String)) {
-                    type = LegacyBlocks.GetBlockFromName(entry.GetString("i"));
+                if (entry.TryGet("i", out string typeName)) {
+                    type = LegacyBlocks.GetBlockFromName(typeName);
                 } else {
                     type = LegacyBlocks.GetBlockFromId(entry.GetInt("i"));
                 }
@@ -121,7 +106,7 @@ namespace AnvilPacker.Level.Versions.v1_8
             return list;
         }
 
-        public CompoundTag Serialize(ChunkBase chunk)
+        public CompoundTag Serialize(Chunk chunk)
         {
             throw new NotImplementedException();
         }

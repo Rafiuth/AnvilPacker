@@ -50,5 +50,21 @@ namespace AnvilPacker.Util
             }
             return ~start;
         }
+
+        public static IEnumerable<T> ExceptNull<T>(this IEnumerable<T> src) where T : class
+        {
+            return src.Where(v => v != null);
+        }
+
+        public static int Count<T>(this T[] arr, T value) where T : IEquatable<T>
+        {
+            int count = 0;
+            foreach (var elem in arr) {
+                if (elem.Equals(value)) {
+                    count++;
+                }
+            }
+            return count;
+        }
     }
 }

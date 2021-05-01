@@ -10,6 +10,7 @@ namespace AnvilPacker.Data
     public class DataReader : IDisposable
     {
         private const MethodImplOptions Inline = MethodImplOptions.AggressiveInlining;
+        private const MethodImplOptions NoInline = MethodImplOptions.NoInlining;
 
         private byte[] _buf;
         private int _bufPos, _bufLen;
@@ -73,11 +74,17 @@ namespace AnvilPacker.Data
                 _bufPos += sizeof(T);
                 return value;
             }
-            FillBuffer(); //fill buffer before to so we may avoid 2 stream reads
-            Unsafe.SkipInit(out T stkValue);
-            ReadBytes(Mem.CreateSpan<T, byte>(ref stkValue, 1));
-            return stkValue;
+            return ReadUnbuffered<T>();
         }
+        [MethodImpl(NoInline)]
+        private T ReadUnbuffered<T>() where T : unmanaged
+        {
+            FillBuffer(); //fill buffer before to so we may avoid 2 stream reads
+            Unsafe.SkipInit(out T value);
+            ReadBytes(Mem.CreateSpan<T, byte>(ref value, 1));
+            return value;
+        }
+
         [MethodImpl(Inline)]
         private T ReadLE<T>() where T : unmanaged
         {

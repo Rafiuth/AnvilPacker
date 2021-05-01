@@ -21,7 +21,7 @@ namespace AnvilPacker.Encoder.Transforms
         public int Samples = 8;
         /// <summary> Specifies the maximum replacement search distance. </summary>
         public int Radius = 2;
-        /// <summary> Don't clear frequency table for each block. If enabled, fewer samples can be used. Generally improves compression. </summary>
+        /// <summary> Keep the neighbor frequency table instead of discarding it for each block. If enabled, fewer samples can be used. Generally improves compression. </summary>
         public bool CummulativeFreqs = true;
         /// <summary> If not null, specifies which blocks can be replaced. </summary>
         public HashSet<BlockState> Whitelist;
@@ -64,87 +64,71 @@ namespace AnvilPacker.Encoder.Transforms
             new(0, 0, +1),
         };
 
-        public override void Apply(CodingUnit unit)
+        public override void Apply(RegionBuffer region)
         {
-            int size = unit.Size;
-            Debug.Assert(Maths.IsPow2(size)); //because our (uint)+OR bounds check below
-
-            var palette = unit.Palette;
-            var isOpaque = BuildOpaquenessTable(palette);
-            var freqs = new int[palette.Length];
-            ushort mostFrequent = 0;
-
             var neighbors = GetNeighbors();
+            var freqs = new DictionarySlim<int, int>();
 
-            int numChanges = 0;
-            //exclude borders because we only ever know one unit.
-            for (int y = 1; y < size - 1; y++) {
-                for (int z = 1; z < size - 1; z++) {
-                    for (int x = 1; x < size - 1; x++) {
+            var mostFrequent = BlockState.Air;
+
+            foreach (var (chunk, y) in ChunkIterator.CreateLayered(region)) {
+                for (int z = 0; z < 16; z++) {
+                    for (int x = 0; x < 16; x++) {
                         if (!CummulativeFreqs) {
-                            //TODO: this will become expansive if palette is too big. Maybe use a Dictionary?
                             freqs.Clear();
                         }
-                        if (!IsHidden(x, y, z)) continue;
+                        if (!IsHidden(chunk, x, y, z)) continue;
 
                         foreach (var pos in neighbors) {
                             int nx = x + pos.X;
                             int ny = y + pos.Y;
                             int nz = z + pos.Z;
 
-                            if ((uint)(nx | ny | nz) >= (uint)size) continue;
-
-                            UpdateFreq(unit.GetBlock(nx, ny, nz));
+                            UpdateFreq(chunk.GetBlock(nx, ny, nz));
                         }
-                        if (mostFrequent != unit.GetBlock(x, y, z)) {
-                            unit.SetBlock(x, y, z, mostFrequent);
-                            numChanges++;
-                        }
+                        chunk.SetBlock(x, y, z, mostFrequent);
                     }
                 }
-                freqs.Clear(); //forget old freqs when CummulativeFreqs == true
             }
-            _logger.Debug($"Removed {numChanges} hidden blocks. ({numChanges * 100L / (size * size * size)}%) blocks.");
 
             //Check if the block is surrounded by opaque blocks
-            bool IsHidden(int x, int y, int z)
+            bool IsHidden(ChunkIterator chunk, int x, int y, int z)
             {
                 foreach (var pos in SelfAndImmediateNeighbors) {
-                    ushort id = unit.GetBlock(x + pos.X, y + pos.Y, z + pos.Z);
-                    if (!isOpaque[id]) {
+                    var block = chunk.GetBlock(x + pos.X, y + pos.Y, z + pos.Z);
+                    if (!IsOpaque(block)) {
                         return false;
                     }
-                    UpdateFreq(id);
+                    UpdateFreq(block);
                 }
                 return true;
             }
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            void UpdateFreq(ushort id)
+            void UpdateFreq(BlockState block)
             {
-                freqs[id]++;
-                if (freqs[id] > freqs[mostFrequent]) {
-                    mostFrequent = id;
+                ref int freq = ref freqs.GetOrAdd(block.Id);
+                freq++;
+                if (freq > freqs.GetOrAdd(mostFrequent.Id)) {
+                    mostFrequent = block;
                 }
             }
         }
 
-        private bool[] BuildOpaquenessTable(BlockState[] palette)
+        private bool IsOpaque(BlockState block)
         {
-            var isOpaque = new bool[palette.Length];
-            for (int i = 0; i < palette.Length; i++) {
-                //Attributes required to be true
-                const BlockAttributes AttrMaskT = BlockAttributes.OpaqueFullCube;
-                //Attributes required to be false
-                const BlockAttributes AttrMaskF = BlockAttributes.Translucent;
+            //Attributes required to be true
+            const BlockAttributes AttrMaskT = BlockAttributes.OpaqueFullCube;
+            //Attributes required to be false
+            const BlockAttributes AttrMaskF = BlockAttributes.Translucent;
 
-                var attrs = palette[i].Attributes;
-                isOpaque[i] = (attrs & (AttrMaskT | AttrMaskF)) == AttrMaskT;
-
-                if (Whitelist != null && !Whitelist.Contains(palette[i])) {
-                    isOpaque[i] = false;
-                }
+            var attrs = block.Attributes;
+            if ((attrs & (AttrMaskT | AttrMaskF)) != AttrMaskT) {
+                return false;
             }
-            return isOpaque;
+            if (Whitelist != null && !Whitelist.Contains(block)) {
+                return false;
+            }
+            return true;
         }
 
         private Vec3i[] GetNeighbors()

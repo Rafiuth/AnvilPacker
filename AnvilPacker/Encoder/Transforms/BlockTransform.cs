@@ -3,12 +3,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using AnvilPacker.Level;
+using AnvilPacker.Util;
 
 namespace AnvilPacker.Encoder.Transforms
 {
     public abstract class BlockTransform
     {
-        public abstract void Apply(CodingUnit unit);
+        public abstract void Apply(RegionBuffer region);
 
         public static void RegisterTransforms()
         {

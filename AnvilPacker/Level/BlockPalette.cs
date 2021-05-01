@@ -1,15 +1,17 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using AnvilPacker.Util;
 
 namespace AnvilPacker.Level
 {
-    public class BlockPalette
+    public class BlockPalette : IEnumerable<BlockState>
     {
         private List<BlockState> _stateById;
-        private Dictionary<int, int> _idByState;
+        private DictionarySlim<int, BlockId> _idByState;
 
         public int Count => _stateById.Count;
 
@@ -19,34 +21,39 @@ namespace AnvilPacker.Level
             _idByState = new(initialCapacity);
         }
 
-        public int Add(BlockState state)
+        public BlockId Add(BlockState state)
         {
-            int id = _stateById.Count;
+            var id = (BlockId)_stateById.Count;
             _idByState.Add(state.Id, id);
             _stateById.Add(state);
-
+            
             return id;
         }
-        public int GetOrAddId(BlockState state)
+        public BlockId GetOrAddId(BlockState state)
         {
-            if (TryGetId(state, out int id)) {
+            if (TryGetId(state, out BlockId id)) {
                 return id;
             }
             return Add(state);
         }
 
-        public BlockState GetState(int id)
+        public BlockState GetState(BlockId id)
         {
             return _stateById[id];
         }
 
-        public int GetId(BlockState state)
+        public BlockId GetId(BlockState state)
         {
-            return _idByState[state.Id];
+            return TryGetId(state, out BlockId id) 
+                    ? id 
+                    : throw new KeyNotFoundException("Block not in palette");
         }
-        public bool TryGetId(BlockState state, out int id)
+        public bool TryGetId(BlockState state, out BlockId id)
         {
             return _idByState.TryGetValue(state.Id, out id);
         }
+
+        public IEnumerator<BlockState> GetEnumerator() => _stateById.GetEnumerator();
+        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
     }
 }
