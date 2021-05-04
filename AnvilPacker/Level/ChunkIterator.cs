@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using AnvilPacker.Data;
 using AnvilPacker.Util;
 
 namespace AnvilPacker.Level
@@ -10,7 +11,7 @@ namespace AnvilPacker.Level
     /// </summary>
     public class ChunkIterator
     {
-        private static readonly Chunk EmptyChunk = new Chunk(0, 0);
+        private static readonly Chunk EmptyChunk = new Chunk(0, 0, new BlockPalette());
         private static readonly ChunkSection EmptySection = EmptyChunk.GetOrCreateSection(0);
 
         public RegionBuffer Region;
@@ -20,6 +21,9 @@ namespace AnvilPacker.Level
 
         public Chunk Chunk => Section.Chunk;
         public BlockPalette Palette => Section.Palette;
+        public BlockId[] Blocks => Section.Blocks;
+        public NibbleArray SkyLight => Section.SkyLight;
+        public NibbleArray BlockLight => Section.BlockLight;
         public int X => Section.X;
         public int Y => Section.Y;
         public int Z => Section.Z;
@@ -28,7 +32,7 @@ namespace AnvilPacker.Level
         public static IEnumerable<ChunkIterator> Create(RegionBuffer region)
         {
             var itr = new ChunkIterator();
-            foreach (var (section, _) in GetSections(region, 0)) {
+            foreach (var (section, _) in GetSections(region, 1)) {
                 itr.SetCurrent(region, section);
                 yield return itr;
             }
@@ -52,7 +56,7 @@ namespace AnvilPacker.Level
         /// <summary> Creates a stream with the chunk sections in specified region, in YZX order. </summary>
         public static IEnumerable<ChunkSection> GetSections(RegionBuffer region)
         {
-            return GetSections(region, 0).Select(v => v.Section);
+            return GetSections(region, 1).Select(v => v.Section);
         }
 
         private static IEnumerable<(ChunkSection Section, int LayerY)> GetSections(RegionBuffer region, int layers)
@@ -92,7 +96,7 @@ namespace AnvilPacker.Level
         }
 
         /// <summary> Gets the block at the specified position. </summary>
-        /// <remarks> The block must be within 16 blocks from the current section. </remarks>
+        /// <remarks> This method can get blocks from any section, as long it is within 16 blocks from the current section. </remarks>
         public BlockState GetBlock(int x, int y, int z)
         {
             if ((uint)(x | y | z) < 16) {
@@ -100,22 +104,25 @@ namespace AnvilPacker.Level
             }
             return GetInterBlock(x, y, z);
         }
+        public BlockId GetBlockId(int x, int y, int z)
+        {
+            if ((uint)(x | y | z) < 16) {
+                return Section.GetBlockId(x, y, z);
+            }
+            return GetInterBlockId(x, y, z);
+        }
+
         /// <summary> Gets the block at the specified position, assumming it is likely outside the current section. </summary>
         /// <remarks> The block must be within 16 blocks from the current section. </remarks>
         public BlockState GetInterBlock(int x, int y, int z)
         {
-            int index = GetNeighborIndex(x, y, z);
-            if (index >= 0) {
-                //xyz range is [-16..-1]
-                //`n & 15` will convert to abs coords, assuming `n` is in two complement
-                // -1  -> 15
-                // -16 -> 0
-                // 16  -> 0
-                // 31  -> 15
-                var neighbor = NeighborCache[index] ?? InitNeighbor(x, y, z, index);
-                return neighbor.GetBlock(x & 15, y & 15, z & 15);
-            }
-            throw new NotImplementedException("Cannot get block farther than 16 blocks from the origin section.");
+            var neighbor = GetNeighbor(x, y, z);
+            return neighbor.GetBlock(x & 15, y & 15, z & 15);
+        }
+        public BlockId GetInterBlockId(int x, int y, int z)
+        {
+            var neighbor = GetNeighbor(x, y, z);
+            return neighbor.GetBlockId(x & 15, y & 15, z & 15);
         }
 
         /// <summary> Gets the block at the specified position, assumming it is inside the current section. </summary>
@@ -123,7 +130,6 @@ namespace AnvilPacker.Level
         {
             return Section.GetBlock(x, y, z);
         }
-        /// <summary> Gets the block id at the specified position, assumming it is inside the current section. </summary>
         public BlockId GetBlockIdFast(int x, int y, int z)
         {
             return Section.GetBlockId(x, y, z);
@@ -134,8 +140,24 @@ namespace AnvilPacker.Level
         {
             Section.SetBlock(x, y, z, block);
         }
+        public void SetBlockId(int x, int y, int z, BlockId id)
+        {
+            Section.SetBlockId(x, y, z, id);
+        }
 
+        /// <summary> Returns the neighbor section at given block coordinates.</summary>
+        public ChunkSection GetNeighbor(int x, int y, int z)
+        {
+            int index = GetNeighborIndex(x, y, z);
 
+            //xyz range is [-16..31]
+            //`n & 15` will convert to abs coords, assuming `n` is in two complement
+            // -1  -> 15
+            // -16 -> 0
+            // 16  -> 0
+            // 31  -> 15
+            return NeighborCache[index] ?? InitNeighbor(x, y, z, index);
+        }
         private ChunkSection InitNeighbor(int x, int y, int z, int index)
         {
             int sx = (X + (x >> 4)) - Region.X * Region.Size;
@@ -146,7 +168,6 @@ namespace AnvilPacker.Level
             NeighborCache[index] = neighbor;
             return neighbor;
         }
-
         private static int GetNeighborIndex(int x, int y, int z)
         {
             //map coords from [-16..31] to [0..2]
@@ -154,10 +175,10 @@ namespace AnvilPacker.Level
             y = (y + 16) >> 4;
             z = (z + 16) >> 4;
 
-            if ((uint)x > 2 || (uint)y > 2 || (uint)z > 2) {
-                return -1;
+            if ((uint)x < 3 && (uint)y < 3 && (uint)z < 3) {
+                return (y * 3 + z) * 3 + x;
             }
-            return (y * 3 + z) * 3 + x;
+            throw new NotImplementedException("Cannot get block farther than 16 blocks from the origin section.");
         }
     }
 }

@@ -9,8 +9,16 @@ namespace AnvilPacker.Encoder.v1
 {
     public class Context
     {
-        public BlockId[] Palette = Array.Empty<BlockId>();
-        public NzContext Nz = new NzContext();
+        public BlockId[] Palette;
+        public NzCoder Nz = new NzCoder();
+
+        public Context(BlockPalette palette)
+        {
+            Palette = new BlockId[palette.Count];
+            for (int i = 0; i < Palette.Length; i++) {
+                Palette[i] = (BlockId)i;
+            }
+        }
 
         public int PredictForward(BlockId value)
         {
@@ -49,7 +57,6 @@ namespace AnvilPacker.Encoder.v1
         {
             ref byte data = ref Unsafe.As<ushort, byte>(ref Unsafe.AsRef(in s[0]));
             ulong w0 = Mem.ReadLE<ulong>(ref data, 0);
-
             ulong hash = Hash(w0);
             return (int)(hash >> (64 - bits));
         }
@@ -57,12 +64,14 @@ namespace AnvilPacker.Encoder.v1
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static ulong Hash(ulong x)
         {
-            //https://github.com/Cyan4973/xxHash/blob/7bf3d9f331d0b7d0f5856ae1894e0314e2b304c2/xxhash.h#L2284
-            ulong acc = 0x27D4EB2F165667C5ul;
-            acc += x * 0xC2B2AE3D27D4EB4Ful;
-            acc = BitOperations.RotateLeft(acc, 31);
-            acc *= 0x9E3779B185EBCA87ul;
-            return acc;
+            //https://lemire.me/blog/2018/08/15/fast-strongly-universal-64-bit-hashing-everywhere/
+            const ulong a = 0x65D200CE55B19AD8ul;
+            const ulong b = 0x4F2162926E40C299ul;
+            const ulong c = 0x162DD799029970F8ul;
+
+            uint lo = (uint)x;
+            uint hi = (uint)(x >> 32);
+            return a * lo + b * hi + c;
         }
     }
 }

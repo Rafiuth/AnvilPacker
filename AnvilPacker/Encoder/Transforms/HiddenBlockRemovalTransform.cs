@@ -67,9 +67,10 @@ namespace AnvilPacker.Encoder.Transforms
         public override void Apply(RegionBuffer region)
         {
             var neighbors = GetNeighbors();
-            var freqs = new DictionarySlim<int, int>();
+            var freqs = new int[region.Palette.Count];
+            var isOpaque = BuildOpaquenessTable(region.Palette);
 
-            var mostFrequent = BlockState.Air;
+            var mostFrequent = default(BlockId);
 
             foreach (var (chunk, y) in ChunkIterator.CreateLayered(region)) {
                 for (int z = 0; z < 16; z++) {
@@ -84,9 +85,9 @@ namespace AnvilPacker.Encoder.Transforms
                             int ny = y + pos.Y;
                             int nz = z + pos.Z;
 
-                            UpdateFreq(chunk.GetBlock(nx, ny, nz));
+                            UpdateFreq(chunk.GetBlockId(nx, ny, nz));
                         }
-                        chunk.SetBlock(x, y, z, mostFrequent);
+                        chunk.SetBlockId(x, y, z, mostFrequent);
                     }
                 }
             }
@@ -95,8 +96,8 @@ namespace AnvilPacker.Encoder.Transforms
             bool IsHidden(ChunkIterator chunk, int x, int y, int z)
             {
                 foreach (var pos in SelfAndImmediateNeighbors) {
-                    var block = chunk.GetBlock(x + pos.X, y + pos.Y, z + pos.Z);
-                    if (!IsOpaque(block)) {
+                    var block = chunk.GetBlockId(x + pos.X, y + pos.Y, z + pos.Z);
+                    if (!isOpaque[block]) {
                         return false;
                     }
                     UpdateFreq(block);
@@ -104,14 +105,19 @@ namespace AnvilPacker.Encoder.Transforms
                 return true;
             }
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            void UpdateFreq(BlockState block)
+            void UpdateFreq(BlockId id)
             {
-                ref int freq = ref freqs.GetOrAdd(block.Id);
+                ref int freq = ref freqs[id];
                 freq++;
-                if (freq > freqs.GetOrAdd(mostFrequent.Id)) {
-                    mostFrequent = block;
+                if (freq > freqs[mostFrequent]) {
+                    mostFrequent = id;
                 }
             }
+        }
+
+        private bool[] BuildOpaquenessTable(BlockPalette palette)
+        {
+            return palette.Select(IsOpaque).ToArray();
         }
 
         private bool IsOpaque(BlockState block)

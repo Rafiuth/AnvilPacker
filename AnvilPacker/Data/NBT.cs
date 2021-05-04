@@ -13,115 +13,109 @@ namespace AnvilPacker.Data
     {
         public abstract TagType Type { get; }
 
-        internal static NbtTag Read(TagType type, DataReader din, int depth)
+        internal static NbtTag Read(TagType type, DataReader dr, int depth)
         {
             if (depth++ > 256) {
-                //Protect against StackOverflowException
+                //prevent stack overflow crashes
                 throw new InvalidDataException("Malformed NBT data: too many nested tags.");
             }
-            static PrimitiveTag<T> NewPrim<T>(T value) => new PrimitiveTag<T>(value);
+            PrimitiveTag<T> ReadPrim<T>() where T : unmanaged
+            {
+                var value = dr.ReadBE<T>();
+                return new PrimitiveTag<T>(value);
+            }
+            PrimitiveTag<T[]> ReadArr<T>() where T : unmanaged
+            {
+                int len = dr.ReadIntBE();
+                var arr = GC.AllocateUninitializedArray<T>(len);
+                dr.ReadBulkBE<T>(arr);
+                return new PrimitiveTag<T[]>(arr);
+            }
 
             switch (type) {
-                case TagType.Byte:      return NewPrim(din.ReadByte());
-                case TagType.Short:     return NewPrim(din.ReadShortBE());
-                case TagType.Int:       return NewPrim(din.ReadIntBE());
-                case TagType.Long:      return NewPrim(din.ReadLongBE());
-                case TagType.Float:     return NewPrim(din.ReadFloatBE());
-                case TagType.Double:    return NewPrim(din.ReadDoubleBE());
-                case TagType.String:    return NewPrim(din.ReadString());
-                case TagType.ByteArray: return NewPrim(din.ReadBytes(din.ReadIntBE()));
-                case TagType.IntArray: {
-                    var arr = new int[din.ReadIntBE()];
-                    for (int i = 0; i < arr.Length; i++) {
-                        arr[i] = din.ReadIntBE();
-                    }
-                    return NewPrim(arr);
-                }
-                case TagType.LongArray: {
-                    var arr = new long[din.ReadIntBE()];
-                    for (int i = 0; i < arr.Length; i++) {
-                        arr[i] = din.ReadLongBE();
-                    }
-                    return NewPrim(arr);
-                }
+                case TagType.Byte:      return ReadPrim<byte>();
+                case TagType.Short:     return ReadPrim<short>();
+                case TagType.Int:       return ReadPrim<int>();
+                case TagType.Long:      return ReadPrim<long>();
+                case TagType.Float:     return ReadPrim<float>();
+                case TagType.Double:    return ReadPrim<double>();
+                case TagType.ByteArray: return ReadArr<byte>();
+                case TagType.IntArray:  return ReadArr<int>();
+                case TagType.LongArray: return ReadArr<long>();
+                case TagType.String:    return new PrimitiveTag<string>(dr.ReadUTF());
                 case TagType.List: {
-                    TagType tagType = (TagType)din.ReadByte();
-                    int count = din.ReadIntBE();
+                    var elemType = (TagType)dr.ReadByte();
+                    int count = dr.ReadIntBE();
 
-                    ListTag list = new ListTag(count);
+                    var list = new ListTag(count);
                     for (int i = 0; i < count; i++) {
-                        list.Add(Read(tagType, din, depth));
+                        list.Add(Read(elemType, dr, depth));
                     }
                     return list;
                 }
                 case TagType.Compound: {
-                    CompoundTag tag = new CompoundTag();
+                    var tag = new CompoundTag();
                     while (true) {
-                        var tagType = (TagType)din.ReadByte();
-                        if (tagType == TagType.End) {
+                        var childType = (TagType)dr.ReadByte();
+                        if (childType == TagType.End) {
                             return tag;
                         }
-                        string name = din.ReadString();
-                        tag[name] = Read(tagType, din, depth);
+                        string name = dr.ReadUTF();
+                        tag[name] = Read(childType, dr, depth);
                     }
                 }
                 default: throw new ArgumentException($"Unknown tag type: {type}");
             }
         }
-        internal static void Write(NbtTag tag, DataWriter dout, int depth)
+        internal static void Write(NbtTag tag, DataWriter dw, int depth)
         {
             if (depth++ > 256) {
-                //Protect against StackOverflowException
+                //prevent stack overflow crashes
                 throw new InvalidDataException("Malformed NBT data: too many nested tags.");
             }
-            T GetPrim<T>() => ((PrimitiveTag<T>)tag).Value;
+            void WritePrim<T>() where T : unmanaged
+            {
+                var value = ((PrimitiveTag<T>)tag).Value;
+                dw.WriteBE<T>(value);
+            }
+            void WriteArr<T>() where T : unmanaged
+            {
+                var arr = ((PrimitiveTag<T[]>)tag).Value;
+                dw.WriteIntBE(arr.Length);
+                dw.WriteBulkBE<T>(arr);
+            }
 
             switch (tag.Type) {
-                case TagType.Byte:   dout.WriteByte(GetPrim<byte>()); break;
-                case TagType.Short:  dout.WriteShortBE(GetPrim<short>()); break;
-                case TagType.Int:    dout.WriteIntBE(GetPrim<int>()); break;
-                case TagType.Long:   dout.WriteLongBE(GetPrim<long>()); break;
-                case TagType.Float:  dout.WriteFloatBE(GetPrim<float>()); break;
-                case TagType.Double: dout.WriteDoubleBE(GetPrim<double>()); break;
-                case TagType.String: dout.WriteString(GetPrim<string>()); break;
-                case TagType.ByteArray: {
-                    var arr = GetPrim<byte[]>();
-                    dout.WriteIntBE(arr.Length);
-                    dout.WriteBytes(arr);
-                    break;
-                }
-                case TagType.IntArray: {
-                    var arr = GetPrim<int[]>();
-                    dout.WriteIntBE(arr.Length);
-                    for (int i = 0; i < arr.Length; i++) {
-                        dout.WriteIntBE(arr[i]);
-                    }
-                    break;
-                }
-                case TagType.LongArray: {
-                    var arr = GetPrim<long[]>();
-                    dout.WriteIntBE(arr.Length);
-                    for (int i = 0; i < arr.Length; i++) {
-                        dout.WriteLongBE(arr[i]);
-                    }
+                case TagType.Byte:      WritePrim<byte>(); break;
+                case TagType.Short:     WritePrim<short>(); break;
+                case TagType.Int:       WritePrim<int>(); break;
+                case TagType.Long:      WritePrim<long>(); break;
+                case TagType.Float:     WritePrim<float>(); break;
+                case TagType.Double:    WritePrim<double>(); break;
+                case TagType.ByteArray: WriteArr<byte>(); break;
+                case TagType.IntArray:  WriteArr<int>(); break;
+                case TagType.LongArray: WriteArr<long>(); break;
+                case TagType.String: {
+                    var str = ((PrimitiveTag<string>)tag).Value;
+                    dw.WriteUTF(str);
                     break;
                 }
                 case TagType.List: {
                     var list = (ListTag)tag;
-                    dout.WriteByte((byte)list.ElementType);
-                    dout.WriteIntBE(list.Count);
+                    dw.WriteByte((byte)list.ElementType);
+                    dw.WriteIntBE(list.Count);
                     foreach (NbtTag entry in list) {
-                        Write(entry, dout, depth);
+                        Write(entry, dw, depth);
                     }
                     break;
                 }
                 case TagType.Compound: {
-                    foreach (KeyValuePair<string, NbtTag> entry in (CompoundTag)tag) {
-                        dout.WriteByte((byte)entry.Value.Type);
-                        dout.WriteString(entry.Key);
-                        Write(entry.Value, dout, depth);
+                    foreach (var (key, val) in (CompoundTag)tag) {
+                        dw.WriteByte((byte)val.Type);
+                        dw.WriteUTF(key);
+                        Write(val, dw, depth);
                     }
-                    dout.WriteByte((byte)TagType.End);
+                    dw.WriteByte((byte)TagType.End);
                     break;
                 }
                 default: throw new NotSupportedException("Unknown tag type");
@@ -512,7 +506,7 @@ namespace AnvilPacker.Data
         public static CompoundTag Read(DataReader dis)
         {
             byte type = dis.ReadByte();
-            string name = dis.ReadString();
+            string name = dis.ReadUTF();
             
             if (NbtTag.Read((TagType)type, dis, 0) is CompoundTag tag) {
                 return tag;
@@ -522,7 +516,7 @@ namespace AnvilPacker.Data
         public static void Write(CompoundTag tag, DataWriter dos)
         {
             dos.WriteByte((byte)tag.Type);
-            dos.WriteString("");
+            dos.WriteUTF("");
             NbtTag.Write(tag, dos, 0);
         }
     }

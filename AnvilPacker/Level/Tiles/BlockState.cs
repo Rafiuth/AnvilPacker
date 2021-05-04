@@ -7,14 +7,15 @@ using AnvilPacker.Data;
 
 namespace AnvilPacker.Level
 {
-    // Design note: The reason we need the block registry is because we wouldn't know how to index them otherwise.
-    // Consider the following:
-    //   Both `oak_log[axis=y]` and `oak_log` map to the same block state. We must know blocks 
-    //   and their default states, otherwise they would map to entirely different block states.
+    // Design note: The reason we need the block registry is because block states can be
+    // ambiguous by omitting properties.
+    // Consider:
+    //   Both `oak_log[axis=y]` and `oak_log` map to the same block state. If we didn't knew 
+    //   that the default value for `axis` is `y`, they would map to entirely different block states.
     // The unfortunate consequences of this are:
     //  - Slow startup since we have to parse a huge JSON file and create thousands of objects.
     //  - Lost support for modded worlds. (still possible, but requires the hastle of updating `blocks.json`)
-    //  - Requires a complete registry of every version; Mojang may add or rename a block, and I'd like to keep compatibility with all versions.
+    //  - Since 1.13, blocks can be renamed. A complete registry is needed for every version being used.
     public class BlockState : IEquatable<BlockState>
     {
         public static BlockState Air { get; internal set; }
@@ -23,6 +24,11 @@ namespace AnvilPacker.Level
         public Block Block { get; init; }
         public Dictionary<string, BlockPropertyValue> Properties { get; init; }
         public BlockAttributes Attributes { get; init; }
+
+        /// <summary> Amount of light this block absorbs. [0..15] </summary>
+        public byte Opacity { get; init; }
+        /// <summary> Amount of light this block emits. [0..15] </summary>
+        public byte Emittance { get; init; }
 
         public BlockMaterial Material => Block.Material;
 

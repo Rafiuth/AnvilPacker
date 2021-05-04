@@ -18,8 +18,6 @@ using NLog;
 
 namespace AnvilPacker
 {
-    //TODO: Look at FLIF's MANIAC encoder
-    //https://hbfs.wordpress.com/2011/03/22/compressing-voxel-worlds/
     public class Program
     {
         private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
@@ -34,7 +32,7 @@ namespace AnvilPacker
             var config = new NLog.Config.LoggingConfiguration();
             var consoleTarget = new NLog.Targets.ConsoleTarget("console");
             consoleTarget.Layout = "[${level:uppercase=true} ${logger:shortName=true}] ${replace-newlines:replacement=\n:${message}} ${exception:format=toString}";
-            config.AddRule(LogLevel.Debug, LogLevel.Fatal, consoleTarget);
+            config.AddRule(LogLevel.Trace, LogLevel.Fatal, consoleTarget);
             NLog.LogManager.Configuration = config;
 
             RegistryLoader.Load();
@@ -53,9 +51,10 @@ namespace AnvilPacker
                 for (int x = 0; x < 32; x++) {
                     var tag = reader.Read(x, z);
                     if (tag != null) {
-                        var chunk = serializer.Deserialize(tag.GetCompound("Level"));
+                        var chunk = serializer.Deserialize(tag.GetCompound("Level"), region.Palette);
                         region.SetChunk(x, z, chunk);
-/*
+
+                        /*
                         for (int i = 0; i < 64; i++) {
                             for (int j = 0; j < 8; j++) {
                                 var section = chunk.Sections[rng.Next(16)];
@@ -71,6 +70,7 @@ namespace AnvilPacker
                     }
                 }
             }
+            Console.WriteLine("Encoding...");
             var sw = Stopwatch.StartNew();
             if (false) {
                 new Encoder.Transforms.HiddenBlockRemovalTransform().Apply(region);
@@ -82,28 +82,31 @@ namespace AnvilPacker
             using var encRegion = new DataWriter(File.Create("encoded.bin"));
             encoder.Encode(encRegion);
 
-            //Dump(region, "dumped.bin");
+            //Dump(region, "dumped.bin", false);
             //DumpImages(region, "layers", false);
             Console.WriteLine($"Encoding took {sw.ElapsedMilliseconds}ms");
         }
 
-        private static void Dump(RegionBuffer region, string filename)
+        private static void Dump(RegionBuffer region, string filename, bool layered)
         {
-            var globalPalette = new Dictionary<int, byte>();
-
+            if (region.Palette.Count > 256) {
+                throw new InvalidOperationException("Palette won't fit in 8 bits");
+            }
             using var fs = File.Create(filename);
-            foreach (var section in ChunkIterator.GetSections(region)) {
-                var palette = section.Palette;
-                foreach (var block in palette) {
-                    globalPalette.TryAdd(block.Id, (byte)globalPalette.Count);
-                }
-                if (globalPalette.Count > 256) {
-                    throw new InvalidOperationException("Palette won't fit in 8 bits");
-                }
 
-                foreach (var block in section.Blocks) {
-                    int stateId = palette.GetState(block).Id;
-                    fs.WriteByte(globalPalette[stateId]);
+            if (layered) {
+                foreach (var (chunk, y) in ChunkIterator.CreateLayered(region)) {
+                    for (int z = 0; z < 16; z++) {
+                        for (int x = 0; x < 16; x++) {
+                            fs.WriteByte((byte)chunk.GetBlockIdFast(x, y, z));
+                        }
+                    }
+                }
+            } else {
+                foreach (var section in ChunkIterator.GetSections(region)) {
+                    foreach (var block in section.Blocks) {
+                        fs.WriteByte((byte)block);
+                    }
                 }
             }
         }

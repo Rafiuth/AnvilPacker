@@ -44,7 +44,7 @@ namespace AnvilPacker.Encoder
                     b |= 0x80;
                 }
                 dw.WriteByte((byte)b);
-                val >>= 7;
+                val = (int)((uint)val >> 7);
             }
         }
         public static int ReadVarInt(this DataReader dr)
@@ -129,7 +129,7 @@ namespace AnvilPacker.Encoder
         }
     }
     //Note: stolen from FLIF's symbol.hpp
-    public class NzContext
+    public class NzCoder
     {
         private const int bits = 16; //max value bits
 
@@ -139,18 +139,18 @@ namespace AnvilPacker.Encoder
         public BitChance[] Mant = new BitChance[bits];
 
         /// <summary> Creates a new nz context and initializes all bit chances to 50%.</summary>
-        public NzContext()
+        public NzCoder()
         {
-            static BitChance Dp() => new BitChance(0.5);
-            Zero = Dp();
-            Sign = Dp();
+            static BitChance C() => new BitChance(0.5);
+            Zero = C();
+            Sign = C();
 
             for (int i = 0; i < bits - 1; i++) {
-                Exp[i * 2 + 0] = Dp();
-                Exp[i * 2 + 1] = Dp();
+                Exp[i * 2 + 0] = C();
+                Exp[i * 2 + 1] = C();
             }
             for (int i = 0; i < bits; i++) {
-                Mant[i] = Dp();
+                Mant[i] = C();
             }
         }
 
@@ -317,30 +317,6 @@ namespace AnvilPacker.Encoder
             int n = bit ? 0 : K;
             Value += (ushort)((n - Value) / (Count + DELTA));
         }
-        //private static readonly double[] AdaptRates = { 0.005, 0.015, 0.025, 0.05 };
-
-        //public void Update(bool bit)
-        //{
-        //    for (int i = 0; i < N; i++) {
-        //        float newScore = FastLog2(65535f / prob[i]);
-        //        score[i] = (score[i] * 15 + newScore) * (1f / 16);
-        //        prob[i] = Adapt(bit, prob[i], AdaptRates[i]);
-        //    }
-        //
-        //    for (int i = 0; i < N; i++) {
-        //        if (score[i] < score[best]) {
-        //            best = (byte)i;
-        //        }
-        //    }
-        //}
-
-        //private static float FastLog2(float x)
-        //{
-        //    //https://github.com/romeric/fastapprox/blob/master/fastapprox/src/fastlog.h
-        //    float y = BitConverter.SingleToInt32Bits(x);
-        //    y *= 1.1920928955078125e-7f;
-        //    return y - 126.94269504f;
-        //}
 
         public override string ToString() => $"{Value * 100 / K}%";
     }

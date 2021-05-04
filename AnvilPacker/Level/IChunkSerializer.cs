@@ -8,7 +8,8 @@ namespace AnvilPacker.Level
 {
     public interface IChunkSerializer
     {
-        Chunk Deserialize(CompoundTag tag);
+        /// <param name="palette">Palette in which block IDs refer to. Note that this method may add new entries to this palette.</param>
+        Chunk Deserialize(CompoundTag tag, BlockPalette palette);
         CompoundTag Serialize(Chunk chunk);
     }
 }

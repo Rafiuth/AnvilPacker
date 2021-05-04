@@ -59,6 +59,8 @@ namespace AnvilPacker.Level
                         Id = id,
                         Block = block,
                         Attributes = (BlockAttributes)flags,
+                        Opacity = (byte)(light & 15),
+                        Emittance = (byte)(light >> 4),
                         Properties = props.ToDictionary(
                             p => p.Name, 
                             p => BlockPropertyValue.Create(props, p, i)

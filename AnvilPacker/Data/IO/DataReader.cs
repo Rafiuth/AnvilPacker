@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text;
 using AnvilPacker.Util;
 
@@ -79,14 +80,14 @@ namespace AnvilPacker.Data
         [MethodImpl(NoInline)]
         private T ReadUnbuffered<T>() where T : unmanaged
         {
-            FillBuffer(); //fill buffer before to so we may avoid 2 stream reads
+            FillBuffer(); //fill buffer before so we might call Read() once
             Unsafe.SkipInit(out T value);
             ReadBytes(Mem.CreateSpan<T, byte>(ref value, 1));
             return value;
         }
 
         [MethodImpl(Inline)]
-        private T ReadLE<T>() where T : unmanaged
+        public T ReadLE<T>() where T : unmanaged
         {
             T value = Read<T>();
             if (!BitConverter.IsLittleEndian) {
@@ -95,7 +96,7 @@ namespace AnvilPacker.Data
             return value;
         }
         [MethodImpl(Inline)]
-        private T ReadBE<T>() where T : unmanaged
+        public T ReadBE<T>() where T : unmanaged
         {
             T value = Read<T>();
             if (BitConverter.IsLittleEndian) {
@@ -152,10 +153,28 @@ namespace AnvilPacker.Data
             ReadBytes(buffer.AsSpan(offset, count));
         }
 
+        public void ReadBulkLE<T>(Span<T> buf) where T : unmanaged
+        {
+            ReadBulk(buf, !BitConverter.IsLittleEndian);
+        }
+        public void ReadBulkBE<T>(Span<T> buf) where T : unmanaged
+        {
+            ReadBulk(buf, BitConverter.IsLittleEndian);
+        }
+        private unsafe void ReadBulk<T>(Span<T> buf, bool revElemBytes) where T : unmanaged
+        {
+            ReadBytes(MemoryMarshal.AsBytes(buf));
+            if (revElemBytes && sizeof(T) > 1) {
+                for (int i = 0; i < buf.Length; i++) {
+                    buf[i] = Mem.BSwap(buf[i]);
+                }
+            }
+        }
+
         //Java compat
 
         /// <summary> Reads an UTF8 string prefixed with a big-endian ushort indicating its length </summary>
-        public string ReadString() => ReadString(ReadUShortBE());
+        public string ReadUTF() => ReadString(ReadUShortBE());
 
         /// <summary> Reads an UTF8 string of <paramref name="len"/> bytes. </summary>
         public string ReadString(int len)

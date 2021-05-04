@@ -1,4 +1,6 @@
-﻿using System;
+﻿#nullable enable
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -51,9 +53,9 @@ namespace AnvilPacker.Util
             return ~start;
         }
 
-        public static IEnumerable<T> ExceptNull<T>(this IEnumerable<T> src) where T : class
+        public static IEnumerable<T> ExceptNull<T>(this IEnumerable<T?> src) where T : class
         {
-            return src.Where(v => v != null);
+            return src.Where(v => v != null)!;
         }
 
         public static int Count<T>(this T[] arr, T value) where T : IEquatable<T>
@@ -65,6 +67,15 @@ namespace AnvilPacker.Util
                 }
             }
             return count;
+        }
+
+        public static int CombinedHashCode<T>(this IEnumerable<T> values)
+        {
+            var hash = new HashCode();
+            foreach (var val in values) {
+                hash.Add(val);
+            }
+            return hash.ToHashCode();
         }
     }
 }

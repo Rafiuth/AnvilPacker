@@ -12,11 +12,11 @@ namespace AnvilPacker.Level.Versions.v1_8
     {
         private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
 
-        public Chunk Deserialize(CompoundTag level)
+        public Chunk Deserialize(CompoundTag tag, BlockPalette palette)
         {
             int x = Pop<int>("xPos");
             int z = Pop<int>("zPos");
-            var chunk = new Chunk(x, z);
+            var chunk = new Chunk(x, z, palette);
 
             foreach (CompoundTag sectTag in Pop<ListTag>("Sections")) {
                 int y = sectTag.GetSByte("Y");
@@ -31,16 +31,17 @@ namespace AnvilPacker.Level.Versions.v1_8
 
             chunk.TileTicks = DeserializeTileTicks(x, z, Pop<ListTag>("TileTicks"));
 
-            chunk.Opaque = level;
+            chunk.Opaque = tag;
 
             return chunk;
 
             T Pop<T>(string name)
             {
-                var val = level.Get<T>(name, TagGetMode.Null);
-                level.Remove(name);
-                
-                return val;
+                if (tag.TryGet(name, out T value)) {
+                    tag.Remove(name);
+                    return value;
+                }
+                return default;
             }
         }
 

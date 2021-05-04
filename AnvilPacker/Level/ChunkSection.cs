@@ -12,6 +12,7 @@ namespace AnvilPacker.Level
         //1.8 and older versions used 8+4/16 bit array and were just fine.
         //We will never hit 64k blocks in a single section anyway.
         public BlockId[] Blocks { get; }
+        /// <summary> A reference copy of the region palette. </summary>
         public BlockPalette Palette { get; set; }
         public NibbleArray? SkyLight { get; set; }
         public NibbleArray? BlockLight { get; set; }
@@ -21,12 +22,12 @@ namespace AnvilPacker.Level
         public int X => Chunk.X;
         public int Z => Chunk.Z;
 
-        public ChunkSection(Chunk chunk, int y, BlockPalette? palette = null)
+        public ChunkSection(Chunk chunk, int y)
         {
             Chunk = chunk;
             Y = y;
             Blocks = new BlockId[16 * 16 * 16];
-            Palette = palette ?? new() { BlockState.Air };
+            Palette = chunk.Palette;
         }
 
         public BlockState GetBlock(int x, int y, int z)
@@ -43,34 +44,9 @@ namespace AnvilPacker.Level
             var id = Palette.GetOrAddId(block);
             Blocks[GetIndex(x, y, z)] = id;
         }
-
-        /// <summary> Removes unused palette entries. </summary>
-        /// <returns> The number of entries removed. </returns>
-        public int OptimizePalette()
+        public void SetBlockId(int x, int y, int z, BlockId id)
         {
-            var blocks = Blocks;
-            var used = new bool[Palette.Count];
-
-            foreach (var block in blocks) {
-                used[block] = true;
-            }
-
-            int unusedCount = used.Count(false);
-            if (unusedCount > 0) {
-                var newId = new BlockId[Palette.Count];
-                var newPalette = new BlockPalette(Palette.Count - unusedCount);
-                for (int i = 0; i < Palette.Count; i++) {
-                    if (used[i]) {
-                        newId[i] = newPalette.Add(Palette.GetState((BlockId)i));
-                    }
-                }
-                Palette = newPalette;
-
-                for (int i = 0; i < blocks.Length; i++) {
-                    blocks[i] = newId[blocks[i]];
-                }
-            }
-            return unusedCount;
+            Blocks[GetIndex(x, y, z)] = id;
         }
 
         public int GetSkyLight(int x, int y, int z)

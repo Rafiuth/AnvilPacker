@@ -18,18 +18,21 @@ namespace AnvilPacker.Level
     {
         public readonly int X, Z;
         public readonly ChunkSection?[] Sections = new ChunkSection[16];
+        public BlockPalette Palette;
+        public HeightMaps HeightMaps = new();
 
         public List<ScheduledTick> TileTicks = new();
         /// <summary> Data that the encoder doesn't know how to handle. Contents are left unmodified. </summary>
-        public CompoundTag? Opaque;
+        public CompoundTag? Opaque { get; set; }
 
         /// <summary> Section Y extents, in chunk coordinates (blockPos / 16). Values are inclusive. </summary>
         public readonly int MinSectionY, MaxSectionY;
 
-        public Chunk(int x, int z)
+        public Chunk(int x, int z, BlockPalette palette)
         {
             X = x;
             Z = z;
+            Palette = palette;
             MinSectionY = 0;
             MaxSectionY = 15;
         }
@@ -45,13 +48,13 @@ namespace AnvilPacker.Level
         {
             Sections[y] = section;
         }
-        public ChunkSection GetOrCreateSection(int y, BlockPalette? palette = null)
+        public ChunkSection GetOrCreateSection(int y)
         {
             var section = GetSection(y);
             if (section == null) {
                 Ensure.That(y >= MinSectionY && y <= MaxSectionY, "Cannot create section outside world Y bounds.");
 
-                section = new ChunkSection(this, y, palette);
+                section = new ChunkSection(this, y);
                 SetSection(y, section);
             }
             return section;

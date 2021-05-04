@@ -16,10 +16,9 @@ using NLog;
 namespace AnvilPacker.Encoder.v1
 {
     //Version 1 uses a fixed size context table. For each block, a context is selected
-    //based on a hash generated using neighbor blocks. The context contains a palette,
-    //which will be used by a move to front transform. The index of the block in the palette
-    //is encoded using adaptive binary arithmetic coding. Last, the block is moved to the
-    //front of the context's palette (MTF).
+    //based on a hash generated using neighbor blocks. The context contains a copy of the
+    //region palette. The index of the block in the palette is encoded using adaptive binary
+    //arithmetic coding, then the block is moved to the first index of the palette (MTF).
 
     //Benchmarks:
     // meth    size     notes
@@ -42,7 +41,6 @@ namespace AnvilPacker.Encoder.v1
         private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
         
         private RegionBuffer _region;
-        private DictionarySlim<BlockState, BlockId> _palette = new();
         private int _predAccuracySum, _blockCount;
 
         public EncoderV1(RegionBuffer region)
@@ -63,9 +61,15 @@ namespace AnvilPacker.Encoder.v1
 
             double bitsPerBlock = buf.Position * 8.0 / _blockCount;
 
+            buf.Clear();
+            EncodeHeightMaps(buf);
+
+            stream.WriteBytes(buf.BufferSpan);
+
             _logger.Debug($"Stats for region {_region.X} {_region.Z}");
-            _logger.Debug($" NumBlocks: {_blockCount / 1000000.0:0.0}M Palette: {_palette.Count}");
+            _logger.Debug($" NumBlocks: {_blockCount / 1000000.0:0.0}M Palette: {_region.Palette.Count}");
             _logger.Debug($" EncSize: {stream.Position / 1024.0:0.000}KB Overhead: {headerLen / 1024.0:0.000}KB");
+            _logger.Debug($" EncHeightmaps: {buf.Position / 1024.0:0.000}KB");
             _logger.Debug($" BitsPerBlock: {bitsPerBlock:0.000}");
             _logger.Debug($" PredAccuracy: {_predAccuracySum * 100.0 / _blockCount:0.0}% NumContexts: 2^{CTX_BITS}");
         }
@@ -74,24 +78,22 @@ namespace AnvilPacker.Encoder.v1
         {
             var contexts = new Context[1 << CTX_BITS];
             var ac = new ArithmEncoder(stream);
-            var paletteCache = new (BlockId[] Palette, int Y)[_region.Size, _region.Size];
 
             foreach (var (chunk, y) in ChunkIterator.CreateLayered(_region)) {
-                var palette = GetCachedPalette(paletteCache, chunk);
-
-                if (chunk.X % 32 == 0) {
+                if (y == 0 && chunk.X % 32 == 0) {
                     _logger.Trace($"Encoding chunk {chunk.X} {chunk.Y} {chunk.Z}");
                 }
-                EncodeBlocks(chunk, y, palette, contexts, CTX_NEIGHBORS, ac);
+                EncodeBlocks(chunk, y, contexts, CTX_NEIGHBORS, ac);
 
                 _blockCount += 16 * 16;
             }
             ac.Flush();
         }
 
-        private unsafe void EncodeBlocks(ChunkIterator chunk, int y, BlockId[] palette, Context[] contexts, Vec3i[] neighbors, ArithmEncoder ac)
+        private unsafe void EncodeBlocks(ChunkIterator chunk, int y, Context[] contexts, Vec3i[] neighbors, ArithmEncoder ac)
         {
             Debug.Assert(neighbors.Length <= ContextKey.MAX_SAMPLES);
+            Debug.Assert(chunk.Palette == _region.Palette);
 
             var key = new ContextKey();
 
@@ -104,14 +106,10 @@ namespace AnvilPacker.Encoder.v1
                         int ny = y + rel.Y;
                         int nz = z + rel.Z;
 
-                        if ((uint)(nx | ny | nz) < 16u) {
-                            key.s[i] = GetBlockId(nx, ny, nz);
-                        } else {
-                            key.s[i] = GetInterBlockId(nx, ny, nz);
-                        }
+                        key.s[i] = chunk.GetBlockId(nx, ny, nz);
                     }
                     var ctx = GetContext(contexts, in key);
-                    var id = GetBlockId(x, y, z);
+                    var id = chunk.GetBlockIdFast(x, y, z);
 
                     int delta = ctx.PredictForward(id);
                     ctx.Nz.Write(ac, delta, 0, ctx.Palette.Length - 1);
@@ -119,54 +117,57 @@ namespace AnvilPacker.Encoder.v1
                     _predAccuracySum += delta == 0 ? 1 : 0;
                 }
             }
-            ushort GetBlockId(int x, int y, int z)
-            {
-                return palette[chunk.GetBlockIdFast(x, y, z)];
-            }
-            ushort GetInterBlockId(int x, int y, int z)
-            {
-                var block = chunk.GetInterBlock(x, y, z);
-                return _palette.GetOrAdd(block, (BlockId)_palette.Count);
-            }
-        }
-
-        private BlockId[] GetCachedPalette((BlockId[] Palette, int Y)[,] cache, ChunkIterator chunk)
-        {
-            int rx = _region.X * _region.Size;
-            int rz = _region.Z * _region.Size;
-            ref var cached = ref cache[chunk.X - rx, chunk.Z - rz];
-
-            if (cached.Palette != null && cached.Y == chunk.Y) {
-                return cached.Palette;
-            }
-            var palette = new BlockId[chunk.Palette.Count];
-            for (int i = 0; i < palette.Length; i++) {
-                var block = chunk.Palette.GetState((BlockId)i);
-
-                if (!_palette.TryGetValue(block, out var id)) {
-                    id = (BlockId)_palette.Count;
-                    _palette.Add(block, id);
-                }
-                palette[i] = id;
-            }
-            cached = (palette, chunk.Y);
-            return palette;
         }
         private Context GetContext(Context[] contexts, in ContextKey key)
         {
             int slot = key.GetSlot(CTX_BITS);
-            var ctx = contexts[slot] ??= new Context();
+            var ctx = contexts[slot] ??= new Context(_region.Palette);
 
-            //resize palette if necessary
-            int oldLen = ctx.Palette.Length;
-            int newLen = _palette.Count;
-            if (oldLen < newLen) {
-                Array.Resize(ref ctx.Palette, newLen);
-                for (int i = oldLen; i < newLen; i++) {
-                    ctx.Palette[i] = (BlockId)i;
+            return ctx;
+        }
+
+        private void EncodeHeightMaps(DataWriter stream)
+        {
+            _logger.Trace("Encoding height maps...");
+            var pred = new short[16 * 16];
+            var types = _region.Chunks
+                               .ExceptNull()
+                               .SelectMany(c => c.HeightMaps.Select(h => h.Key))
+                               .Distinct();
+
+            var (minSy, maxSy) = _region.GetChunkYExtents();
+            //rough estimate of min and max deltas.
+            int minDelta = (minSy - maxSy) * 16;
+            int maxDelta = (maxSy - minSy) * 16;
+
+            foreach (var type in types) {
+                stream.WriteString(type.Name, stream.WriteVarInt);
+            }
+            stream.WriteVarInt(minDelta);
+            stream.WriteVarInt(maxDelta);
+
+            if (minDelta == 0 && maxDelta == 0) {
+                //all predicted heights are correct, don't waste resources encoding them.
+                return;
+            }
+            var ac = new ArithmEncoder(stream);
+            var pSkip = new BitChance(0.9);
+            var nzHeight = new NzCoder();
+
+            foreach (var chunk in _region.Chunks.ExceptNull()) {
+                foreach (var type in types) {
+                    var map = chunk.HeightMaps.Get(type);
+
+                    pSkip.Write(ac, map == null);
+                    if (map != null) {
+                        HeightMaps.Calculate(chunk, type, pred);
+                        for (int i = 0; i < 16 * 16; i++) {
+                            nzHeight.Write(ac, map[i] - pred[i], minDelta, maxDelta);
+                        }
+                    }
                 }
             }
-            return ctx;
+            ac.Flush();
         }
 
         private void WriteHeader(DataWriter stream)
@@ -175,24 +176,27 @@ namespace AnvilPacker.Encoder.v1
 
             stream.WriteByte(_region.Size / 32);
 
+            stream.WriteByte(CTX_BITS);
+            stream.WriteByte(CTX_NEIGHBORS.Length);
+            foreach (var (nx, ny, nz) in CTX_NEIGHBORS) {
+                Ensure.That(
+                    nx >= -3 && nx <= 0 && 
+                    ny >= -4 && ny <= 3 && 
+                    nz >= -3 && nz <= 0
+                );
+                stream.WriteByte(
+                    (nx & 3) << 0 | //-3..0
+                    (ny & 7) << 2 | //-4..3
+                    (nz & 3) << 5   //-3..0
+                );
+            }
             WritePalette(stream);
             WriteChunkBitmap(stream);
         }
 
         private void WriteChunkBitmap(DataWriter stream)
         {
-            //find Y extents
-            int minY = int.MaxValue, maxY = int.MinValue;
-            foreach (var chunk in _region.Chunks) {
-                if (chunk == null) continue;
-
-                for (int y = chunk.MinSectionY; y <= chunk.MaxSectionY; y++) {
-                    if (chunk.GetSection(y) != null) {
-                        minY = Math.Min(minY, y);
-                        maxY = Math.Max(maxY, y);
-                    }
-                }
-            }
+            var (minY, maxY) = _region.GetChunkYExtents();
             //create bitmap
             int length = (maxY - minY + 1) * (_region.Size * _region.Size);
             var bitmap = new BitArray(length);
@@ -226,19 +230,16 @@ namespace AnvilPacker.Encoder.v1
         }
         private void WritePalette(DataWriter stream)
         {
-            var palette = _palette;
+            var palette = _region.Palette;
             stream.WriteVarInt(palette.Count);
 
-            int expectedId = 0;
-            foreach (var (block, id) in palette) {
-                Debug.Assert(id == expectedId++);
-
+            foreach (var (block, id) in palette.BlocksAndIds()) {
                 var name = Encoding.UTF8.GetBytes(block.ToString());
                 stream.WriteVarInt(name.Length);
                 stream.WriteBytes(name);
 
                 stream.WriteVarInt((int)block.Attributes);
-                stream.WriteByte(0); //opacity << 4 | emittance
+                stream.WriteByte(block.Emittance << 4 | block.Opacity);
             }
         }
     }

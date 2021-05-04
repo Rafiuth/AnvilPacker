@@ -11,6 +11,8 @@ namespace AnvilPacker.Data
     //TODO: optimize
     //this is about 1.3x slower than PackedBitStorage
     //using a div by const thing like Minecraft does might improve it (see libdivide)
+
+    // bit[i] = (data[i / elemBits] >> (i % elemBits)) & mask
     public class SparseBitStorage
     {
         public readonly long[] Data;

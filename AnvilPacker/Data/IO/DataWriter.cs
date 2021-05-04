@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text;
 using AnvilPacker.Util;
 
@@ -72,7 +73,7 @@ namespace AnvilPacker.Data
             WriteBytes(Mem.CreateSpan<T, byte>(ref value, 1));
         }
         [MethodImpl(Inline)]
-        private void WriteLE<T>(T value) where T : unmanaged
+        public void WriteLE<T>(T value) where T : unmanaged
         {
             if (!BitConverter.IsLittleEndian) {
                 value = Mem.BSwap(value);
@@ -80,7 +81,7 @@ namespace AnvilPacker.Data
             Write(value);
         }
         [MethodImpl(Inline)]
-        private void WriteBE<T>(T value) where T : unmanaged
+        public void WriteBE<T>(T value) where T : unmanaged
         {
             if (BitConverter.IsLittleEndian) {
                 value = Mem.BSwap(value);
@@ -125,21 +126,48 @@ namespace AnvilPacker.Data
             WriteBytes(buffer.AsSpan(offset, count));
         }
 
+        public unsafe void WriteBulkLE<T>(ReadOnlySpan<T> buf) where T : unmanaged
+        {
+            if (BitConverter.IsLittleEndian || sizeof(T) <= 1) {
+                WriteBytes(MemoryMarshal.AsBytes(buf));
+                return;
+            }
+            //TODO: optimize by copying into _buf then bswap'ing
+            for (int i = 0; i < buf.Length; i++) {
+                WriteLE(buf[i]);
+            }
+        }
+        public unsafe void WriteBulkBE<T>(ReadOnlySpan<T> buf) where T : unmanaged
+        {
+            if (!BitConverter.IsLittleEndian || sizeof(T) <= 1) {
+                WriteBytes(MemoryMarshal.AsBytes(buf));
+                return;
+            }
+            for (int i = 0; i < buf.Length; i++) {
+                WriteBE(buf[i]);
+            }
+        }
         //Java compat
 
         /// <summary> Writes an UTF8 string prefixed with a big-endian ushort indicating it's length. </summary>
-        public void WriteString(string str)
+        public void WriteUTF(string str)
+        {
+            WriteString(str, len => {
+                Ensure.That(len < 65536, "Encoded string cannot be longer than 65535 bytes.");
+                WriteUShortBE(len);
+            });
+        }
+
+        /// <summary> Writes an UTF8 string with a custom length prefix. </summary>
+        public void WriteString(string str, Action<int> writePrefixLen)
         {
             var enc = Encoding.UTF8;
             int len = enc.GetByteCount(str);
-            if (len > 65535) {
-                throw new InvalidOperationException("String cannot be larger than 65535 characters.");
-            }
-            var buf = len < 256 ? stackalloc byte[len] : new byte[len];
 
+            var buf = len < 256 ? stackalloc byte[len] : new byte[len];
             enc.GetBytes(str, buf);
 
-            WriteUShortBE((ushort)len);
+            writePrefixLen(len);
             WriteBytes(buf);
         }
     }

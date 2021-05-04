@@ -53,6 +53,11 @@ namespace AnvilPacker.Level
             return _idByState.TryGetValue(state.Id, out id);
         }
 
+        public IEnumerable<(BlockState Block, BlockId Id)> BlocksAndIds()
+        {
+            return _stateById.Select((b, i) => (b, (BlockId)i));
+        }
+
         public IEnumerator<BlockState> GetEnumerator() => _stateById.GetEnumerator();
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
     }
