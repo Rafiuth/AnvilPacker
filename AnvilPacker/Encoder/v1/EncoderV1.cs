@@ -141,7 +141,7 @@ namespace AnvilPacker.Encoder.v1
             int maxDelta = (maxSy - minSy) * 16;
 
             foreach (var type in types) {
-                stream.WriteString(type.Name, stream.WriteVarInt);
+                stream.WriteString(type.Name, stream.WriteVarUInt);
             }
             stream.WriteVarInt(minDelta);
             stream.WriteVarInt(maxDelta);
@@ -216,8 +216,8 @@ namespace AnvilPacker.Encoder.v1
             // - 1.16 at 32x16x32 chunks = 16K bits = 2KB
             // - 1.17 at 32x64x32 chunks = 64K bits = 8KB
             //RLE gives ~200 bytes at 32x5x32 (normal overworld)
-            stream.WriteVarInt(minY);
-            stream.WriteVarInt(maxY);
+            stream.WriteVarUInt(minY);
+            stream.WriteVarUInt(maxY);
 
             var bw = new BitWriter(stream);
             CodecPrimitives.RunLengthEncode(
@@ -231,14 +231,14 @@ namespace AnvilPacker.Encoder.v1
         private void WritePalette(DataWriter stream)
         {
             var palette = _region.Palette;
-            stream.WriteVarInt(palette.Count);
+            stream.WriteVarUInt(palette.Count);
 
             foreach (var (block, id) in palette.BlocksAndIds()) {
                 var name = Encoding.UTF8.GetBytes(block.ToString());
-                stream.WriteVarInt(name.Length);
+                stream.WriteVarUInt(name.Length);
                 stream.WriteBytes(name);
 
-                stream.WriteVarInt((int)block.Attributes);
+                stream.WriteVarUInt((int)block.Attributes);
                 stream.WriteByte(block.Emittance << 4 | block.Opacity);
             }
         }

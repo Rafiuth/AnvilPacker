@@ -384,6 +384,8 @@ namespace AnvilPacker.Data
             if (typeof(T) == typeof(ushort)) return (T)(object)((ushort)(short)GetValue());
             if (typeof(T) == typeof(uint))   return (T)(object)((uint)(int)GetValue());
             if (typeof(T) == typeof(ulong))  return (T)(object)((ulong)(long)GetValue());
+            
+            if (typeof(T) == typeof(Array))  return (T)(object)GetValue();
 
             return (T)Convert.ChangeType(GetValue(), typeof(T));
         }

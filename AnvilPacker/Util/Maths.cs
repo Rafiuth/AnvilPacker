@@ -14,6 +14,11 @@ namespace AnvilPacker.Util
         {
             return x == 0 ? 0 : BitOperations.Log2((uint)x - 1) + 1;
         }
+        public static int CeilLog2(long x)
+        {
+            return x == 0 ? 0 : BitOperations.Log2((ulong)x - 1) + 1;
+        }
+
         public static int Log2(int x)
         {
             return BitOperations.Log2((uint)x);

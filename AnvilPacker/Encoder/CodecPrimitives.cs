@@ -36,7 +36,7 @@ namespace AnvilPacker.Encoder
             return rangeMin + br.ReadBits(valueBits);
         }
 
-        public static void WriteVarInt(this DataWriter dw, int val)
+        public static void WriteVarUInt(this DataWriter dw, int val)
         {
             while (val != 0) {
                 int b = val & 0x7F;
@@ -47,7 +47,7 @@ namespace AnvilPacker.Encoder
                 val = (int)((uint)val >> 7);
             }
         }
-        public static int ReadVarInt(this DataReader dr)
+        public static int ReadVarUInt(this DataReader dr)
         {
             int val = 0;
             int shift = 0;
@@ -62,11 +62,61 @@ namespace AnvilPacker.Encoder
             throw new FormatException("Corrupted VarInt");
         }
 
-        public static int VarIntSize(int val)
+        public static void WriteVarInt(this DataWriter dw, int val)
         {
-            return 1 + BitOperations.Log2((uint)val) / 7;
+            //See https://developers.google.com/protocol-buffers/docs/encoding#signed_integers
+            dw.WriteVarUInt((val << 1) ^ (val >> 31));
         }
-        public static int VarIntSize(ushort val) => VarIntSize((int)val);
+        public static int ReadVarInt(this DataReader dr)
+        {
+            var val = dr.ReadVarUInt();
+            return (int)((uint)val >> 1) ^ -(val & 1);
+        }
+
+        public static void WriteVarULong(this DataWriter dw, long val)
+        {
+            while (val != 0) {
+                int b = (int)(val & 0x7FL);
+                if ((val & ~0x7FL) != 0) {
+                    b |= 0x80;
+                }
+                dw.WriteByte((byte)b);
+                val = (long)((ulong)val >> 7);
+            }
+        }
+        public static long ReadVarULong(this DataReader dr)
+        {
+            long val = 0;
+            int shift = 0;
+            while (shift < 64) {
+                byte b = dr.ReadByte();
+                val |= (b & 0x7FL) << shift;
+                if ((b & 0x80) == 0) {
+                    return val;
+                }
+                shift += 7;
+            }
+            throw new FormatException("Corrupted VarLong");
+        }
+        public static void WriteVarLong(this DataWriter dw, long val)
+        {
+            //See https://developers.google.com/protocol-buffers/docs/encoding#signed_integers
+            dw.WriteVarULong((val << 1) ^ (val >> 63));
+        }
+        public static long ReadVarLong(this DataReader dr)
+        {
+            var val = dr.ReadVarULong();
+            return (int)((ulong)val >> 1) ^ -(val & 1);
+        }
+
+        public static int VarIntSize(long val)
+        {
+            return VarUIntSize((val << 1) ^ (val >> 63));
+        }
+        public static int VarUIntSize(long val)
+        {
+            return 1 + BitOperations.Log2((ulong)val) / 7;
+        }
 
         public static void RunLengthEncode(int length, Func<int, int, bool> compare, Action<int> writeLiteral, Action<int> writeRunLen)
         {
