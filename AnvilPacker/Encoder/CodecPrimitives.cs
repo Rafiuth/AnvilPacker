@@ -38,14 +38,11 @@ namespace AnvilPacker.Encoder
 
         public static void WriteVarUInt(this DataWriter dw, int val)
         {
-            while (val != 0) {
-                int b = val & 0x7F;
-                if ((val & ~0x7F) != 0) {
-                    b |= 0x80;
-                }
-                dw.WriteByte((byte)b);
+            while ((val & ~0x7F) != 0) {
+                dw.WriteByte((byte)val | 0x80);
                 val = (int)((uint)val >> 7);
             }
+            dw.WriteByte(val);
         }
         public static int ReadVarUInt(this DataReader dr)
         {
@@ -75,14 +72,11 @@ namespace AnvilPacker.Encoder
 
         public static void WriteVarULong(this DataWriter dw, long val)
         {
-            while (val != 0) {
-                int b = (int)(val & 0x7FL);
-                if ((val & ~0x7FL) != 0) {
-                    b |= 0x80;
-                }
-                dw.WriteByte((byte)b);
+            while ((val & ~0x7FL) != 0) {
+                dw.WriteByte((byte)val | 0x80);
                 val = (long)((ulong)val >> 7);
             }
+            dw.WriteByte((byte)val);
         }
         public static long ReadVarULong(this DataReader dr)
         {
@@ -106,7 +100,7 @@ namespace AnvilPacker.Encoder
         public static long ReadVarLong(this DataReader dr)
         {
             var val = dr.ReadVarULong();
-            return (int)((ulong)val >> 1) ^ -(val & 1);
+            return (long)((ulong)val >> 1) ^ -(val & 1);
         }
 
         public static int VarIntSize(long val)

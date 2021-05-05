@@ -3,3 +3,5 @@ obj/
 bin/
 *.suo
 *.user
+/test_data/*
+!/test_data/nbt/

@@ -4,7 +4,7 @@ using System.Linq;
 using AnvilPacker.Data;
 using AnvilPacker.Util;
 
-namespace AnvilPacker.Encoder.Pnbt
+namespace AnvilPacker.Encoder.PNbt
 {
     public class StringPool
     {

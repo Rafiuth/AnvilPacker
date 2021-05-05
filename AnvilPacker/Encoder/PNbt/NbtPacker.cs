@@ -7,16 +7,18 @@ using System.Text;
 using AnvilPacker.Data;
 using AnvilPacker.Util;
 
-namespace AnvilPacker.Encoder.Pnbt
+namespace AnvilPacker.Encoder.PNbt
 {
     //http://stevehanov.ca/blog/?id=104
     //http://stevehanov.ca/blog/cjson.js
     //https://github.com/That3Percent/tree-buf
+    //TODO: Planar data fields like in tree-buf
     public class NbtPacker
     {
         private List<CompoundTag> _tags = new();
         private Node _root = new Node(null, new SchemaField("root", TagType.End));
         private StringPool _stringPool = new();
+        internal List<Schema>? _lastSchemas = null;
 
         public void Add(CompoundTag tag)
         {
@@ -53,13 +55,12 @@ namespace AnvilPacker.Encoder.Pnbt
             }
         }
 
-        private List<Schema> CreateSchemas()
+        internal List<Schema> CreateSchemas()
         {
             var schemas = new List<Schema>();
             var queue = new Queue<Node>();
 
             _root.Schema = new Schema() { Id = 0 };
-            schemas.Add(_root.Schema);
             
             foreach (var child in _root.Children.Values) {
                 queue.Enqueue(child);
@@ -79,7 +80,7 @@ namespace AnvilPacker.Encoder.Pnbt
                         curr = curr.Parent;
                     }
                     schema.Parent = curr?.Schema;
-                    schema.Id = schemas.Count;
+                    schema.Id = schemas.Count + 1;
 
                     schemas.Add(schema);
                     node.Schema = schema;
@@ -93,18 +94,16 @@ namespace AnvilPacker.Encoder.Pnbt
         public void Encode(DataWriter dw, bool reset)
         {
             var schemas = CreateSchemas();
+            _lastSchemas = schemas;
 
             dw.WriteByte(1); //version
             _stringPool.WriteTable(dw);
 
-            dw.WriteVarUInt(schemas.Count);
-            foreach (var schema in schemas) {
-                schema.Write(dw);
-            }
+            Schema.Write(dw, schemas);
 
             dw.WriteVarUInt(_tags.Count);
             foreach (var tag in _tags) {
-                WriteCompound(dw, tag);
+                WriteCompound(dw, tag, null);
             }
 
             _tags.Clear();
@@ -114,43 +113,52 @@ namespace AnvilPacker.Encoder.Pnbt
             }
         }
 
-        private void WriteCompound(DataWriter dw, CompoundTag tag)
+        private void WriteCompound(DataWriter dw, CompoundTag tag, Schema? schema)
         {
-            var schema = FindSchema(tag);
-
-            dw.WriteVarUInt(schema.Id);
+            if (schema == null) {
+                schema = FindSchema(tag);
+                dw.WriteVarUInt(schema.Id);
+            }
             while (schema != null) {
                 foreach (var field in schema.Fields) {
-                    WriteTagField(dw, field.Data!, tag[field.Name]);
+                    WriteTag(dw, tag[field.Name], field.Data);
                 }
                 schema = schema.Parent;
             }
         }
-        private void WriteTagField(DataWriter dw, FieldData? opaqueData, NbtTag tag)
+        
+        private void WriteTag(DataWriter dw, NbtTag tag, FieldData? opaqueData)
         {
+            void WriteInt<T>() where T : unmanaged
+            {
+                if (opaqueData is FieldIntData data) {
+                    long val = tag.Value<long>();
+                    data.Write(dw, val);
+                    return;
+                }
+                WritePrim<T>();
+            }
             void WritePrim<T>() where T : unmanaged
             {
-                var val = ((PrimitiveTag<T>)tag).Value;
+                T val = ((PrimitiveTag<T>)tag).Value;
                 dw.WriteLE<T>(val);
             }
             void WriteArr<T>() where T : unmanaged
             {
                 var arr = ((PrimitiveTag<T[]>)tag).Value;
-                var data = (FieldArrayData)opaqueData!;
-
-                data.Len.Write(dw, arr.Length);
+                if (opaqueData is FieldArrayData data) {
+                    data.Len.Write(dw, arr.Length);
+                } else {
+                    dw.WriteVarUInt(arr.Length);
+                }
                 dw.WriteBulkLE<T>(arr);
             }
 
             switch (tag.Type) {
-                case TagType.Byte:
-                case TagType.Short:
-                case TagType.Int:
-                case TagType.Long: {
-                    var data = (FieldIntData)opaqueData!;
-                    data.Write(dw, tag.Value<long>());
-                    break;
-                }
+                case TagType.Byte:      WriteInt<byte>(); break;
+                case TagType.Short:     WriteInt<short>(); break;
+                case TagType.Int:       WriteInt<int>(); break;
+                case TagType.Long:      WriteInt<long>(); break;
                 case TagType.Float:     WritePrim<float>(); break;
                 case TagType.Double:    WritePrim<double>(); break;
                 case TagType.ByteArray: WriteArr<byte>(); break;
@@ -163,23 +171,30 @@ namespace AnvilPacker.Encoder.Pnbt
                 }
                 case TagType.List: {
                     var list = (ListTag)tag;
-                    var data = (FieldListData)opaqueData!;
 
-                    data.Len.Write(dw, list.Count);
-                    if (list.Count == 0) break;
+                    Schema? elemSchema = null;
+                    FieldData? elemData = null;
 
-                    Ensure.That(data.ElemSchema == null); //not supported yet
-
-                    if (data.ElemType == TagType.End) {
+                    if (opaqueData is FieldListData data && data.ElemType != TagType.End) {
+                        data.Len.Write(dw, list.Count);
+                        elemSchema = data.ElemSchema;
+                        elemData = data.ElemData;
+                    } else {
+                        dw.WriteVarUInt(list.Count);
                         dw.WriteByte((byte)list.ElementType);
                     }
                     foreach (var elem in list) {
-                        WriteTagField(dw, data.ElemData, elem);
+                        if (elemSchema == null) {
+                            WriteTag(dw, elem, elemData);
+                        } else {
+                            WriteCompound(dw, (CompoundTag)elem, elemSchema);
+                        }
                     }
                     break;
                 }
                 case TagType.Compound: {
-                    WriteCompound(dw, (CompoundTag)tag);
+                    var data = (FieldCompoundData?)opaqueData;
+                    WriteCompound(dw, (CompoundTag)tag, data?.Type);
                     break;
                 }
                 default: throw new NotSupportedException("Unknown tag type");

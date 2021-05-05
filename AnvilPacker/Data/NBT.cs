@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Runtime.CompilerServices;
@@ -480,8 +481,8 @@ namespace AnvilPacker.Data
         {
             var tmpFilename = filename + ".tmp";
 
-            using var dos = new DataWriter(new GZipStream(File.Create(tmpFilename), CompressionMode.Compress, leaveOpen: false));
             try {
+                using var dos = new DataWriter(new GZipStream(File.Create(tmpFilename), CompressionMode.Compress, leaveOpen: false));
                 Write(tag, dos);
             } catch {
                 File.Delete(tmpFilename);
@@ -541,72 +542,65 @@ namespace AnvilPacker.Data
             _sb = sb;
         }
 
-        private void Append(string name, string content)
+        private void Begin(string brace)
         {
-            Indent();
-            _sb.AppendFormat("{0}{1}\n", name, content);
-        }
-        private void Begin(string name)
-        {
-            Indent();
-            _sb.Append(name + " {\n");
+            _sb.Append(brace);
             _level++;
         }
-        private void End()
+        private void End(string brace, bool newLine)
         {
             _level--;
-            Indent();
-            _sb.Append("}\n");
+            if (newLine) {
+                _sb.AppendLine();
+                Indent();
+            }
+            _sb.Append(brace);
         }
         private void Indent()
         {
-            _sb.Append(' ', _level * 4);
+            _sb.Append(' ', _level * 2);
         }
 
-        public void Print(NbtTag tag, string name = null)
+        public void Print(NbtTag tag)
         {
             switch (tag.Type) {
-                case TagType.Byte:
-                case TagType.Short:
-                case TagType.Int:
-                case TagType.Long:
-                case TagType.Float:
-                case TagType.Double:
-                    Append($"{tag.Type}('{name}'): ", ((PrimitiveTag)tag).GetValue().ToString());
-                    break;
+                case TagType.Byte:      PrintPrim(tag, "b"); break;
+                case TagType.Short:     PrintPrim(tag, "s"); break;
+                case TagType.Int:       PrintPrim(tag, ""); break;
+                case TagType.Long:      PrintPrim(tag, "L"); break;
+                case TagType.Float:     PrintPrim(tag, "f"); break;
+                case TagType.Double:    PrintPrim(tag, ""); break;
                 case TagType.String: {
-                    var str = (string)((PrimitiveTag)tag).GetValue();
-                    Append($"String('{name}'): ", "\"" + str.Replace("\"", "\\\"") + "\"");
+                    var str = tag.Value<string>();
+                    _sb.AppendFormat("\"{0}\"", str.Replace("\"", "\\\""));
                     break;
                 }
-                case TagType.ByteArray: {
-                    PrintArray<byte>("Byte", name, tag);
-                    break;
-                }
-                case TagType.IntArray: {
-                    PrintArray<int>("Int", name, tag);
-                    break;
-                }
-                case TagType.LongArray: {
-                    PrintArray<long>("Long", name, tag);
-                    break;
-                }
+                case TagType.ByteArray: PrintArray<byte>("byte", tag); break;
+                case TagType.IntArray:  PrintArray<int>("int", tag); break;
+                case TagType.LongArray: PrintArray<long>("long", tag); break;
                 case TagType.List: {
                     var list = (ListTag)tag;
-                    Begin($"List<{list.ElementType}>('{name}'):");
+                    Begin("[");
                     for (int i = 0; i < list.Count; i++) {
+                        _sb.Append(i == 0 ? "\n" : ",\n");
+                        Indent();
                         Print(list[i]);
                     }
-                    End();
+                    End("]", list.Count > 0);
                     break;
                 }
                 case TagType.Compound: {
                     var comp = (CompoundTag)tag;
-                    Begin($"Compound('{name}'):");
-                    foreach (var kv in comp) {
-                        Print(kv.Value, kv.Key);
+                    Begin("{");
+                    int i = 0;
+                    foreach (var (k, v) in comp) {
+                        _sb.Append(i++ == 0 ? "\n" : ",\n");
+                        Indent();
+                        _sb.Append(k);
+                        _sb.Append(": ");
+                        Print(v);
                     }
-                    End();
+                    End("}", i > 0);
                     break;
                 }
                 default:
@@ -614,22 +608,34 @@ namespace AnvilPacker.Data
             }
         }
 
-        private void PrintArray<T>(string type, string name, NbtTag tag)
+        private void PrintPrim(NbtTag tag, string postfix)
+        {
+            object val = ((PrimitiveTag)tag).GetValue();
+            string str = string.Format(CultureInfo.InvariantCulture, "{0}", val);
+
+            _sb.Append(str);
+            if (val is double or float && !str.Contains('.')) {
+                _sb.Append(".0");
+            }
+            _sb.Append(postfix);
+        }
+        private void PrintArray<T>(string type, NbtTag tag)
         {
             var arr = (T[])((PrimitiveTag)tag).GetValue();
 
-            Indent();
-            _sb.Append($"{type}[{arr.Length}]('{name}'): ");
+            Begin($"{type}[");
 
             int len = Math.Min(arr.Length, ArraySizeLimit);
             for (int i = 0; i < len; i++) {
-                if (i != 0) _sb.Append(' ');
+                if (i != 0)      { _sb.Append(", "); }
+                if (i % 32 == 0) { _sb.Append('\n'); Indent(); }
+
                 _sb.Append(arr[i]);
             }
             if (arr.Length > ArraySizeLimit) {
-                _sb.Append("...");
+                _sb.Append($" //and more {arr.Length - ArraySizeLimit} elements...");
             }
-            _sb.Append('\n');
+            End("]", arr.Length > 0);
         }
 
         public override string ToString()

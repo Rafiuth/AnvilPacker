@@ -8,6 +8,8 @@ using AnvilPacker.Util;
 namespace AnvilPacker.Data
 {
     /// <summary> Provides an efficient binary data reader over <see cref="Stream" />. </summary>
+    //Design note: this class doesn't allow abstraction because it's whole point
+    //is to provide a "efficient" way to read binary data.
     public class DataReader : IDisposable
     {
         private const MethodImplOptions Inline = MethodImplOptions.AggressiveInlining;
@@ -105,7 +107,7 @@ namespace AnvilPacker.Data
             return value;
         }
 
-        public void Dispose()
+        public virtual void Dispose()
         {
             if (!_leaveOpen) {
                 BaseStream.Dispose();

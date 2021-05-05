@@ -9,7 +9,7 @@ using System.Text;
 using AnvilPacker.Data;
 using AnvilPacker.Data.Entropy;
 using AnvilPacker.Encoder;
-using AnvilPacker.Encoder.Pnbt;
+using AnvilPacker.Encoder.PNbt;
 using AnvilPacker.Encoder.Transforms;
 using AnvilPacker.Level;
 using AnvilPacker.Util;
@@ -25,20 +25,21 @@ namespace AnvilPacker
 
         static void Main(string[] args)
         {
+            var tag = NbtIO.ReadCompressed("../../../test_data/nbt/chunks_1.nbt.gz");
+            File.WriteAllText(@"../../../test_data/nbt/chunks_1.txt", tag.ToString());
+
             var packer = new NbtPacker();
+            packer.Add(tag);
 
-            for (int z = 0; z < 32; z++) {
-                for (int x = 0; x < 32; x++) {
-                    using var fs = new DataReader(File.OpenRead($@"E:\nbt_samples\chunks\{x}.{z}.nbt"));
-                    var tag = NbtIO.Read(fs);
-
-                    packer.Add(tag);
-                }
-            }
             using var mem = new MemoryDataWriter();
             packer.Encode(mem, false);
 
             File.WriteAllBytes("E:/nbt_samples/packed.dat", mem.BufferSpan.ToArray());
+
+            var unpacker = new NbtUnpacker(new DataReader(new MemoryStream(mem.Buffer)));
+            unpacker.ReadHeader();
+            var first = unpacker.Read();
+
 
             return;
             Test();

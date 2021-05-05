@@ -6,7 +6,7 @@ using System.Linq;
 using AnvilPacker.Data;
 using AnvilPacker.Util;
 
-namespace AnvilPacker.Encoder.Pnbt
+namespace AnvilPacker.Encoder.PNbt
 {
     public class Schema
     {
@@ -14,6 +14,14 @@ namespace AnvilPacker.Encoder.Pnbt
         public Schema? Parent = null;
         public int Id;
 
+
+        public static void Write(DataWriter dw, List<Schema> schemas)
+        {
+            dw.WriteVarUInt(schemas.Count);
+            foreach (var schema in schemas) {
+                schema.Write(dw);
+            }
+        }
         public void Write(DataWriter dw)
         {
             dw.WriteVarUInt(Id);
@@ -23,9 +31,9 @@ namespace AnvilPacker.Encoder.Pnbt
             foreach (var field in Fields) {
                 dw.WriteString(field.Name, dw.WriteVarUInt);
                 dw.WriteByte((int)field.Type | (field.Data != null ? 0x80 : 0x00));
-                
+
                 if (field.Data != null) {
-                    field.Data.UpdateLast();
+                    field.Data.Prepare();
                     WriteData(dw, field.Data, field.Type);
                 }
             }
@@ -38,15 +46,20 @@ namespace AnvilPacker.Encoder.Pnbt
                 case TagType.Int:
                 case TagType.Long: {
                     var data = (FieldIntData)opaqueData;
-
-                    dw.WriteByte((byte)data.Size);
+                    dw.WriteVarLong(data.Min);
+                    dw.WriteVarLong(data.Max);
                     break;
                 }
                 case TagType.List: {
                     var data = (FieldListData)opaqueData;
 
-                    dw.WriteByte((byte)data.ElemType);
-                    dw.WriteVarUInt(data.ElemSchema?.Id ?? 0);
+                    dw.WriteByte((byte)data.ElemType | (data.ElemData != null ? 0x80 : 0));
+                    if (data.ElemType == TagType.Compound) {
+                        dw.WriteVarUInt(data.ElemSchema?.Id ?? 0);
+                    }
+                    if (data.ElemData != null) {
+                        WriteData(dw, data.ElemData, data.ElemType);
+                    }
                     dw.WriteVarUInt((int)data.Len.Min);
                     dw.WriteVarUInt((int)data.Len.Max);
                     break;
@@ -69,10 +82,116 @@ namespace AnvilPacker.Encoder.Pnbt
             }
         }
 
+        public static Schema[] Read(DataReader dr)
+        {
+            var schemas = new Schema[dr.ReadVarUInt()];
+
+            for (int i = 0; i < schemas.Length; i++) {
+                var s = new Schema();
+
+                s.Id = dr.ReadVarUInt();
+                s.Parent = ReadSchema(dr, schemas);
+
+                int numFields = dr.ReadVarUInt();
+                for (int fi = 0; fi < numFields; fi++) {
+                    var fieldName = dr.ReadString(dr.ReadVarUInt());
+                    var type = dr.ReadByte();
+
+                    var field = new SchemaField(fieldName, (TagType)(type & 0x7F));
+
+                    if ((type & 0x80) != 0) {
+                        field.Data = ReadData(dr, field.Type, schemas);
+                        field.Data?.Prepare();
+                    }
+                    s.Fields.Add(field);
+                }
+
+                schemas[i] = s;
+            }
+            FixPlaceholders(schemas);
+            return schemas;
+        }
+
+        private static void FixPlaceholders(Schema[] schemas)
+        {
+            foreach (var schema in schemas) {
+                Fix(ref schema.Parent);
+                foreach (var field in schema.Fields) {
+                    switch (field.Data) {
+                        case FieldListData data: {
+                            Fix(ref data.ElemSchema);
+                            break;
+                        }
+                        case FieldCompoundData data: {
+                            Fix(ref data.Type);
+                            break;
+                        }
+                    }
+                }
+            }
+            void Fix(ref Schema? p)
+            {
+                if (p != null && p.Id < 0) {
+                    p = schemas[~p.Id];
+                }
+            }
+        }
+
+        private static FieldData? ReadData(DataReader dr, TagType type, Schema[] schemas)
+        {
+            switch (type) {
+                case TagType.Byte:
+                case TagType.Short:
+                case TagType.Int:
+                case TagType.Long: {
+                    var data = new FieldIntData();
+                    data.Min = dr.ReadVarLong();
+                    data.Max = dr.ReadVarLong();
+                    return data;
+                }
+                case TagType.List: {
+                    var data = new FieldListData();
+
+                    var elemTypeAndFlags = dr.ReadByte();
+                    data.ElemType = (TagType)(elemTypeAndFlags & 0x7F);
+                    if (data.ElemType == TagType.Compound) {
+                        data.ElemSchema = ReadSchema(dr, schemas);
+                    }
+                    if ((elemTypeAndFlags & 0x80) != 0) {
+                        data.ElemData = ReadData(dr, data.ElemType, schemas);
+                    }
+                    data.Len.Min = dr.ReadVarUInt();
+                    data.Len.Max = dr.ReadVarUInt();
+                    return data;
+                }
+                case TagType.Compound: {
+                    var data = new FieldCompoundData();
+                    data.Type = ReadSchema(dr, schemas);
+                    return data;
+                }
+                case TagType.ByteArray:
+                case TagType.IntArray:
+                case TagType.LongArray: {
+                    var data = new FieldArrayData();
+                    data.Len.Min = dr.ReadVarUInt();
+                    data.Len.Max = dr.ReadVarUInt();
+                    return data;
+                }
+                default: return null;
+            }
+        }
+
+        private static Schema? ReadSchema(DataReader dr, Schema[] schemas)
+        {
+            int id = dr.ReadVarUInt() - 1;
+            return id < 0 ? null : 
+                   schemas[id] ?? new Schema() { Id = ~id };
+        }
+
         public override string ToString()
         {
             var fields = string.Join(", ", Fields.Select(v => $"{v.Name}: {v.Type}"));
-            return $"Schema {Id} {(Parent == null ? "" : ": " + Parent.Id)} {{ {fields} }}";
+            return $"Schema {Id}{(Parent == null ? "" : " : " + Parent.Id)} {{ {fields} }}";
         }
     }
     public record SchemaField(
@@ -96,8 +215,8 @@ namespace AnvilPacker.Encoder.Pnbt
 
     public abstract class FieldData
     {
-        /// <summary> Update internal values before writting tags. </summary>
-        public virtual void UpdateLast() { }
+        /// <summary> Update internal values before reading/writing tags. </summary>
+        public virtual void Prepare() { }
 
         public static void Merge(ref FieldData? opaqueData, NbtTag tag)
         {
@@ -156,23 +275,32 @@ namespace AnvilPacker.Encoder.Pnbt
             Max = Math.Max(Max, value);
         }
 
-        public override void UpdateLast()
+        public override void Prepare()
+        {
+            Size = PickSize(Min, Max);
+        }
+        private IntSize PickSize(long min, long max)
         {
             //TODO: maybe better sizes could be picked by keeping a histogram.
-            foreach (int w in new[] { 8, 16, 56 }) {
-                long uRange = 1L << w;
-                long sRange = 1L << (w - 1);
+            if (InS(8))   return IntSize.S8;
+            if (InU(8))   return IntSize.U8;
+            if (InS(16))  return IntSize.S16;
+            if (InU(16))  return IntSize.U16;
+            
+            if (!InS(56)) return IntSize.S64;
+            
+            return min < 0 ? IntSize.SVar : IntSize.UVar;
 
-                if (Min >= 0 && Max < uRange) {
-                    Size = IntSizes.ForWidth(w, false);
-                    return;
-                }
-                if (Min >= -sRange && Max < sRange) {
-                    Size = IntSizes.ForWidth(w, true);
-                    return;
-                }
+            bool InS(int bits)
+            {
+                long r = 1L << (bits - 1);
+                return min >= -r && max < r;
             }
-            Size = Min < 0 ? IntSize.SVar : IntSize.UVar;
+            bool InU(int bits)
+            {
+                long r = 1L << bits;
+                return min >= 0 && max < r;
+            }
         }
 
         public void Write(DataWriter dw, long value)
@@ -180,30 +308,73 @@ namespace AnvilPacker.Encoder.Pnbt
             if (Min == Max) return;
 
             switch (Size) {
-                case IntSize.SVar: dw.WriteVarLong(value); break;
-                case IntSize.UVar: dw.WriteVarULong(value); break;
-                default: WriteFixedInt(dw, value, Size.ValueBytes()); break;
+                case IntSize.SVar: {
+                    dw.WriteVarLong(value);
+                    break;
+                }
+                case IntSize.UVar: {
+                    dw.WriteVarULong(value);
+                    break;
+                }
+                default: {
+                    int len = Size.ValueBytes();
+                    while (--len >= 0) {
+                        dw.WriteByte((byte)(value >> (len * 8)));
+                    }
+                    break;
+                }
             }
         }
-        private static void WriteFixedInt(DataWriter dw, long value, int len)
+        
+        public long Read(DataReader dr)
         {
-            for (int i = 0; i < len; i++) {
-                dw.WriteByte((byte)value);
-                value >>= 8;
+            if (Min == Max) return Min;
+
+            switch (Size) {
+                case IntSize.SVar: {
+                    return dr.ReadVarLong();
+                }
+                case IntSize.UVar: {
+                    return dr.ReadVarULong();
+                }
+                default: {
+                    int len = Size.ValueBytes();
+                    long val = 0;
+                    for (int i = 0; i < len; i++) {
+                        val = (val << 8) | dr.ReadByte();
+                    }
+                    if (Size.IsSigned()) {
+                        //sign extend
+                        int shift = 64 - (len * 8);
+                        val = (val << shift) >> shift;
+                    }
+                    return val;
+                }
             }
         }
     }
     public class FieldListData : FieldData
     {
         public TagType ElemType = TagType.End; //When decoding, this will be End for mixed element types.
-        public Schema? ElemSchema = null;
+        public Schema? ElemSchema = null; //Schema if ElemType == Compound
         public bool MixedElemTypes = false;
         public FieldIntData Len = new();
         public FieldData? ElemData = null;
+
+        public override void Prepare()
+        {
+            Len.Prepare();
+            ElemData?.Prepare();
+        }
     }
     public class FieldArrayData : FieldData
     {
         public FieldIntData Len = new();
+
+        public override void Prepare()
+        {
+            Len.Prepare();
+        }
     }
     public class FieldCompoundData : FieldData
     {
@@ -236,7 +407,7 @@ namespace AnvilPacker.Encoder.Pnbt
         }
         public static int ValueBytes(this IntSize size)
         {
-            return (int)size >> 1;
+            return ((int)size >> 1) + 1;
         }
         public static bool IsSigned(this IntSize size)
         {
