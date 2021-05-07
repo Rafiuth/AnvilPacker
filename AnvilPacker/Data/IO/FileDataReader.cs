@@ -18,7 +18,9 @@ namespace AnvilPacker.Data
 
         private static Stream CreateBaseStream(string path, out MemoryMappedFile file)
         {
-            file = MemoryMappedFile.CreateFromFile(path, FileMode.Open, null, 0, MemoryMappedFileAccess.Read);
+            //CreateViewStream() will randomly throw UnauthorizedAccessException if we dont set
+            //access to ReadWrite.
+            file = MemoryMappedFile.CreateFromFile(path, FileMode.Open, null, 0, MemoryMappedFileAccess.ReadWrite);
             return file.CreateViewStream(0, 0, MemoryMappedFileAccess.Read);
         }
         

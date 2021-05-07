@@ -160,9 +160,9 @@ namespace AnvilPacker.Level
         }
         private ChunkSection InitNeighbor(int x, int y, int z, int index)
         {
-            int sx = (X + (x >> 4)) - Region.X * Region.Size;
+            int sx = X + (x >> 4) - Region.X;
             int sy = Y + (y >> 4);
-            int sz = (Z + (z >> 4)) - Region.Z * Region.Size;
+            int sz = Z + (z >> 4) - Region.Z;
 
             var neighbor = Region.GetSection(sx, sy, sz) ?? EmptySection;
             NeighborCache[index] = neighbor;

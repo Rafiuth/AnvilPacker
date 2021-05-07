@@ -80,5 +80,35 @@ namespace AnvilPacker.Level
             }
             return sb.ToString();
         }
+
+        /// <summary> Parses a block state in the form of <c>namespace:block_name[property1=value1,property2=value2,...]</c> </summary>
+        public static BlockState Parse(string str)
+        {
+            int i = str.IndexOf('[');
+            if (i < 0) i = str.Length;
+
+            var blockName = ResourceName.Parse(str[0..i]);
+            var block = Block.Registry[blockName].DefaultState;
+
+            i++; //skip '['
+            for (; i < str.Length; i++) {
+                int iEq = str.IndexOf('=', i);
+                int iValEnd = str.IndexOf(',', iEq);
+                if (iValEnd < 0) iValEnd = str.Length - 1;
+
+                var propName = str[i..iEq];
+                var propVal = str[(iEq + 1)..iValEnd];
+
+                block = block.WithProperty(propName, propVal);
+
+                // expect ',' or ']' if end
+                bool isEnd = iValEnd == str.Length - 1;
+                if (str[iValEnd] != (isEnd ? ']' : ',')) {
+                    throw new FormatException($"Malformed block state string '{str}': expecting ',' or ']', got '{str[iValEnd]}'");
+                }
+                i = iValEnd;
+            }
+            return block;
+        }
     }
 }

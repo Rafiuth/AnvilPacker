@@ -170,5 +170,11 @@ namespace AnvilPacker.Data
             writePrefixLen(len);
             WriteBytes(buf);
         }
+        /// <summary> Writes an UTF8 encoded string, postfixed '\0'. The string should not contain any NUL char. </summary>
+        public void WriteNulString(string str)
+        {
+            WriteString(str, len => { });
+            WriteByte(0);
+        }
     }
 }

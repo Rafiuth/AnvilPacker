@@ -33,6 +33,7 @@ namespace AnvilPacker.Data
         public void Clear()
         {
             Position = 0;
+            Length = 0;
         }
     }
 }

@@ -10,15 +10,16 @@ namespace AnvilPacker.Level.Versions.v1_16
     {
         public Chunk Deserialize(CompoundTag tag, BlockPalette palette)
         {
-            int x = tag.GetInt("xPos");
-            int z = tag.GetInt("zPos");
+            int x = Pop<int>("xPos");
+            int z = Pop<int>("zPos");
             var chunk = new Chunk(x, z, palette);
 
             foreach (CompoundTag section in Pop<ListTag>("Sections")) {
                 DeserializeSection(chunk, section);
             }
             DeserializeHeightmaps(chunk.HeightMaps, Pop<CompoundTag>("Heightmaps"));
-            DeserializeTileTicks(chunk.TileTicks, Pop<ListTag>("TileTicks"));
+            //DeserializeScheduledTicks(chunk, Pop<ListTag>("TileTicks"));
+            //DeserializeScheduledTicks(chunk, Pop<ListTag>("LiquidTicks"));
 
             chunk.Opaque = tag;
 
@@ -70,7 +71,7 @@ namespace AnvilPacker.Level.Versions.v1_16
                 var name = tag.GetString("Name");
                 var state = Block.Registry[name].DefaultState;
 
-                if (tag.TryGet<CompoundTag>("Properties", out var props)) {
+                if (tag.TryGet("Properties", out CompoundTag props)) {
                     foreach (var (k, v) in props) {
                         state = state.WithProperty(k, v.Value<string>());
                     }
@@ -94,16 +95,19 @@ namespace AnvilPacker.Level.Versions.v1_16
                 }
             }
         }
-        private static void DeserializeTileTicks(List<ScheduledTick> list, ListTag tag)
+        private static void DeserializeScheduledTicks(Chunk chunk, ListTag tag)
         {
             if (tag == null) return;
 
+            var list = chunk.ScheduledTicks;
+            int xo = chunk.X * 16;
+            int zo = chunk.Z * 16;
             foreach (CompoundTag entry in tag) {
                 var st = new ScheduledTick() {
                     Type = Block.Registry[entry.GetString("i")],
-                    X = entry.GetInt("x"),
-                    Y = entry.GetInt("y"),
-                    Z = entry.GetInt("z"),
+                    X = (sbyte)(entry.GetInt("x") - xo),
+                    Z = (sbyte)(entry.GetInt("z") - zo),
+                    Y = (short)entry.GetInt("y"),
                     Delay = entry.GetInt("t"),
                     Priority = entry.GetInt("p")
                 };

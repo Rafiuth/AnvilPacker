@@ -2,9 +2,11 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Numerics;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text;
 using AnvilPacker.Data;
 using AnvilPacker.Data.Entropy;
@@ -24,9 +26,11 @@ namespace AnvilPacker
         private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
 
         static void Main(string[] args)
-        {
+        {/*
             var tag = NbtIO.ReadCompressed("../../../test_data/nbt/chunks_1.nbt.gz");
-            File.WriteAllText(@"../../../test_data/nbt/chunks_1.txt", tag.ToString());
+            foreach (CompoundTag t in tag.GetList("Chunks")) {
+                t.Remove("Biomes");
+            }
 
             var packer = new NbtPacker();
             packer.Add(tag);
@@ -34,26 +38,31 @@ namespace AnvilPacker
             using var mem = new MemoryDataWriter();
             packer.Encode(mem, false);
 
-            File.WriteAllBytes("E:/nbt_samples/packed.dat", mem.BufferSpan.ToArray());
-
             var unpacker = new NbtUnpacker(new DataReader(new MemoryStream(mem.Buffer)));
             unpacker.ReadHeader();
             var first = unpacker.Read();
 
+            var br = new BrotliEncoder(10, 22);
+            var compressedBuf = new byte[1024 * 1024 * 2];
+            //mem.Clear();
+            //NbtIO.Write(tag, mem);
+            var status = br.Compress(mem.BufferSpan, compressedBuf, out int bytesRead, out int bytesWritten, true);
 
-            return;
-            Test();
-        }
+            return;*/
 
-        private static void Test()
-        {
             var config = new NLog.Config.LoggingConfiguration();
             var consoleTarget = new NLog.Targets.ConsoleTarget("console");
             consoleTarget.Layout = "[${level:uppercase=true} ${logger:shortName=true}] ${replace-newlines:replacement=\n:${message}} ${exception:format=toString}";
-            config.AddRule(LogLevel.Trace, LogLevel.Fatal, consoleTarget);
+            config.AddRule(LogLevel.Debug, LogLevel.Fatal, consoleTarget);
             NLog.LogManager.Configuration = config;
 
             RegistryLoader.Load();
+
+            TestDec();
+        }
+
+        private static void TestEnc()
+        {
             //string file = @"C:\Users\Daniel\Desktop\Arquivos2\mc\saves\New World\region\r.-1.0.mca";
             //string file = @"../../../test_data/world_amplified1/region/r.-1.-1.mca";
             string file = @"../../../test_data/world_default1/region/r.0.-1.mca";
@@ -62,7 +71,7 @@ namespace AnvilPacker
 
             var serializer = new Level.Versions.v1_16.ChunkSerializer();
             var region = new RegionBuffer();
-            (region.X, region.Z) = (0, -1);
+            (region.X, region.Z) = (0 * 32, -1 * 32);
             var rng = new Random(4567);
 
             for (int z = 0; z < 32; z++) {
@@ -71,23 +80,10 @@ namespace AnvilPacker
                     if (tag != null) {
                         var chunk = serializer.Deserialize(tag.GetCompound("Level"), region.Palette);
                         region.SetChunk(x, z, chunk);
-
-                        /*
-                        for (int i = 0; i < 64; i++) {
-                            for (int j = 0; j < 8; j++) {
-                                var section = chunk.Sections[rng.Next(16)];
-                                if (section != null) {
-                                    var bx = rng.Next(16);
-                                    var by = rng.Next(16);
-                                    var bz = rng.Next(16);
-                                    section.SetBlock(bx, by, bz, Block.StateRegistry[rng.Next(16384)]);
-                                    break;
-                                }
-                            }
-                        }*/
                     }
                 }
             }
+            Console.WriteLine("Hash: " + Verifier.HashBlocks(region));
             Console.WriteLine("Encoding...");
             var sw = Stopwatch.StartNew();
             if (false) {
@@ -98,11 +94,38 @@ namespace AnvilPacker
 
             var encoder = new Encoder.v1.EncoderV1(region);
             using var encRegion = new DataWriter(File.Create("encoded.bin"));
-            encoder.Encode(encRegion);
+
+            int lastReport = 0;
+            encoder.Encode(encRegion, p => {
+                int now = Environment.TickCount;
+                if (now - lastReport > 250) {
+                    lastReport = now;
+                    Console.WriteLine($"Encoding... {p * 100:0.0}%");
+                }
+            });
 
             //Dump(region, "dumped.bin", false);
             //DumpImages(region, "layers", false);
             Console.WriteLine($"Encoding took {sw.ElapsedMilliseconds}ms");
+        }
+
+        private static void TestDec()
+        {
+            using var encRegion = new DataReader(File.OpenRead("encoded.bin"));
+
+            var sw = Stopwatch.StartNew();
+            var dec = new Encoder.v1.DecoderV1();
+            int lastReport = 0;
+            var region = dec.Decode(encRegion, p => {
+                int now = Environment.TickCount;
+                if (now - lastReport > 250) {
+                    lastReport = now;
+                    Console.WriteLine($"Decoding... {p * 100:0.0}%");
+                }
+            });
+            Console.WriteLine($"Decoding took {sw.ElapsedMilliseconds}ms");
+            Console.WriteLine("Hash: " + Verifier.HashBlocks(region));
+            return;
         }
 
         private static void Dump(RegionBuffer region, string filename, bool layered)

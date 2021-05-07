@@ -1,14 +1,7 @@
 ﻿#nullable enable
 
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Numerics;
-using System.Runtime.CompilerServices;
-using System.Text;
-using System.Threading.Tasks;
 using AnvilPacker.Data;
 using AnvilPacker.Util;
 
@@ -21,7 +14,7 @@ namespace AnvilPacker.Level
         public BlockPalette Palette;
         public HeightMaps HeightMaps = new();
 
-        public List<ScheduledTick> TileTicks = new();
+        public List<ScheduledTick> ScheduledTicks = new();
         /// <summary> Data that the encoder doesn't know how to handle. Contents are left unmodified. </summary>
         public CompoundTag? Opaque { get; set; }
 
@@ -74,7 +67,10 @@ namespace AnvilPacker.Level
 
     public struct ScheduledTick
     {
-        public int X, Y, Z;
+        /// <summary> Block X/Z position, relative to the chunk this tick was scheduled into. </summary>
+        public sbyte X, Z;
+        /// <summary> Block Y position, in absolute world coordinates. </summary>
+        public short Y;
         public int Delay;
         public int Priority;
         public Block Type;

@@ -10,8 +10,13 @@ namespace AnvilPacker.Level.Versions.v1_8
     /// <summary> Handles chunks serialization for versions <c>1.8-1.12.2</c>. </summary>
     public class ChunkSerializer : IChunkSerializer
     {
-        private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
+        public Chunk Deserialize(CompoundTag tag, BlockPalette palette)
+        {
+            throw new NotImplementedException();
+        }
+        /*
 
+        private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
         public Chunk Deserialize(CompoundTag tag, BlockPalette palette)
         {
             int x = Pop<int>("xPos");
@@ -29,7 +34,7 @@ namespace AnvilPacker.Level.Versions.v1_8
             //chunk.HeightMap = Pop<int[]>("HeightMap");
             //chunk.Biomes = Pop<byte[]>("Biomes");
 
-            chunk.TileTicks = DeserializeTileTicks(x, z, Pop<ListTag>("TileTicks"));
+            chunk.ScheduledTicks = DeserializeTileTicks(x, z, Pop<ListTag>("TileTicks"));
 
             chunk.Opaque = tag;
 
@@ -105,7 +110,7 @@ namespace AnvilPacker.Level.Versions.v1_8
                 list.Add(st);
             }
             return list;
-        }
+        }*/
 
         public CompoundTag Serialize(Chunk chunk)
         {

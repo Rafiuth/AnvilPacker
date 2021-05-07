@@ -35,10 +35,20 @@ namespace AnvilPacker.Util
             return 1 << CeilLog2(x);
         }
 
-        /// <summary> Returns `ceil(x / y)` of two positive integers. </summary>
+        /// <summary> Computes `ceil(x / y)`, assuming x and y are two positive integers. </summary>
         public static int CeilDiv(int x, int y)
         {
             return (x + (y - 1)) / y;
+        }
+
+        /// <summary> Computes `floor(x / y)`. </summary>
+        public static int FloorDiv(int x, int y)
+        {
+            //https://stackoverflow.com/a/46265641
+            int d = x / y;
+            return d * y == x 
+                    ? d 
+                    : d - ((x < 0) ^ (y < 0) ? 1 : 0);
         }
 
         public static int Min(int x, int y)

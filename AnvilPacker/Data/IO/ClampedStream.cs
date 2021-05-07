@@ -44,6 +44,13 @@ namespace AnvilPacker.Data
             Remaining -= c;
             return c;
         }
+        public override int Read(Span<byte> buffer)
+        {
+            if (Remaining <= 0) return 0;
+            int c = BaseStream.Read(buffer.Slice(0, Math.Min(Remaining, buffer.Length)));
+            Remaining -= c;
+            return c;
+        }
         public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
         {
             if (Remaining <= 0) return 0;

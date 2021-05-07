@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -26,73 +28,69 @@ namespace AnvilPacker.Encoder.v1
     //BZip2   2038KB
     //Deflate 1864KB
     //LZMA2   1569KB
-    //APv1    1280KB   block data only.
+    //APv1    1308KB   block data only.
     //paq8l   1225KB   very slow, -5 took ~20min.
     public class EncoderV1
     {
         private const int CTX_BITS = 13;
         private static readonly Vec3i[] CTX_NEIGHBORS = {
-            //new(-1, 0, 0),
+            new(-1, 0, 0),
             new(0, -1, 0),
             new(0, 0, -1),
-            new(-1, 1, 0),
         };
 
         private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
         
         private RegionBuffer _region;
-        private int _predAccuracySum, _blockCount;
+        private int _blockCount; //updated by WriteChunkBitmap()
 
         public EncoderV1(RegionBuffer region)
         {
             _region = region;
         }
 
-        public void Encode(DataWriter stream)
+        public void Encode(DataWriter stream, Action<double> progress = null)
         {
-            var buf = new MemoryDataWriter(1024 * 1024 * 4);
-            EncodeChunks(buf);
+            var headerBuf = new MemoryDataWriter(1024 * 256);
+            using (var comp = Compressors.NewBrotliEncoder(headerBuf, true, 9, 22)) {
+                WriteHeader(comp);
+                WriteOpaqueTags(comp);
+            }
 
             long startPos = stream.Position;
-            WriteHeader(stream);
-            long headerLen = stream.Position - startPos;
+            var headerSpan = headerBuf.BufferSpan;
+            stream.WriteVarUInt(1); //data version
+            stream.WriteIntLE(headerSpan.Length);
+            stream.WriteBytes(headerSpan);
 
-            stream.WriteBytes(buf.BufferSpan);
-
-            double bitsPerBlock = buf.Position * 8.0 / _blockCount;
-
-            buf.Clear();
-            EncodeHeightMaps(buf);
-
-            stream.WriteBytes(buf.BufferSpan);
+            EncodeChunks(stream, progress);
+            double bitsPerBlock = (stream.Position - startPos) * 8.0 / _blockCount;
 
             _logger.Debug($"Stats for region {_region.X} {_region.Z}");
-            _logger.Debug($" NumBlocks: {_blockCount / 1000000.0:0.0}M Palette: {_region.Palette.Count}");
-            _logger.Debug($" EncSize: {stream.Position / 1024.0:0.000}KB Overhead: {headerLen / 1024.0:0.000}KB");
-            _logger.Debug($" EncHeightmaps: {buf.Position / 1024.0:0.000}KB");
-            _logger.Debug($" BitsPerBlock: {bitsPerBlock:0.000}");
-            _logger.Debug($" PredAccuracy: {_predAccuracySum * 100.0 / _blockCount:0.0}% NumContexts: 2^{CTX_BITS}");
+            _logger.Debug($" NumBlocks: {_blockCount / 1000000.0:0.0}M  Palette: {_region.Palette.Count}");
+            _logger.Debug($" BitsPerBlock: {bitsPerBlock:0.000}  NumContexts: 2^{CTX_BITS}");
+            _logger.Debug($" EncSize: {stream.Position / 1024.0:0.000}KB  Header+Opaque: {headerSpan.Length / 1024.0:0.000}KB");
         }
 
-        private void EncodeChunks(DataWriter stream)
+        private void EncodeChunks(DataWriter stream, Action<double> progress)
         {
             var contexts = new Context[1 << CTX_BITS];
             var ac = new ArithmEncoder(stream);
+            int blocksProcessed = 0;
 
             foreach (var (chunk, y) in ChunkIterator.CreateLayered(_region)) {
-                if (y == 0 && chunk.X % 32 == 0) {
-                    _logger.Trace($"Encoding chunk {chunk.X} {chunk.Y} {chunk.Z}");
-                }
                 EncodeBlocks(chunk, y, contexts, CTX_NEIGHBORS, ac);
 
-                _blockCount += 16 * 16;
+                blocksProcessed += 16 * 16;
+                if (chunk.X % 32 == 0) {
+                    progress?.Invoke(blocksProcessed / (double)_blockCount);
+                }
             }
             ac.Flush();
         }
-
         private unsafe void EncodeBlocks(ChunkIterator chunk, int y, Context[] contexts, Vec3i[] neighbors, ArithmEncoder ac)
         {
-            Debug.Assert(neighbors.Length <= ContextKey.MAX_SAMPLES);
+            Debug.Assert(NeighborsValid(neighbors));
             Debug.Assert(chunk.Palette == _region.Palette);
 
             var key = new ContextKey();
@@ -113,11 +111,22 @@ namespace AnvilPacker.Encoder.v1
 
                     int delta = ctx.PredictForward(id);
                     ctx.Nz.Write(ac, delta, 0, ctx.Palette.Length - 1);
-
-                    _predAccuracySum += delta == 0 ? 1 : 0;
                 }
             }
         }
+
+        private bool NeighborsValid(Vec3i[] neighbors)
+        {
+            //A neighbor is only valid if the block was decoded before.
+            //Encoding happens in YZX order
+            foreach (var pos in neighbors) {
+                if (pos.Y > 0 || (pos.X > 0 && pos.Z > 0)) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
         private Context GetContext(Context[] contexts, in ContextKey key)
         {
             int slot = key.GetSlot(CTX_BITS);
@@ -126,55 +135,11 @@ namespace AnvilPacker.Encoder.v1
             return ctx;
         }
 
-        private void EncodeHeightMaps(DataWriter stream)
-        {
-            _logger.Trace("Encoding height maps...");
-            var pred = new short[16 * 16];
-            var types = _region.Chunks
-                               .ExceptNull()
-                               .SelectMany(c => c.HeightMaps.Select(h => h.Key))
-                               .Distinct();
-
-            var (minSy, maxSy) = _region.GetChunkYExtents();
-            //rough estimate of min and max deltas.
-            int minDelta = (minSy - maxSy) * 16;
-            int maxDelta = (maxSy - minSy) * 16;
-
-            foreach (var type in types) {
-                stream.WriteString(type.Name, stream.WriteVarUInt);
-            }
-            stream.WriteVarInt(minDelta);
-            stream.WriteVarInt(maxDelta);
-
-            if (minDelta == 0 && maxDelta == 0) {
-                //all predicted heights are correct, don't waste resources encoding them.
-                return;
-            }
-            var ac = new ArithmEncoder(stream);
-            var pSkip = new BitChance(0.9);
-            var nzHeight = new NzCoder();
-
-            foreach (var chunk in _region.Chunks.ExceptNull()) {
-                foreach (var type in types) {
-                    var map = chunk.HeightMaps.Get(type);
-
-                    pSkip.Write(ac, map == null);
-                    if (map != null) {
-                        HeightMaps.Calculate(chunk, type, pred);
-                        for (int i = 0; i < 16 * 16; i++) {
-                            nzHeight.Write(ac, map[i] - pred[i], minDelta, maxDelta);
-                        }
-                    }
-                }
-            }
-            ac.Flush();
-        }
-
         private void WriteHeader(DataWriter stream)
         {
-            stream.WriteUShortBE(1); //data version
-
-            stream.WriteByte(_region.Size / 32);
+            stream.WriteByte(Maths.CeilDiv(_region.Size, 32));
+            stream.WriteVarInt(Maths.FloorDiv(_region.X, _region.Size));
+            stream.WriteVarInt(Maths.FloorDiv(_region.Z, _region.Size));
 
             stream.WriteByte(CTX_BITS);
             stream.WriteByte(CTX_NEIGHBORS.Length);
@@ -197,36 +162,24 @@ namespace AnvilPacker.Encoder.v1
         private void WriteChunkBitmap(DataWriter stream)
         {
             var (minY, maxY) = _region.GetChunkYExtents();
-            //create bitmap
-            int length = (maxY - minY + 1) * (_region.Size * _region.Size);
-            var bitmap = new BitArray(length);
-            int i = 0;
 
+            stream.WriteVarInt(minY);
+            stream.WriteVarInt(maxY);
+
+            _blockCount = 0;
             for (int y = minY; y <= maxY; y++) {
                 for (int z = 0; z < _region.Size; z++) {
                     for (int x = 0; x < _region.Size; x++) {
-                        bitmap[i++] = _region.GetSection(x, y, z) != null;
+                        bool exists = _region.GetSection(x, y, z) != null;
+                        stream.WriteByte(exists ? 1 : 0);
+
+                        if (exists) {
+                            _blockCount += 4096;
+                        }
                     }
                 }
             }
-
-            //encode it
-            //TODO: improve bitmap encoding (maybe)
-            //worst cases:
-            // - 1.16 at 32x16x32 chunks = 16K bits = 2KB
-            // - 1.17 at 32x64x32 chunks = 64K bits = 8KB
-            //RLE gives ~200 bytes at 32x5x32 (normal overworld)
-            stream.WriteVarUInt(minY);
-            stream.WriteVarUInt(maxY);
-
-            var bw = new BitWriter(stream);
-            CodecPrimitives.RunLengthEncode(
-                length,
-                compare: (i, j) => bitmap[i] == bitmap[j],
-                writeLiteral: i => bw.WriteBit(bitmap[i]),
-                writeRunLen: l => bw.WriteVLC(l)
-            );
-            bw.Flush();
+            //bitmap+RLE: 42.892KB, 1 byte per chunk: 42.790KB
         }
         private void WritePalette(DataWriter stream)
         {
@@ -234,13 +187,20 @@ namespace AnvilPacker.Encoder.v1
             stream.WriteVarUInt(palette.Count);
 
             foreach (var (block, id) in palette.BlocksAndIds()) {
-                var name = Encoding.UTF8.GetBytes(block.ToString());
-                stream.WriteVarUInt(name.Length);
-                stream.WriteBytes(name);
+                stream.WriteNulString(block.ToString());
 
                 stream.WriteVarUInt((int)block.Attributes);
                 stream.WriteByte(block.Emittance << 4 | block.Opacity);
             }
+        }
+        private void WriteOpaqueTags(DataWriter stream)
+        {
+            stream.WriteVarUInt(0); //version
+
+            foreach (var chunk in _region.Chunks.ExceptNull()) {
+                NbtIO.Write(chunk.Opaque, stream);
+            }
+            //pnbt: 39.156KB, nbt: 42.892KB
         }
     }
 }

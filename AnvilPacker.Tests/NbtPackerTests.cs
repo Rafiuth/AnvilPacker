@@ -29,55 +29,7 @@ namespace AnvilPacker.Tests
 
             EnsureSchemasEqual(packer._lastSchemas, unpacker._schemas);
 
-            EnsureTagEqual(tag, unpacker.Read());
-        }
-
-        private void EnsureTagEqual(NbtTag t1, NbtTag t2)
-        {
-            switch (t1.Type) {
-                case TagType.Byte:
-                case TagType.Short:
-                case TagType.Int:
-                case TagType.Long:
-                case TagType.Float:
-                case TagType.Double:
-                case TagType.String: {
-                    var v1 = ((PrimitiveTag)t1).GetValue();
-                    var v2 = ((PrimitiveTag)t2).GetValue();
-                    Assert.Equal(v1, v2);
-                    break;
-                }
-                case TagType.ByteArray:
-                case TagType.IntArray:
-                case TagType.LongArray: {
-                    var a1 = (Array)((PrimitiveTag)t1).GetValue();
-                    var a2 = (Array)((PrimitiveTag)t2).GetValue();
-                    Assert.Equal(a1.Length, a2.Length);
-                    for (int i = 0; i < a1.Length; i++) {
-                        Assert.Equal(a1.GetValue(i), a2.GetValue(i));
-                    }
-                    break;
-                }
-                case TagType.List: {
-                    var list1 = (ListTag)t1;
-                    var list2 = (ListTag)t2;
-                    Assert.Equal(list1.Count, list2.Count);
-                    for (int i = 0; i < list1.Count; i++) {
-                        EnsureTagEqual(list1[i], list2[i]);
-                    }
-                    break;
-                }
-                case TagType.Compound: {
-                    var c1 = (CompoundTag)t1;
-                    var c2 = (CompoundTag)t2;
-                    Assert.Equal(c1.Count, c2.Count);
-                    foreach (var (k, v) in c1) {
-                        EnsureTagEqual(v, c2[k]);
-                    }
-                    break;
-                }
-                default: throw new InvalidOperationException();
-            }
+            Assert.True(Verifier.CompareTags(tag, unpacker.Read()));
         }
 
         private void EnsureSchemasEqual(IList<Schema> list1, IList<Schema> list2)

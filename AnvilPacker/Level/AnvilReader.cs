@@ -10,7 +10,7 @@ namespace AnvilPacker.Level
     //https://minecraft.gamepedia.com/Region_file_format
     public class AnvilReader : IDisposable
     {
-        private readonly DataReader _s;
+        private readonly FileDataReader _s;
 
         public AnvilReader(string path, int rx, int rz)
             : this(Path.Combine(path, $"r.{rx}.{rz}.mca"))
@@ -18,8 +18,7 @@ namespace AnvilPacker.Level
         }
         public AnvilReader(string filename)
         {
-            //disabling buffer allows passing BaseStream without seeking twice
-            _s = new DataReader(File.OpenRead(filename), false, 0);
+            _s = new FileDataReader(filename);
         }
 
         public CompoundTag Read(int x, int z)
@@ -35,7 +34,7 @@ namespace AnvilPacker.Level
             if (len > sectorCount * 4096) {
                 throw new InvalidDataException($"Corrupted chunk: declared length larger than sector count.");
             }
-            var rawStream = new ClampedStream(_s.BaseStream, len, true);
+            var rawStream = _s.ForkStream(offset + 5, len);
 
             using var dataStream = compressionType switch {
                 1 => new GZipStream(rawStream, CompressionMode.Decompress),
@@ -54,12 +53,6 @@ namespace AnvilPacker.Level
             int sectors = loc & 0xFF;
             return (offset, sectors);
         }
-
-        private static int GetIndex(int x, int z)
-        {
-            return (x & 31) + (z & 31) * 32;
-        }
-
         private static Stream new_ZlibStream(Stream stream, CompressionMode mode, bool leaveOpen = false)
         {
             //adapted from here: https://github.com/dotnet/runtime/issues/38022#issuecomment-645612109
@@ -67,6 +60,11 @@ namespace AnvilPacker.Level
             var ctor = typeof(DeflateStream).GetConstructor(BindingFlags.NonPublic | BindingFlags.Instance, null, argTypes, null);
 
             return (DeflateStream)ctor.Invoke(new object[] { stream, mode, leaveOpen, 15, -1L });
+        }
+
+        private static int GetIndex(int x, int z)
+        {
+            return (x & 31) + (z & 31) * 32;
         }
 
         public void Dispose()

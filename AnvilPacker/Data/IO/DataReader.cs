@@ -163,6 +163,7 @@ namespace AnvilPacker.Data
         {
             ReadBulk(buf, BitConverter.IsLittleEndian);
         }
+
         private unsafe void ReadBulk<T>(Span<T> buf, bool revElemBytes) where T : unmanaged
         {
             ReadBytes(MemoryMarshal.AsBytes(buf));
@@ -184,6 +185,22 @@ namespace AnvilPacker.Data
             Span<byte> buf = len <= 256 ? stackalloc byte[len] : new byte[len];
             ReadBytes(buf);
             return Encoding.UTF8.GetString(buf);
+        }
+        public string ReadNulString()
+        {
+            var buf = new byte[256];
+            int pos = 0;
+
+            while (true) {
+                byte b = ReadByte();
+                if (b == 0) break;
+
+                if (pos >= buf.Length) {
+                    Array.Resize(ref buf, buf.Length * 2);
+                }
+                buf[pos++] = b;
+            }
+            return Encoding.UTF8.GetString(buf, 0, pos);
         }
     }
 }
