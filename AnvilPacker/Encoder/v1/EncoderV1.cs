@@ -28,8 +28,8 @@ namespace AnvilPacker.Encoder.v1
     //BZip2   2038KB
     //Deflate 1864KB
     //LZMA2   1569KB
-    //APv1    1308KB   block data only.
     //paq8l   1225KB   very slow, -5 took ~20min.
+    //APv1    1100KB   block data + chunk tags.
     public class EncoderV1
     {
         private const int CTX_BITS = 13;
@@ -57,12 +57,12 @@ namespace AnvilPacker.Encoder.v1
                 WriteOpaqueTags(comp);
             }
 
-            long startPos = stream.Position;
             var headerSpan = headerBuf.BufferSpan;
             stream.WriteVarUInt(1); //data version
             stream.WriteIntLE(headerSpan.Length);
             stream.WriteBytes(headerSpan);
 
+            long startPos = stream.Position;
             EncodeChunks(stream, progress);
             double bitsPerBlock = (stream.Position - startPos) * 8.0 / _blockCount;
 
@@ -90,7 +90,7 @@ namespace AnvilPacker.Encoder.v1
         }
         private unsafe void EncodeBlocks(ChunkIterator chunk, int y, Context[] contexts, Vec3i[] neighbors, ArithmEncoder ac)
         {
-            Debug.Assert(NeighborsValid(neighbors));
+            Debug.Assert(neighbors.All(n => n.Y <= 0 && (n.X <= 0 || n.Z <= 0)));
             Debug.Assert(chunk.Palette == _region.Palette);
 
             var key = new ContextKey();
@@ -114,19 +114,6 @@ namespace AnvilPacker.Encoder.v1
                 }
             }
         }
-
-        private bool NeighborsValid(Vec3i[] neighbors)
-        {
-            //A neighbor is only valid if the block was decoded before.
-            //Encoding happens in YZX order
-            foreach (var pos in neighbors) {
-                if (pos.Y > 0 || (pos.X > 0 && pos.Z > 0)) {
-                    return false;
-                }
-            }
-            return true;
-        }
-
         private Context GetContext(Context[] contexts, in ContextKey key)
         {
             int slot = key.GetSlot(CTX_BITS);
@@ -188,6 +175,7 @@ namespace AnvilPacker.Encoder.v1
 
             foreach (var (block, id) in palette.BlocksAndIds()) {
                 stream.WriteNulString(block.ToString());
+                stream.WriteNulString(block.Material.Name.ToString(false));
 
                 stream.WriteVarUInt((int)block.Attributes);
                 stream.WriteByte(block.Emittance << 4 | block.Opacity);

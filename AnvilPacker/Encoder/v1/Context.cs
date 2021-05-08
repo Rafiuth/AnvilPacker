@@ -10,6 +10,9 @@ namespace AnvilPacker.Encoder.v1
     public class Context
     {
         public BlockId[] Palette;
+        public int[] Freq;
+        public int Hits;
+
         public NzCoder Nz = new NzCoder();
 
         public Context(BlockPalette palette)
@@ -18,32 +21,57 @@ namespace AnvilPacker.Encoder.v1
             for (int i = 0; i < Palette.Length; i++) {
                 Palette[i] = (BlockId)i;
             }
+            Freq = new int[palette.Count];
         }
 
         public int PredictForward(BlockId value)
         {
-            if (Palette[0] == value) {
-                //avoid IndexOf() overhead as this should be very likely
-                return 0;
-            }
-            int index = Array.IndexOf(Palette, value);
-            MoveToFront(index);
+            int index = FindIndex(Palette, value);
+            Update(Palette, index);
             return index;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private int FindIndex(BlockId[] palette, BlockId value)
+        {
+            //Try a simple loop first to avoid IndexOf() overhead.
+            for (int i = 0; i < palette.Length && i < 8; i++) {
+                if (palette[i] == value) return i;
+            }
+            //This call won't be inlined. JIT produces less asm when passing bounds explicitly.
+            return Array.IndexOf(palette, value, 0, palette.Length);
         }
         public BlockId PredictBackward(int delta)
         {
             var id = Palette[delta];
-            MoveToFront(delta);
+            Update(Palette, delta);
             return id;
         }
 
-        private void MoveToFront(int index)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void Update(BlockId[] palette, int index)
         {
+            var curr = palette[index];
             if (index != 0) {
-                var actual = Palette[index];
-                Array.Copy(Palette, 0, Palette, 1, index);
-                Palette[0] = actual;
+                //Move frequent symbols to front
+                int currWeight = Weight(curr);
+                int j = index;
+
+                while (j > 0) {
+                    var prev = palette[j - 1];
+                    if (Weight(prev) > currWeight) break;
+                    palette[j] = prev;
+                    j--;
+                }
+                palette[j] = curr;
             }
+            Freq[curr]++;
+            Hits++;
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private int Weight(int id)
+        {
+            return Freq[id] / (1 + Hits / 64);
         }
     }
     public unsafe struct ContextKey

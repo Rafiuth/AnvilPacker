@@ -65,8 +65,6 @@ namespace AnvilPacker.Encoder.v1
 
             var key = new ContextKey();
 
-            //using var sw = new StreamWriter("decode.txt", true);
-
             for (int z = 0; z < 16; z++) {
                 for (int x = 0; x < 16; x++) {
 
@@ -83,8 +81,6 @@ namespace AnvilPacker.Encoder.v1
                     var id = ctx.PredictBackward(delta);
 
                     chunk.SetBlockId(x, y, z, id);
-
-                    //sw.WriteLine($"Dec {key.GetSlot(_ctxBits)} {id} {delta}");
                 }
             }
         }
@@ -147,6 +143,7 @@ namespace AnvilPacker.Encoder.v1
 
             for (int i = 0; i < count; i++) {
                 string name = stream.ReadNulString();
+                string material = stream.ReadNulString();
 
                 var attribs = (BlockAttributes)stream.ReadVarUInt();
                 byte light = stream.ReadByte();

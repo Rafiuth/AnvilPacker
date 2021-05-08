@@ -12,13 +12,14 @@ namespace AnvilPacker.Data
         /// <param name="window">A number representing the encoder window bits. The minimum value is 10, and the maximum value is 24.</param>
         public static DataWriter NewBrotliEncoder(DataWriter output, bool leaveOpen = false, int quality = 10, int windowBits = 22)
         {
-            return new DataWriter(new BrotliStream(output.BaseStream, CompressionLevel.Optimal, leaveOpen));
+            return new DataWriter(new BrotliEncStream(output.BaseStream, leaveOpen, quality, windowBits));
         }
         public static DataReader NewBrotliDecoder(Stream input, bool leaveOpen = false)
         {
             return new DataReader(new BrotliStream(input, CompressionMode.Decompress, leaveOpen));
         }
 
+        //This exists because BCL's BrotliStream configurability is awful
         private class BrotliEncStream : Stream
         {
             private BrotliEncoder _enc;

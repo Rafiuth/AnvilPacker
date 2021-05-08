@@ -48,7 +48,11 @@ namespace AnvilPacker
             for (int sy = c1.MinSectionY; sy <= c1.MaxSectionY; sy++) {
                 var s1 = c1.GetSection(sy);
                 var s2 = c2.GetSection(sy);
-                if (!s1.Blocks.AsSpan().SequenceEqual(s2.Blocks)) {
+                if ((s1 == null) != (s2 == null)) {
+                    return false;
+                }
+                if (s1 != null && !s1.Blocks.AsSpan().SequenceEqual(s2.Blocks)) {
+                    Console.WriteLine("Wrong at " + c1.X + " " +sy+" " + c1.Z);
                     return false;
                 }
             }
