@@ -35,7 +35,7 @@ namespace AnvilPacker.Encoder.PNbt
 
             dw.WriteVarUInt(sorted.Count);
             foreach (var (str, freq) in sorted) {
-                dw.WriteString(str, dw.WriteVarUInt);
+                dw.WriteString(str, CodecPrimitives.WriteVarUInt);
 
                 _indices[str] = _indices.Count;
             }
@@ -55,7 +55,7 @@ namespace AnvilPacker.Encoder.PNbt
                 dw.WriteVarUInt(index << 1 | 1);
                 return;
             }
-            dw.WriteString(str, len => dw.WriteVarUInt(len << 1 | 0));
+            dw.WriteString(str, (w, len) => w.WriteVarUInt(len << 1 | 0));
         }
         public string Read(DataReader dr)
         {

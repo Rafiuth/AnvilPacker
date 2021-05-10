@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -12,23 +13,45 @@ namespace AnvilPacker.Level
     public class WorldInfo
     {
         private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
-        public string Path { get; }
+
+        public string RootPath { get; }
+        public CompoundTag InfoTag { get; set; }
+
+        public WorldInfo(string path)
+        {
+            RootPath = path;
+            InfoTag = NbtIO.ReadCompressed(Path.Combine(path, "level.dat"));
+        }
+        
+        public IEnumerable<string> GetRegionDirs()
+        {
+            yield return Path.Combine(RootPath, "region");
+        }
 
         /// <summary> Returns a serializer capable of handling the specified anvil tag. </summary>
         public IChunkSerializer GetSerializer(CompoundTag tag)
         {
-            int version = tag.GetInt("DataVersion");
-            for (int i = _serializers.Length - 1; i >= 0; i--) {
-                var (minVer, maxVer, serializer) = _serializers[i];
-                if (version >= minVer) {
-                    if (version > maxVer) {
-                        _logger.Warn($"Chunk serializer for v{version} not available, using latest: v{minVer} to v{maxVer}");
+            int version = tag.GetInt("DataVersion", TagGetMode.Null);
+            return GetSerializer(version);
+        }
+        public IChunkSerializer GetSerializer(Chunk chunk)
+        {
+            throw new NotImplementedException();
+        }
+
+        public IChunkSerializer GetSerializer(int dataVersion)
+        {
+            foreach (var (minVer, maxVer, serializer) in _serializers) {
+                if (dataVersion >= minVer) {
+                    if (dataVersion > maxVer) {
+                        _logger.Warn($"Chunk serializer for v{dataVersion} not available, using latest: v{minVer} to v{maxVer}");
                     }
-                    return _serializers[i].Serializer;
+                    return serializer;
                 }
             }
-            throw new FormatException($"Bad chunk data version {version}");
+            throw new InvalidOperationException(); //unreachable
         }
+
 
         private static readonly (int MinVersion, int MaxVersion, IChunkSerializer Serializer)[] _serializers = {
             (2566, 2586, new Versions.v1_16.ChunkSerializer()),

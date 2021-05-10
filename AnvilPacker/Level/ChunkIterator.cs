@@ -11,7 +11,7 @@ namespace AnvilPacker.Level
     /// </summary>
     public class ChunkIterator
     {
-        private static readonly Chunk EmptyChunk = new Chunk(0, 0, new BlockPalette());
+        private static readonly Chunk EmptyChunk = new Chunk(0, 0, 0, 0, new BlockPalette());
         private static readonly ChunkSection EmptySection = EmptyChunk.GetOrCreateSection(0);
 
         public RegionBuffer Region;
@@ -96,7 +96,10 @@ namespace AnvilPacker.Level
         }
 
         /// <summary> Gets the block at the specified position. </summary>
-        /// <remarks> This method can get blocks from any section, as long it is within 16 blocks from the current section. </remarks>
+        /// <remarks> 
+        /// Coordinates are relative to the current section. The supported range is [-16..31]. <br/> 
+        /// If the coordinate is expected to be within the current chunk, use <see cref="GetBlockFast(int, int, int)"/> instead. <br/>
+        /// </remarks>
         public BlockState GetBlock(int x, int y, int z)
         {
             if ((uint)(x | y | z) < 16) {
@@ -112,14 +115,12 @@ namespace AnvilPacker.Level
             return GetInterBlockId(x, y, z);
         }
 
-        /// <summary> Gets the block at the specified position, assumming it is likely outside the current section. </summary>
-        /// <remarks> The block must be within 16 blocks from the current section. </remarks>
-        public BlockState GetInterBlock(int x, int y, int z)
+        private BlockState GetInterBlock(int x, int y, int z)
         {
             var neighbor = GetNeighbor(x, y, z);
             return neighbor.GetBlock(x & 15, y & 15, z & 15);
         }
-        public BlockId GetInterBlockId(int x, int y, int z)
+        private BlockId GetInterBlockId(int x, int y, int z)
         {
             var neighbor = GetNeighbor(x, y, z);
             return neighbor.GetBlockId(x & 15, y & 15, z & 15);
@@ -145,17 +146,10 @@ namespace AnvilPacker.Level
             Section.SetBlockId(x, y, z, id);
         }
 
-        /// <summary> Returns the neighbor section at given block coordinates.</summary>
+        /// <summary> Returns the neighbor section at given block coordinates. </summary>
         public ChunkSection GetNeighbor(int x, int y, int z)
         {
             int index = GetNeighborIndex(x, y, z);
-
-            //xyz range is [-16..31]
-            //`n & 15` will convert to abs coords, assuming `n` is in two complement
-            // -1  -> 15
-            // -16 -> 0
-            // 16  -> 0
-            // 31  -> 15
             return NeighborCache[index] ?? InitNeighbor(x, y, z, index);
         }
         private ChunkSection InitNeighbor(int x, int y, int z, int index)

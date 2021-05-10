@@ -12,10 +12,6 @@ namespace AnvilPacker.Level
     {
         private readonly FileDataReader _s;
 
-        public AnvilReader(string path, int rx, int rz)
-            : this(Path.Combine(path, $"r.{rx}.{rz}.mca"))
-        {
-        }
         public AnvilReader(string filename)
         {
             _s = new FileDataReader(filename);

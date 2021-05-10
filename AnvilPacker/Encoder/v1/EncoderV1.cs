@@ -1,14 +1,6 @@
 ﻿using System;
-using System.Buffers;
-using System.Collections;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
-using System.IO.Compression;
 using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 using AnvilPacker.Data;
 using AnvilPacker.Data.Entropy;
 using AnvilPacker.Level;
@@ -49,7 +41,7 @@ namespace AnvilPacker.Encoder.v1
             _region = region;
         }
 
-        public void Encode(DataWriter stream, Action<double> progress = null)
+        public void Encode(DataWriter stream, IProgress<double> progress = null)
         {
             var headerBuf = new MemoryDataWriter(1024 * 256);
             using (var comp = Compressors.NewBrotliEncoder(headerBuf, true, 9, 22)) {
@@ -66,13 +58,13 @@ namespace AnvilPacker.Encoder.v1
             EncodeChunks(stream, progress);
             double bitsPerBlock = (stream.Position - startPos) * 8.0 / _blockCount;
 
-            _logger.Debug($"Stats for region {_region.X} {_region.Z}");
+            _logger.Debug($"Stats for region {_region.X >> 5} {_region.Z >> 5}");
             _logger.Debug($" NumBlocks: {_blockCount / 1000000.0:0.0}M  Palette: {_region.Palette.Count}");
             _logger.Debug($" BitsPerBlock: {bitsPerBlock:0.000}  NumContexts: 2^{CTX_BITS}");
             _logger.Debug($" EncSize: {stream.Position / 1024.0:0.000}KB  Header+Opaque: {headerSpan.Length / 1024.0:0.000}KB");
         }
 
-        private void EncodeChunks(DataWriter stream, Action<double> progress)
+        private void EncodeChunks(DataWriter stream, IProgress<double> progress)
         {
             var contexts = new Context[1 << CTX_BITS];
             var ac = new ArithmEncoder(stream);
@@ -82,8 +74,8 @@ namespace AnvilPacker.Encoder.v1
                 EncodeBlocks(chunk, y, contexts, CTX_NEIGHBORS, ac);
 
                 blocksProcessed += 16 * 16;
-                if (chunk.X % 32 == 0) {
-                    progress?.Invoke(blocksProcessed / (double)_blockCount);
+                if ((blocksProcessed & 4095) == 0) { //update progress on every chunk
+                    progress?.Report(blocksProcessed / (double)_blockCount);
                 }
             }
             ac.Flush();
@@ -109,8 +101,7 @@ namespace AnvilPacker.Encoder.v1
                     var ctx = GetContext(contexts, in key);
                     var id = chunk.GetBlockIdFast(x, y, z);
 
-                    int delta = ctx.PredictForward(id);
-                    ctx.Nz.Write(ac, delta, 0, ctx.Palette.Length - 1);
+                    ctx.Write(ac, id);
                 }
             }
         }
@@ -124,23 +115,15 @@ namespace AnvilPacker.Encoder.v1
 
         private void WriteHeader(DataWriter stream)
         {
-            stream.WriteByte(Maths.CeilDiv(_region.Size, 32));
-            stream.WriteVarInt(Maths.FloorDiv(_region.X, _region.Size));
-            stream.WriteVarInt(Maths.FloorDiv(_region.Z, _region.Size));
+            stream.WriteVarInt(_region.X >> 5);
+            stream.WriteVarInt(_region.Z >> 5);
 
             stream.WriteByte(CTX_BITS);
             stream.WriteByte(CTX_NEIGHBORS.Length);
             foreach (var (nx, ny, nz) in CTX_NEIGHBORS) {
-                Ensure.That(
-                    nx >= -3 && nx <= 0 && 
-                    ny >= -4 && ny <= 3 && 
-                    nz >= -3 && nz <= 0
-                );
-                stream.WriteByte(
-                    (nx & 3) << 0 | //-3..0
-                    (ny & 7) << 2 | //-4..3
-                    (nz & 3) << 5   //-3..0
-                );
+                stream.WriteSByte(nx);
+                stream.WriteSByte(ny);
+                stream.WriteSByte(nz);
             }
             WritePalette(stream);
             WriteChunkBitmap(stream);

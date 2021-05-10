@@ -2,21 +2,28 @@
 using System.Collections.Generic;
 using AnvilPacker.Data;
 using AnvilPacker.Util;
+using NLog;
 
 namespace AnvilPacker.Level.Versions.v1_16
 {
     /// <summary> Handles chunks serialization for versions <c>1.16-1.16.5</c>. </summary>
     public class ChunkSerializer : IChunkSerializer
     {
+        private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
+
         public Chunk Deserialize(CompoundTag tag, BlockPalette palette)
         {
+            tag = tag.GetCompound("Level");
+            
             int x = Pop<int>("xPos");
             int z = Pop<int>("zPos");
-            var chunk = new Chunk(x, z, palette);
+            var chunk = new Chunk(x, z, 0, 15, palette);
 
             foreach (CompoundTag section in Pop<ListTag>("Sections")) {
                 DeserializeSection(chunk, section);
             }
+
+            Pop<NbtTag>("HeightMap"); //legacy heightmap appears in upgrated worlds.
             DeserializeHeightmaps(chunk.HeightMaps, Pop<CompoundTag>("Heightmaps"));
             //DeserializeScheduledTicks(chunk, Pop<ListTag>("TileTicks"));
             //DeserializeScheduledTicks(chunk, Pop<ListTag>("LiquidTicks"));
@@ -85,6 +92,8 @@ namespace AnvilPacker.Level.Versions.v1_16
         }
         private void DeserializeHeightmaps(HeightMaps maps, CompoundTag tag)
         {
+            if (tag == null) return;
+
             foreach (var (typeName, rawBits) in tag) {
                 var packedHeights = new SparseBitStorage(256, 9, rawBits.Value<long[]>());
 
@@ -117,7 +126,75 @@ namespace AnvilPacker.Level.Versions.v1_16
 
         public CompoundTag Serialize(Chunk chunk)
         {
+            var tag = new CompoundTag();
+            tag.SetInt("xPos", chunk.X);
+            tag.SetInt("zPos", chunk.Z);
+
+            var sections = new ListTag();
+
+            var reindexTable = new int[chunk.Palette.Count];
+
+            foreach (var section in chunk.Sections.ExceptNull()) {
+                sections.Add(SerializeSection(section, reindexTable));
+            }
+
+            CopyOpaque(tag, chunk.Opaque);
+
             throw new NotImplementedException();
+        }
+
+        private CompoundTag SerializeSection(ChunkSection section, int[] reindexTable)
+        {
+            var tag = new CompoundTag();
+            var palette = SerializePalette(section, reindexTable);
+            var blocks = PackBlocks(section.Blocks, reindexTable, palette.Count);
+
+            tag.SetSByte("Y", (sbyte)section.Y);
+            tag.SetList("Palette", palette);
+            tag.SetLongArray("BlockStates", blocks);
+
+            if (section.SkyLight != null) {
+                tag.SetByteArray("SkyLight", section.SkyLight.Data);
+            }
+            if (section.BlockLight != null) {
+                tag.SetByteArray("BlockLight", section.BlockLight.Data);
+            }
+            return tag;
+        }
+        private ListTag SerializePalette(ChunkSection section, int[] reindexTable)
+        {
+            var palette = section.Palette;
+            reindexTable.Fill(-1);
+
+            var list = new ListTag();
+            foreach (var id in section.Blocks) {
+                if (reindexTable[id] >= 0) continue;
+
+                var state = palette.GetState(id);
+                var tag = new CompoundTag();
+                tag.SetString("Name", state.Block.Name.ToString());
+                if (state.Properties.Count > 0) {
+                    var props = new CompoundTag();
+                    foreach (var (name, prop) in state.Properties) {
+                        props.SetString(name, prop.GetValue());
+                    }
+                    tag.SetCompound("Properties", props);
+                }
+                reindexTable[id] = list.Count;
+                list.Add(tag);
+            }
+            return list;
+        }
+        private void CopyOpaque(CompoundTag tag, CompoundTag opaque)
+        {
+            foreach (var (k, v) in opaque) {
+                if (tag.ContainsKey(k)) {
+                    //TODO: recursive merging?
+                    _logger.Warn($"Opaque tag '{k}' already exists in serialized chunk, keeping existing one.");
+                    continue;
+                }
+                tag.Set(k, v);
+            }
         }
 
         private static void UnpackBlocks(long[] src, BlockId[] dst, BlockId[] palette)
@@ -128,14 +205,32 @@ namespace AnvilPacker.Level.Versions.v1_16
             int srcPos = 0;
 
             for (int i = 0; i < dst.Length; i += valsPerLong) {
-                long vals = src[srcPos++];
                 int valCount = Math.Min(dst.Length - i, valsPerLong);
+                long vals = src[srcPos++];
 
                 for (int j = 0; j < valCount; j++) {
                     dst[i + j] = palette[vals & mask];
                     vals >>= elemBits;
                 }
             }
+        }
+        private static long[] PackBlocks(BlockId[] src, int[] reindexTable, int paletteLen)
+        {
+            int elemBits = GetPaletteBits(paletteLen);
+            int valsPerLong = 64 / elemBits;
+            var dst = new long[Maths.CeilDiv(src.Length, valsPerLong)];
+            int dstPos = 0;
+
+            for (int i = 0; i < src.Length; i += valsPerLong) {
+                int valCount = Math.Min(src.Length - i, valsPerLong);
+                long vals = 0;
+
+                for (int j = 0; j < valCount; j++) {
+                    vals |= (long)reindexTable[src[i + j]] << (j * elemBits);
+                }
+                dst[dstPos++] = vals;
+            }
+            return dst;
         }
         private static int GetPaletteBits(int size)
         {

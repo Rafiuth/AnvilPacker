@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using AnvilPacker.Level;
 using AnvilPacker.Util;
@@ -21,41 +22,61 @@ namespace AnvilPacker.Level
         public int X, Z;
 
         /// <param name="count">Capacity of the buffer, in regions of 32x32 chunks.</param>
-        public RegionBuffer(int count = 1)
+        public RegionBuffer()
         {
-            Ensure.That(count > 0);
-            Size = count * 32;
+            Size = 32;
             Chunks = new Chunk[Size * Size];
             Palette = new BlockPalette() { BlockState.Air };
         }
 
         /// <summary> Fills the buffer with the chunks at the specified region offset. </summary>
-        public void Load(WorldInfo world, string regionPath, int rx, int rz)
+        /// <param name="path">Full path of the .mca file</param>
+        public void Load(WorldInfo world, string path)
         {
-            string path = Path.Combine(world.Path, regionPath);
+            Ensure.That(Size == 32);
 
             Clear();
-            for (int z = 0; z < Size; z++) {
-                for (int x = 0; x < Size; x++) {
-                    LoadChunks(world, path, rx + x, rz + z);
-                }
-            }
-        }
-        private void LoadChunks(WorldInfo world, string path, int rx, int rz)
-        {
-            using var reader = new AnvilReader(path, rx, rz);
+            SetPosFromRegionFile(path);
+
+            using var reader = new AnvilReader(path);
             for (int cz = 0; cz < 32; cz++) {
                 for (int cx = 0; cx < 32; cx++) {
-                    Chunk chunk = null;
-
                     var tag = reader.Read(cx, cz);
                     if (tag != null) {
                         var serializer = world.GetSerializer(tag);
-                        chunk = serializer.Deserialize(tag, Palette);
+                        var chunk = serializer.Deserialize(tag, Palette);
+                        SetChunk(cx, cz, chunk);
                     }
-                    SetChunk(rx * 32 + cx, rz * 32 + cz, chunk);
                 }
             }
+        }
+        /// <summary> Creates a new region file with the chunks present in this buffer. </summary>
+        /// <param name="path">Full path of the .mca file</param>
+        public void Save(WorldInfo world, string path)
+        {
+            Ensure.That(Size == 32);
+
+            using var writer = new AnvilWriter(path);
+            for (int cz = 0; cz < 32; cz++) {
+                for (int cx = 0; cx < 32; cx++) {
+                    var chunk = GetChunk(cx, cz);
+                    if (chunk != null) {
+                        var serializer = world.GetSerializer(chunk);
+                        var tag = serializer.Serialize(chunk);
+                        writer.Write(cx, cz, tag);
+                    }
+                }
+            }
+        }
+
+        private void SetPosFromRegionFile(string path)
+        {
+            var m = Regex.Match(Path.GetFileName(path), @"r\.(-?\d+)\.(-?\d+)\.mca$");
+            if (!m.Success) {
+                throw new FormatException("Region file must have the form of 'r.0.0.mca'.");
+            }
+            X = int.Parse(m.Groups[1].Value) * 32;
+            Z = int.Parse(m.Groups[2].Value) * 32;
         }
 
         public void Clear()
@@ -131,6 +152,8 @@ namespace AnvilPacker.Level
             if ((uint)x >= (uint)Size || (uint)z >= (uint)Size) {
                 throw new ArgumentOutOfRangeException();
             }
+            Ensure.That(chunk.X >= X && chunk.X < X + Size);
+            Ensure.That(chunk.Z >= Z && chunk.Z < Z + Size);
             Chunks[x + z * Size] = chunk;
         }
 

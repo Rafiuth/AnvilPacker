@@ -1,7 +1,6 @@
 using System;
-using System.Collections;
-using System.Numerics;
 using System.Runtime.CompilerServices;
+using AnvilPacker.Data.Entropy;
 using AnvilPacker.Level;
 using AnvilPacker.Util;
 
@@ -24,11 +23,19 @@ namespace AnvilPacker.Encoder.v1
             Freq = new int[palette.Count];
         }
 
-        public int PredictForward(BlockId value)
+        public void Write(ArithmEncoder ac, BlockId value)
         {
             int index = FindIndex(Palette, value);
             Update(Palette, index);
-            return index;
+            Nz.Write(ac, index, 0, Palette.Length - 1);
+        }
+
+        public BlockId Read(ArithmDecoder ac)
+        {
+            int delta = Nz.Read(ac, 0, Palette.Length - 1);
+            var id = Palette[delta];
+            Update(Palette, delta);
+            return id;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -40,12 +47,6 @@ namespace AnvilPacker.Encoder.v1
             }
             //This call won't be inlined. JIT produces less asm when passing bounds explicitly.
             return Array.IndexOf(palette, value, 0, palette.Length);
-        }
-        public BlockId PredictBackward(int delta)
-        {
-            var id = Palette[delta];
-            Update(Palette, delta);
-            return id;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -71,7 +72,7 @@ namespace AnvilPacker.Encoder.v1
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private int Weight(int id)
         {
-            return Freq[id] / (1 + Hits / 64);
+            return Freq[id] / (1 + Hits / 32);
         }
     }
     public unsafe struct ContextKey

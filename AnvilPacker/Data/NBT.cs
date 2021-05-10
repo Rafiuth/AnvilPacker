@@ -237,6 +237,14 @@ namespace AnvilPacker.Data
             }
             _tags[name] = PrimitiveTag.Create(value);
         }
+        public bool ContainsKey(string name)
+        {
+            return _tags.ContainsKey(name);
+        }
+        public bool ContainsKey(string name, TagType type)
+        {
+            return _tags.TryGetValue(name, out var tag) && tag.Type == type;
+        }
         public bool Remove(string name)
         {
             return _tags.Remove(name);

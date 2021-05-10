@@ -30,7 +30,7 @@ namespace AnvilPacker.Data
                 BaseStream.Position = value;
             }
         }
-        public long length
+        public long Length
         {
             get => BaseStream.Length + _bufPos;
         }

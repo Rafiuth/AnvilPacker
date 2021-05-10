@@ -1,14 +1,6 @@
 using System;
-using System.Buffers;
-using System.Collections;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.IO.Compression;
-using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 using AnvilPacker.Data;
 using AnvilPacker.Data.Entropy;
 using AnvilPacker.Level;
@@ -77,8 +69,7 @@ namespace AnvilPacker.Encoder.v1
                         key.s[i] = chunk.GetBlockId(nx, ny, nz);
                     }
                     var ctx = GetContext(contexts, in key);
-                    int delta = ctx.Nz.Read(ac, 0, ctx.Palette.Length - 1);
-                    var id = ctx.PredictBackward(delta);
+                    var id = ctx.Read(ac);
 
                     chunk.SetBlockId(x, y, z, id);
                 }
@@ -94,20 +85,17 @@ namespace AnvilPacker.Encoder.v1
 
         private void ReadHeader(DataReader stream)
         {
-            _region = new RegionBuffer(stream.ReadByte());
+            _region = new RegionBuffer();
             _region.X = stream.ReadVarInt() * _region.Size;
             _region.Z = stream.ReadVarInt() * _region.Size;
 
             _ctxBits = stream.ReadByte();
             _ctxNeighbors = new Vec3i[stream.ReadByte()];
             for (int i = 0; i < _ctxNeighbors.Length; i++) {
-                int v = stream.ReadByte();
-                //01 234 56  bit
-                //xx yyy zz  field
                 _ctxNeighbors[i] = new Vec3i(
-                    (v << 30) >> 30, 
-                    (v << 27) >> 29,
-                    (v << 25) >> 30
+                    stream.ReadSByte(),
+                    stream.ReadSByte(),
+                    stream.ReadSByte()
                 );
             }
             ReadPalette(stream);
@@ -127,7 +115,7 @@ namespace AnvilPacker.Encoder.v1
 
                         var chunk = _region.GetChunk(x, z);
                         if (chunk == null) {
-                            chunk = new Chunk(_region.X + x, _region.Z + z, _region.Palette);
+                            chunk = new Chunk(_region.X + x, _region.Z + z, minY, maxY, _region.Palette);
                             _region.SetChunk(x, z, chunk);
                         }
                         chunk.SetSection(y, new ChunkSection(chunk, y));

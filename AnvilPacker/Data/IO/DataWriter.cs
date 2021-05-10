@@ -11,6 +11,7 @@ namespace AnvilPacker.Data
     public class DataWriter : IDisposable
     {
         private const MethodImplOptions Inline = MethodImplOptions.AggressiveInlining;
+        private const MethodImplOptions NoInline = MethodImplOptions.NoInlining;
 
         private byte[] _buf;
         private int _bufPos;
@@ -70,8 +71,14 @@ namespace AnvilPacker.Data
                 _bufPos += sizeof(T);
                 return;
             }
+            WriteUnbuffered<T>(value);
+        }
+        [MethodImpl(NoInline)]
+        private void WriteUnbuffered<T>(T value) where T : unmanaged
+        {
             WriteBytes(Mem.CreateSpan<T, byte>(ref value, 1));
         }
+
         [MethodImpl(Inline)]
         public void WriteLE<T>(T value) where T : unmanaged
         {
@@ -152,14 +159,14 @@ namespace AnvilPacker.Data
         /// <summary> Writes an UTF8 string prefixed with a big-endian ushort indicating it's length. </summary>
         public void WriteUTF(string str)
         {
-            WriteString(str, len => {
+            WriteString(str, (dw, len) => {
                 Ensure.That(len < 65536, "Encoded string cannot be longer than 65535 bytes.");
-                WriteUShortBE(len);
+                dw.WriteUShortBE(len);
             });
         }
 
         /// <summary> Writes an UTF8 string with a custom length prefix. </summary>
-        public void WriteString(string str, Action<int> writePrefixLen)
+        public void WriteString(string str, Action<DataWriter, int> writePrefixLen)
         {
             var enc = Encoding.UTF8;
             int len = enc.GetByteCount(str);
@@ -167,13 +174,13 @@ namespace AnvilPacker.Data
             var buf = len < 256 ? stackalloc byte[len] : new byte[len];
             enc.GetBytes(str, buf);
 
-            writePrefixLen(len);
+            writePrefixLen(this, len);
             WriteBytes(buf);
         }
         /// <summary> Writes an UTF8 encoded string, postfixed '\0'. The string should not contain any NUL char. </summary>
         public void WriteNulString(string str)
         {
-            WriteString(str, len => { });
+            WriteString(str, (dw, len) => { });
             WriteByte(0);
         }
     }

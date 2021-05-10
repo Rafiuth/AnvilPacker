@@ -29,7 +29,7 @@ namespace AnvilPacker.Encoder.PNbt
 
             dw.WriteVarUInt(Fields.Count);
             foreach (var field in Fields) {
-                dw.WriteString(field.Name, dw.WriteVarUInt);
+                dw.WriteString(field.Name, CodecPrimitives.WriteVarUInt);
                 dw.WriteByte((int)field.Type | (field.Data != null ? 0x80 : 0x00));
 
                 if (field.Data != null) {

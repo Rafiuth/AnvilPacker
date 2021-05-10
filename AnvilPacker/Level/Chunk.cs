@@ -10,36 +10,40 @@ namespace AnvilPacker.Level
     public class Chunk
     {
         public readonly int X, Z;
-        public readonly ChunkSection?[] Sections = new ChunkSection[16];
+        /// <summary> Section Y extents, in chunk coordinates (blockPos / 16). Values are inclusive. </summary>
+        public readonly int MinSectionY, MaxSectionY;
+        public readonly ChunkSection?[] Sections;
         public BlockPalette Palette;
         public HeightMaps HeightMaps = new();
 
         public List<ScheduledTick> ScheduledTicks = new();
-        /// <summary> Data that the encoder doesn't know how to handle. Contents are left unmodified. </summary>
-        public CompoundTag? Opaque { get; set; }
+        /// <summary> Data that the serializer doesn't know how to handle. This is the "Level" tag from the region chunk. </summary>
+        public CompoundTag? Opaque;
 
-        /// <summary> Section Y extents, in chunk coordinates (blockPos / 16). Values are inclusive. </summary>
-        public readonly int MinSectionY, MaxSectionY;
-
-        public Chunk(int x, int z, BlockPalette palette)
+        public Chunk(int x, int z, int minSy, int maxSy, BlockPalette palette)
         {
             X = x;
             Z = z;
+            MinSectionY = minSy;
+            MaxSectionY = maxSy;
+            Sections = new ChunkSection[MaxSectionY - MinSectionY + 1];
             Palette = palette;
-            MinSectionY = 0;
-            MaxSectionY = 15;
         }
 
         /// <param name="y">Section Y coord (blockY >> 4)</param>
         public ChunkSection? GetSection(int y)
         {
-            return (uint)y < 16u ? Sections[y] : null;
+            int index = y - MinSectionY;
+            if (y >= MinSectionY && y <= MaxSectionY) {
+                return Sections[y - MinSectionY];
+            }
+            return null;
         }
         /// <param name="y">Section Y coord (blockY >> 4)</param>
-        /// <remarks><see cref="IndexOutOfRangeException"/> is thrown if y is outside [0..15]</remarks>
+        /// <remarks><see cref="IndexOutOfRangeException"/> is thrown if y is outside Y limits.</remarks>
         public void SetSection(int y, ChunkSection? section)
         {
-            Sections[y] = section;
+            Sections[y - MinSectionY] = section;
         }
         public ChunkSection GetOrCreateSection(int y)
         {
