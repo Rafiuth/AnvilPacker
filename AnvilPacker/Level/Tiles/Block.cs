@@ -33,9 +33,10 @@ namespace AnvilPacker.Level
         Opaque              = 1 << 0,
         Translucent         = 1 << 1,
         FullCube            = 1 << 2,
-        OpaqueFullCube      = 1 << 3,
+        OpaqueFullCube      = 1 << 3, // Opaque && FullCube
         HasRandomTicks      = 1 << 4,
         EmitsRedstonePower  = 1 << 5,
+        IsImmerse           = 1 << 6, // !state.getFluidState().isEmpty()
         IsAir               = 1 << 7
     }
 }

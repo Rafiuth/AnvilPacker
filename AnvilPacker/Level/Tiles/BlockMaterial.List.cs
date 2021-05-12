@@ -10,27 +10,27 @@ namespace AnvilPacker.Level {
         const MaterialAttributes S = MaterialAttributes.Solid;
 
         public static BlockMaterial Air              { get; } = Reg("air", MapColor.Air, R);
-        public static BlockMaterial StructureVoid    { get; } = Reg("structure_void", MapColor.Air, R);
+        public static BlockMaterial StructuralAir    { get; } = Reg("structural_air", MapColor.Air, R);
         public static BlockMaterial Portal           { get; } = Reg("portal", MapColor.Air, 0);
         public static BlockMaterial Carpet           { get; } = Reg("carpet", MapColor.Wool, F);
         public static BlockMaterial Plant            { get; } = Reg("plant", MapColor.Plant, 0);
-        public static BlockMaterial UnderwaterPlant  { get; } = Reg("underwater_plant", MapColor.Water, 0);
+        public static BlockMaterial WaterPlant       { get; } = Reg("water_plant", MapColor.Water, 0);
         public static BlockMaterial ReplaceablePlant { get; } = Reg("replaceable_plant", MapColor.Plant, F | R);
-        public static BlockMaterial NetherShoots     { get; } = Reg("nether_shoots", MapColor.Plant, R);
-        public static BlockMaterial ReplaceableUnderwaterPlant { get; } = Reg("replaceable_underwater_plant", MapColor.Water, R);
+        public static BlockMaterial ReplaceableFireproofPlant { get; } = Reg("replaceable_fireproof_plant", MapColor.Plant, R);
+        public static BlockMaterial ReplaceableWaterPlant { get; } = Reg("replaceable_water_plant", MapColor.Water, R);
         public static BlockMaterial Water            { get; } = Reg("water", MapColor.Water, L | R);
         public static BlockMaterial BubbleColumn     { get; } = Reg("bubble_column", MapColor.Water, L | R);
         public static BlockMaterial Lava             { get; } = Reg("lava", MapColor.Fire, L | R);
         public static BlockMaterial SnowLayer        { get; } = Reg("snow_layer", MapColor.Snow, R);
         public static BlockMaterial Fire             { get; } = Reg("fire", MapColor.Air, R);
-        public static BlockMaterial Supported        { get; } = Reg("supported", MapColor.Air, 0);
+        public static BlockMaterial Decoration       { get; } = Reg("decoration", MapColor.Air, 0);
         public static BlockMaterial Cobweb           { get; } = Reg("cobweb", MapColor.Wool, S);
         public static BlockMaterial RedstoneLamp     { get; } = Reg("redstone_lamp", MapColor.Air, BM | SB | S);
-        public static BlockMaterial OrganicProduct   { get; } = Reg("organic_product", MapColor.Clay, BM | SB | S);
-        public static BlockMaterial Soil             { get; } = Reg("soil", MapColor.Dirt, BM | SB | S);
-        public static BlockMaterial SolidOrganic     { get; } = Reg("solid_organic", MapColor.Grass, BM | SB | S);
+        public static BlockMaterial Clay             { get; } = Reg("clay", MapColor.Clay, BM | SB | S);
+        public static BlockMaterial Dirt             { get; } = Reg("dirt", MapColor.Dirt, BM | SB | S);
+        public static BlockMaterial Grass            { get; } = Reg("grass", MapColor.Grass, BM | SB | S);
         public static BlockMaterial DenseIce         { get; } = Reg("dense_ice", MapColor.Ice, BM | SB | S);
-        public static BlockMaterial Aggregate        { get; } = Reg("aggregate", MapColor.Sand, BM | SB | S);
+        public static BlockMaterial Sand             { get; } = Reg("sand", MapColor.Sand, BM | SB | S);
         public static BlockMaterial Sponge           { get; } = Reg("sponge", MapColor.ColorYellow, BM | SB | S);
         public static BlockMaterial ShulkerBox       { get; } = Reg("shulker_box", MapColor.ColorPurple, BM | SB | S);
         public static BlockMaterial Wood             { get; } = Reg("wood", MapColor.Wood, BM | F | SB | S);
@@ -49,8 +49,8 @@ namespace AnvilPacker.Level {
         public static BlockMaterial RepairStation    { get; } = Reg("repair_station", MapColor.Metal, BM | SB | S);
         public static BlockMaterial Barrier          { get; } = Reg("barrier", MapColor.Air, BM | SB | S);
         public static BlockMaterial Piston           { get; } = Reg("piston", MapColor.Stone, BM | SB | S);
-        public static BlockMaterial UnusedPlant      { get; } = Reg("unused_plant", MapColor.Plant, BM | SB | S);
-        public static BlockMaterial Gourd            { get; } = Reg("gourd", MapColor.Plant, BM | SB | S);
+        public static BlockMaterial Coral            { get; } = Reg("coral", MapColor.Plant, BM | SB | S);
+        public static BlockMaterial Vegetable        { get; } = Reg("vegetable", MapColor.Plant, BM | SB | S);
         public static BlockMaterial Egg              { get; } = Reg("egg", MapColor.Plant, BM | SB | S);
         public static BlockMaterial Cake             { get; } = Reg("cake", MapColor.Air, BM | SB | S);
 
