@@ -73,8 +73,8 @@ namespace AnvilPacker.Level
             const int HDR_LEN = 5;
             _s.Position = startPos + HDR_LEN;
 
-            using (var stream = new_ZlibStream(_s.BaseStream, CompressionLevel.Optimal, true)) {
-                NbtIO.Write(tag, new DataWriter(stream));
+            using (var stream = new DataWriter(new_ZlibStream(_s.BaseStream, CompressionLevel.Optimal, true))) {
+                NbtIO.Write(tag, stream);
             }
             long endPos = _s.Position;
             int totalLen = (int)(endPos - startPos);
@@ -87,7 +87,7 @@ namespace AnvilPacker.Level
 
             loc = PackLocation(startPos, totalLen);
 
-            _s.WriteIntBE(totalLen - HDR_LEN); //length
+            _s.WriteIntBE(totalLen - HDR_LEN + 1); //length
             _s.WriteByte(2); //compressionMethod: zlib
 
             _s.Position = endPos;
@@ -113,7 +113,8 @@ namespace AnvilPacker.Level
 
         private static int GetIndex(int x, int z)
         {
-            return (x & 31) + (z & 31) * 32;
+            Ensure.InRange(x, z, 0, 31, "Invalid region chunk coords");
+            return x + z * 32;
         }
 
         private static Stream new_ZlibStream(Stream stream, CompressionLevel level, bool leaveOpen = false)

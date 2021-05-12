@@ -19,6 +19,8 @@ namespace AnvilPacker.Level
         public List<ScheduledTick> ScheduledTicks = new();
         /// <summary> Data that the serializer doesn't know how to handle. This is the "Level" tag from the region chunk. </summary>
         public CompoundTag? Opaque;
+        public int DataVersion;
+        public bool HasLightData;
 
         public Chunk(int x, int z, int minSy, int maxSy, BlockPalette palette)
         {
@@ -33,7 +35,6 @@ namespace AnvilPacker.Level
         /// <param name="y">Section Y coord (blockY >> 4)</param>
         public ChunkSection? GetSection(int y)
         {
-            int index = y - MinSectionY;
             if (y >= MinSectionY && y <= MaxSectionY) {
                 return Sections[y - MinSectionY];
             }
@@ -55,6 +56,19 @@ namespace AnvilPacker.Level
                 SetSection(y, section);
             }
             return section;
+        }
+
+        /// <summary> Computes the min and max non-empty section Y coords. </summary>
+        /// <remarks> If this chunk is fully empty, the result is (MinSectionY, MinSectionY-1). (max &lt; min) </remarks>
+        public (int Min, int Max) GetActualYExtents()
+        {
+            int min = MinSectionY;
+            int max = MaxSectionY;
+            //Find max first, so if this chunk is empty, the result will be (minSy, minSy-1).
+            while (max >= min && GetSection(max) == null) max--;
+            while (min <= max && GetSection(min) == null) min++;
+
+            return (min, max);
         }
 
         public BlockState GetBlock(int x, int y, int z)

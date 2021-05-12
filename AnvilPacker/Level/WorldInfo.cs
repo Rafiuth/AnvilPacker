@@ -15,12 +15,10 @@ namespace AnvilPacker.Level
         private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
 
         public string RootPath { get; }
-        public CompoundTag InfoTag { get; set; }
 
         public WorldInfo(string path)
         {
             RootPath = path;
-            InfoTag = NbtIO.ReadCompressed(Path.Combine(path, "level.dat"));
         }
         
         public IEnumerable<string> GetRegionDirs()
@@ -36,7 +34,7 @@ namespace AnvilPacker.Level
         }
         public IChunkSerializer GetSerializer(Chunk chunk)
         {
-            throw new NotImplementedException();
+            return GetSerializer(chunk.DataVersion);
         }
 
         public IChunkSerializer GetSerializer(int dataVersion)

@@ -72,7 +72,7 @@ namespace AnvilPacker.Level
                 blocks.Add(name, block);
             }
             Block.Registry = blocks.Freeze();
-            Block.StateRegistry = new IndexedMap<BlockState>(states);
+            Block.StateRegistry = new IndexableMap<BlockState>(states);
 
             BlockState.Air = blocks["air"].DefaultState;
         }

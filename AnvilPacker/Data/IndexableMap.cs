@@ -8,12 +8,12 @@ using System.Threading.Tasks;
 namespace AnvilPacker.Data
 {
     /// <summary> Implements a readonly map that can be indexed. </summary>
-    public class IndexedMap<T> : IEnumerable<T>
+    public class IndexableMap<T> : IEnumerable<T>
     {
         private readonly T[] _arr;
         private readonly Dictionary<T, int> _indices;
 
-        public IndexedMap(T[] entries)
+        public IndexableMap(T[] entries)
         {
             _arr = entries;
             _indices = new Dictionary<T, int>(_arr.Length);

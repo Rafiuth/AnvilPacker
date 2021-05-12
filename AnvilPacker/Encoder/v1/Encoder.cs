@@ -13,16 +13,7 @@ namespace AnvilPacker.Encoder.v1
     //based on a hash generated using neighbor blocks. The context contains a copy of the
     //region palette. The index of the block in the palette is encoded using adaptive binary
     //arithmetic coding, then the block is moved to the first index of the palette (MTF).
-
-    //Benchmarks:
-    // meth    size     notes
-    // raw    20396KB  1 byte per block, YZX order. chunk size is 16^3, empty chunks are not included.
-    //BZip2   2038KB
-    //Deflate 1864KB
-    //LZMA2   1569KB
-    //paq8l   1225KB   very slow, -5 took ~20min.
-    //APv1    1100KB   block data + chunk tags.
-    public class EncoderV1
+    public class Encoder
     {
         private const int CTX_BITS = 13;
         private static readonly Vec3i[] CTX_NEIGHBORS = {
@@ -36,7 +27,7 @@ namespace AnvilPacker.Encoder.v1
         private RegionBuffer _region;
         private int _blockCount; //updated by WriteChunkBitmap()
 
-        public EncoderV1(RegionBuffer region)
+        public Encoder(RegionBuffer region)
         {
             _region = region;
         }
@@ -46,7 +37,7 @@ namespace AnvilPacker.Encoder.v1
             var headerBuf = new MemoryDataWriter(1024 * 256);
             using (var comp = Compressors.NewBrotliEncoder(headerBuf, true, 9, 22)) {
                 WriteHeader(comp);
-                WriteOpaqueTags(comp);
+                WriteMetadata(comp);
             }
 
             var headerSpan = headerBuf.BufferSpan;
@@ -61,7 +52,7 @@ namespace AnvilPacker.Encoder.v1
             _logger.Debug($"Stats for region {_region.X >> 5} {_region.Z >> 5}");
             _logger.Debug($" NumBlocks: {_blockCount / 1000000.0:0.0}M  Palette: {_region.Palette.Count}");
             _logger.Debug($" BitsPerBlock: {bitsPerBlock:0.000}  NumContexts: 2^{CTX_BITS}");
-            _logger.Debug($" EncSize: {stream.Position / 1024.0:0.000}KB  Header+Opaque: {headerSpan.Length / 1024.0:0.000}KB");
+            _logger.Debug($" EncSize: {stream.Position / 1024.0:0.000}KB  Header+Metadata: {headerSpan.Length / 1024.0:0.000}KB");
         }
 
         private void EncodeChunks(DataWriter stream, IProgress<double> progress)
@@ -98,14 +89,14 @@ namespace AnvilPacker.Encoder.v1
 
                         key.s[i] = chunk.GetBlockId(nx, ny, nz);
                     }
-                    var ctx = GetContext(contexts, in key);
+                    var ctx = GetContext(contexts, ref key);
                     var id = chunk.GetBlockIdFast(x, y, z);
 
                     ctx.Write(ac, id);
                 }
             }
         }
-        private Context GetContext(Context[] contexts, in ContextKey key)
+        private Context GetContext(Context[] contexts, ref ContextKey key)
         {
             int slot = key.GetSlot(CTX_BITS);
             var ctx = contexts[slot] ??= new Context(_region.Palette);
@@ -115,8 +106,8 @@ namespace AnvilPacker.Encoder.v1
 
         private void WriteHeader(DataWriter stream)
         {
-            stream.WriteVarInt(_region.X >> 5);
-            stream.WriteVarInt(_region.Z >> 5);
+            stream.WriteVarInt(Maths.FloorDiv(_region.X, _region.Size));
+            stream.WriteVarInt(Maths.FloorDiv(_region.Z, _region.Size));
 
             stream.WriteByte(CTX_BITS);
             stream.WriteByte(CTX_NEIGHBORS.Length);
@@ -136,11 +127,23 @@ namespace AnvilPacker.Encoder.v1
             stream.WriteVarInt(minY);
             stream.WriteVarInt(maxY);
 
+            //design note: using a whole byte per bit because brotli works best that way.
+            //chunk bitmap
+            for (int z = 0; z < _region.Size; z++) {
+                for (int x = 0; x < _region.Size; x++) {
+                    bool exists = _region.GetChunk(x, z) != null;
+                    stream.WriteByte(exists ? 1 : 0);
+                }
+            }
+            //section bitmap
             _blockCount = 0;
             for (int y = minY; y <= maxY; y++) {
                 for (int z = 0; z < _region.Size; z++) {
                     for (int x = 0; x < _region.Size; x++) {
-                        bool exists = _region.GetSection(x, y, z) != null;
+                        var chunk = _region.GetChunk(x, z);
+                        if (chunk == null) continue;
+                        
+                        bool exists = chunk.GetSection(y) != null;
                         stream.WriteByte(exists ? 1 : 0);
 
                         if (exists) {
@@ -149,7 +152,6 @@ namespace AnvilPacker.Encoder.v1
                     }
                 }
             }
-            //bitmap+RLE: 42.892KB, 1 byte per chunk: 42.790KB
         }
         private void WritePalette(DataWriter stream)
         {
@@ -164,11 +166,12 @@ namespace AnvilPacker.Encoder.v1
                 stream.WriteByte(block.Emittance << 4 | block.Opacity);
             }
         }
-        private void WriteOpaqueTags(DataWriter stream)
+        private void WriteMetadata(DataWriter stream)
         {
             stream.WriteVarUInt(0); //version
 
             foreach (var chunk in _region.Chunks.ExceptNull()) {
+                stream.WriteVarUInt(chunk.DataVersion);
                 NbtIO.Write(chunk.Opaque, stream);
             }
             //pnbt: 39.156KB, nbt: 42.892KB

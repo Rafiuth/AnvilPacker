@@ -90,7 +90,7 @@ namespace AnvilPacker.Level
         {
             int min = int.MaxValue, max = int.MinValue;
 
-            foreach (var chunk in Chunks){
+            foreach (var chunk in Chunks) {
                 if (chunk == null) continue;
 
                 for (int y = chunk.MinSectionY; y <= chunk.MaxSectionY; y++) {
@@ -154,6 +154,8 @@ namespace AnvilPacker.Level
             }
             Ensure.That(chunk.X >= X && chunk.X < X + Size);
             Ensure.That(chunk.Z >= Z && chunk.Z < Z + Size);
+            Ensure.That((chunk.X & 31) == x && (chunk.Z & 31) == z);
+
             Chunks[x + z * Size] = chunk;
         }
 

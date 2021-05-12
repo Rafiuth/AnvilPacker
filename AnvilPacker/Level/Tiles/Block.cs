@@ -10,7 +10,7 @@ namespace AnvilPacker.Level
     public class Block
     {
         public static ResourceRegistry<Block> Registry { get; internal set; }
-        public static IndexedMap<BlockState> StateRegistry { get; internal set; }
+        public static IndexableMap<BlockState> StateRegistry { get; internal set; }
 
         public ResourceName Name { get; init; }
         public int MinStateId { get; init; }

@@ -82,9 +82,9 @@ namespace AnvilPacker.Encoder.v1
         public fixed ushort s[MAX_SAMPLES];
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public readonly int GetSlot(int bits)
+        public int GetSlot(int bits)
         {
-            ref byte data = ref Unsafe.As<ushort, byte>(ref Unsafe.AsRef(in s[0]));
+            ref byte data = ref Unsafe.As<ushort, byte>(ref s[0]);
             ulong w0 = Mem.ReadLE<ulong>(ref data, 0);
             ulong hash = Hash(w0);
             return (int)(hash >> (64 - bits));

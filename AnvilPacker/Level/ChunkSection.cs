@@ -8,17 +8,16 @@ namespace AnvilPacker.Level
     /// <summary> Represents a 16x16x16 block region. </summary>
     public class ChunkSection
     {
-        //We don't use a bit array here because it just makes everything simpler and ironically faster.
+        //We don't use a bit array here because it just makes everything simpler and faster.
         //1.8 and older versions used 8+4/16 bit array and were just fine.
-        //We will never hit 64k blocks in a single section anyway.
-        public BlockId[] Blocks { get; }
+        public readonly BlockId[] Blocks;
         /// <summary> A reference copy of the region palette. </summary>
-        public BlockPalette Palette { get; set; }
-        public NibbleArray? SkyLight { get; set; }
-        public NibbleArray? BlockLight { get; set; }
+        public BlockPalette Palette;
+        public NibbleArray? SkyLight;
+        public NibbleArray? BlockLight;
 
-        public Chunk Chunk { get; }
-        public int Y { get; }
+        public readonly Chunk Chunk;
+        public readonly int Y;
         public int X => Chunk.X;
         public int Z => Chunk.Z;
 

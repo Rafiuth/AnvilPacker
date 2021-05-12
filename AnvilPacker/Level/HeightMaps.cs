@@ -11,6 +11,7 @@ namespace AnvilPacker.Level
     public class HeightMaps : IEnumerable<Map>
     {
         private List<Map> _values = new();
+        public int Count => _values.Count;
 
         public short[]? Get(HeightMapType type, bool create = false)
         {
@@ -27,41 +28,78 @@ namespace AnvilPacker.Level
             return null;
         }
 
-        public static void Calculate(Chunk chunk, HeightMapType type, short[] heights)
-        {
-            //bitmap where bit[i] indicates whether heights[i] contains the final value.
-            var populated = new BitSet(16 * 16);
-            heights.Fill((short)(chunk.MinSectionY * 16));
+        public IEnumerator<Map> GetEnumerator() => _values.GetEnumerator();
+        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+    }
+    /// <summary> Provides methods for computing heightmaps for chunks in a region. </summary>
+    public class HeightMapComputer
+    {
+        private RegionBuffer _region;
+        private bool[] _isOpaque;
+        private BitSet _populated;
+        private HeightMapType _type;
 
-            for (int sy = chunk.MaxSectionY; sy >= chunk.MinSectionY; sy--) {
+        public HeightMapComputer(RegionBuffer region, HeightMapType type)
+        {
+            _region = region;
+            _populated = new BitSet(16 * 16);
+            _type = type;
+
+            var palette = region.Palette;
+            _isOpaque = new bool[palette.Count];
+            foreach (var (block, id) in palette.BlocksAndIds()) {
+                _isOpaque[id] = type.IsOpaque(block);
+            }
+        }
+        public void Compute(Chunk chunk)
+        {
+            var heightmap = chunk.HeightMaps.Get(_type, true);
+            Compute(chunk, heightmap!);
+        }
+        public void Compute(Chunk chunk, short[] heightmap)
+        {
+            Ensure.That(chunk.Palette == _region.Palette, "Chunk not in region");
+
+            var populated = _populated;
+            populated.Clear();
+
+            int numPopulated = 0;
+            var (minSy, maxSy) = chunk.GetActualYExtents();
+
+            int defaultHeight = minSy * 16;
+            if (_type == HeightMapType.Legacy) {
+                defaultHeight = maxSy * 16 + 15;
+            }
+            heightmap.Fill((short)defaultHeight);
+
+            for (int sy = maxSy; sy >= minSy; sy--) {
                 var section = chunk.GetSection(sy);
                 if (section == null) continue;
 
                 for (int y = 15; y >= 0; y--) {
                     for (int z = 0; z < 16; z++) {
                         for (int x = 0; x < 16; x++) {
-                            var block = section.GetBlock(x, y, z);
+                            var block = section.GetBlockId(x, y, z);
                             int index = x + z * 16;
-                            if (type.IsOpaque(block) && !populated[index]) {
-                                heights[index] = (short)(sy * 16 + y + 1);
+                            if (_isOpaque[block] && !populated[index]) {
+                                heightmap[index] = (short)(sy * 16 + y + 1);
                                 populated[index] = true;
+                                numPopulated++;
                             }
                         }
                     }
                 }
-                if (populated.All(true)) break;
+                if (numPopulated >= 16 * 16) break;
             }
         }
-
-        public IEnumerator<Map> GetEnumerator() => _values.GetEnumerator();
-        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
     }
 
     public class HeightMapType
     {
-        private static readonly List<HeightMapType> _knownTypes = new();
+        public static readonly List<HeightMapType> KnownTypes = new();
 
         public static readonly HeightMapType 
+            Legacy                 = new("LEGACY", b => b.Opacity != 0),
             WorldSurfaceWG         = new("WORLD_SURFACE_WG", b => b.Material != BlockMaterial.Air),
             WorldSurface           = new("WORLD_SURFACE",    b => b.Material != BlockMaterial.Air),
             OceanFloorWG           = new("OCEAN_FLOOR_WG",   b => b.Material.BlocksMotion),
@@ -79,21 +117,18 @@ namespace AnvilPacker.Level
             IsOpaque = isOpaque;
             KeepAfterWorldGen = !name.EndsWith("_WG");
             if (isKnown) {
-                _knownTypes.Add(this);
+                KnownTypes.Add(this);
             }
         }
 
         private static bool HasFluid(BlockState block)
         {
-            //TODO: update DataExtractor and get fluid states
-            return block.Material.IsLiquid ||
-                   block.Material == BlockMaterial.UnderwaterPlant ||
-                   block.Material == BlockMaterial.ReplaceableUnderwaterPlant;
+            return block.HasAttribs(BlockAttributes.IsImmerse);
         }
 
         public static HeightMapType ForName(string name)
         {
-            return _knownTypes.Find(v => v.Name == name) ?? 
+            return KnownTypes.Find(v => v.Name == name) ?? 
                    new HeightMapType(name, MotionBlocking.IsOpaque, false);
         }
 

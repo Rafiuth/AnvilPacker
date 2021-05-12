@@ -57,6 +57,10 @@ namespace AnvilPacker.Level
                 return x + (newVal - currVal) * shift;
             }
         }
+        public bool HasAttribs(BlockAttributes attribs)
+        {
+            return (Attributes & attribs) == attribs;
+        }
 
         public bool Equals(BlockState other)   => other.Id == Id;
         public override bool Equals(object obj) => obj is BlockState mb && Equals(mb);

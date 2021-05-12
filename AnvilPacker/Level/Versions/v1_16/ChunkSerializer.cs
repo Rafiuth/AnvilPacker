@@ -11,23 +11,25 @@ namespace AnvilPacker.Level.Versions.v1_16
     {
         private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
 
-        public Chunk Deserialize(CompoundTag tag, BlockPalette palette)
+        public Chunk Deserialize(CompoundTag rootTag, BlockPalette palette)
         {
-            tag = tag.GetCompound("Level");
+            var tag = rootTag.GetCompound("Level");
             
             int x = Pop<int>("xPos");
             int z = Pop<int>("zPos");
             var chunk = new Chunk(x, z, 0, 15, palette);
+            chunk.DataVersion = rootTag.GetInt("DataVersion");
 
             foreach (CompoundTag section in Pop<ListTag>("Sections")) {
                 DeserializeSection(chunk, section);
             }
-
-            Pop<NbtTag>("HeightMap"); //legacy heightmap appears in upgrated worlds.
             DeserializeHeightmaps(chunk.HeightMaps, Pop<CompoundTag>("Heightmaps"));
             //DeserializeScheduledTicks(chunk, Pop<ListTag>("TileTicks"));
             //DeserializeScheduledTicks(chunk, Pop<ListTag>("LiquidTicks"));
+            chunk.HasLightData = tag.Remove("isLightOn");
 
+            //Remove legacy data from upgrated worlds
+            tag.Remove("HeightMap");
             chunk.Opaque = tag;
 
             return chunk;
@@ -67,7 +69,6 @@ namespace AnvilPacker.Level.Versions.v1_16
                 section.BlockLight = new NibbleArray(blockLight);
             }
         }
-
         private static BlockId[] DeserializePalette(ListTag list, BlockPalette destPalette)
         {
             if (list == null) return null;
@@ -131,16 +132,21 @@ namespace AnvilPacker.Level.Versions.v1_16
             tag.SetInt("zPos", chunk.Z);
 
             var sections = new ListTag();
-
             var reindexTable = new int[chunk.Palette.Count];
 
             foreach (var section in chunk.Sections.ExceptNull()) {
                 sections.Add(SerializeSection(section, reindexTable));
             }
+            tag.SetList("Sections", sections);
+            tag.SetCompound("Heightmaps", SerializeHeightmaps(chunk.HeightMaps));
+            tag.SetBool("isLightOn", chunk.HasLightData);
 
             CopyOpaque(tag, chunk.Opaque);
 
-            throw new NotImplementedException();
+            var rootTag = new CompoundTag();
+            rootTag.SetCompound("Level", tag);
+            rootTag.SetInt("DataVersion", chunk.DataVersion);
+            return rootTag;
         }
 
         private CompoundTag SerializeSection(ChunkSection section, int[] reindexTable)
@@ -185,6 +191,20 @@ namespace AnvilPacker.Level.Versions.v1_16
             }
             return list;
         }
+        private CompoundTag SerializeHeightmaps(HeightMaps maps)
+        {
+            var tag = new CompoundTag();
+            foreach (var (type, heights) in maps) {
+                var packedHeights = new SparseBitStorage(256, 9);
+
+                for (int i = 0; i < 256; i++) {
+                    packedHeights[i] = (short)heights[i];
+                }
+                tag.SetLongArray(type.Name, packedHeights.Data);
+            }
+            return tag;
+        }
+
         private void CopyOpaque(CompoundTag tag, CompoundTag opaque)
         {
             foreach (var (k, v) in opaque) {

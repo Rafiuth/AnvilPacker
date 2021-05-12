@@ -3,6 +3,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Reflection;
 using AnvilPacker.Data;
+using AnvilPacker.Util;
 
 namespace AnvilPacker.Level
 {
@@ -60,7 +61,8 @@ namespace AnvilPacker.Level
 
         private static int GetIndex(int x, int z)
         {
-            return (x & 31) + (z & 31) * 32;
+            Ensure.InRange(x, z, 0, 31, "Invalid region chunk coords");
+            return x + z * 32;
         }
 
         public void Dispose()

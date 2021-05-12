@@ -1,20 +1,25 @@
 # Chunk serialization
-[ ] 1.16 serializer **high**
+[x] 1.16 (de)serializer
+[ ] 1.13-1.15 (de)serializer
+[ ] 1.x-1.12.2 (de)serializer
 
 # Encoder
 [ ] Scheduled ticks
 [ ] Biomes
 
+# Decoder
+[ ] Prime light data
+
 # CLI
 [ ] Encoder/decoder CLI **medium**
 [ ] Utility commands (nbt print, region strip/repack)
 
-# Features and Improvements
-[ ] Transform to remove monsters/entities
-[ ] PPM/Context tree based format
-[ ] Better NBT compression
-[ ] Write more tests
-[ ] Get more test data
-
 # Architeture
 [ ] Allow BlockStates to be dynamically defined **medium**
+
+# Features and Improvements
+[ ] Better NBT compression
+[ ] Transform to remove monsters/entities
+[ ] PPM/Context tree based format
+[ ] Write more tests
+[ ] Get more test data
