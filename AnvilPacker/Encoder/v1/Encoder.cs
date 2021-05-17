@@ -9,10 +9,6 @@ using NLog;
 
 namespace AnvilPacker.Encoder.v1
 {
-    //Version 1 uses a fixed size context table. For each block, a context is selected
-    //based on a hash generated using neighbor blocks. The context contains a copy of the
-    //region palette. The index of the block in the palette is encoded using adaptive binary
-    //arithmetic coding, then the block is moved to the first index of the palette (MTF).
     public class Encoder
     {
         private const int CTX_BITS = 13;
@@ -158,12 +154,19 @@ namespace AnvilPacker.Encoder.v1
             var palette = _region.Palette;
             stream.WriteVarUInt(palette.Count);
 
-            foreach (var (block, id) in palette.BlocksAndIds()) {
+            foreach (var block in palette) {
                 stream.WriteNulString(block.ToString());
                 stream.WriteNulString(block.Material.Name.ToString(false));
 
-                stream.WriteVarUInt((int)block.Attributes);
+                int flags = 0;
+                flags |= block.HasAttribs(BlockAttributes.Legacy) ? 1 << 0 : 0;
+                stream.WriteByte(flags);
+                stream.WriteVarUInt((int)(block.Attributes & ~BlockAttributes.InternalMask));
                 stream.WriteByte(block.Emittance << 4 | block.Opacity);
+                
+                if (block.HasAttribs(BlockAttributes.Legacy)) {
+                    stream.WriteVarUInt(block.Id);
+                }
             }
         }
         private void WriteMetadata(DataWriter stream)

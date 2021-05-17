@@ -35,15 +35,15 @@ namespace AnvilPacker.Level
     public class HeightMapComputer
     {
         private RegionBuffer _region;
+        private HeightMapType _type;
         private bool[] _isOpaque;
         private BitSet _populated;
-        private HeightMapType _type;
 
         public HeightMapComputer(RegionBuffer region, HeightMapType type)
         {
             _region = region;
-            _populated = new BitSet(16 * 16);
             _type = type;
+            _populated = new BitSet(16 * 16);
 
             var palette = region.Palette;
             _isOpaque = new bool[palette.Count];

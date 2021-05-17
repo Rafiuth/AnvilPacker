@@ -13,7 +13,7 @@ namespace AnvilPacker.Encoder.Transforms
     //XXXX    XXXX
     //XYZX -> XXXX
     //XXXX    XXXX
-    public class HiddenBlockRemovalTransform : BlockTransform
+    public class HiddenBlockRemovalTransform : TransformBase
     {
         private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
 
@@ -21,10 +21,10 @@ namespace AnvilPacker.Encoder.Transforms
         public int Samples = 8;
         /// <summary> Specifies the maximum replacement search distance. </summary>
         public int Radius = 2;
-        /// <summary> Keep the neighbor frequency table instead of discarding it for each block. If enabled, fewer samples can be used. Generally improves compression. </summary>
+        /// <summary> Keep the neighbor frequency table instead of clearing it for each block. If enabled, fewer samples can be used. Generally improves compression. </summary>
         public bool CummulativeFreqs = true;
         /// <summary> If not null, specifies which blocks can be replaced. </summary>
-        public HashSet<BlockState> Whitelist;
+        public HashSet<Block> Whitelist;
 
         public HiddenBlockRemovalTransform()
         {
@@ -39,10 +39,7 @@ namespace AnvilPacker.Encoder.Transforms
             };
             Whitelist = new();
             foreach (var name in names) {
-                var block = Block.Registry[name];
-                for (int i = block.MinStateId; i <= block.MaxStateId; i++) {
-                    Whitelist.Add(Block.StateRegistry[i]);
-                }
+                Whitelist.Add(BlockRegistry.GetBlock(name));
             }
         }
 
@@ -68,7 +65,7 @@ namespace AnvilPacker.Encoder.Transforms
         {
             var neighbors = GetNeighbors();
             var freqs = new int[region.Palette.Count];
-            var isOpaque = BuildOpaquenessTable(region.Palette);
+            var isOpaque = region.Palette.ToArray(IsOpaque);
 
             var mostFrequent = default(BlockId);
 
@@ -115,23 +112,18 @@ namespace AnvilPacker.Encoder.Transforms
             }
         }
 
-        private bool[] BuildOpaquenessTable(BlockPalette palette)
-        {
-            return palette.Select(IsOpaque).ToArray();
-        }
-
-        private bool IsOpaque(BlockState block)
+        private bool IsOpaque(BlockState state)
         {
             //Attributes required to be true
             const BlockAttributes AttrMaskT = BlockAttributes.OpaqueFullCube;
             //Attributes required to be false
             const BlockAttributes AttrMaskF = BlockAttributes.Translucent;
 
-            var attrs = block.Attributes;
+            var attrs = state.Attributes;
             if ((attrs & (AttrMaskT | AttrMaskF)) != AttrMaskT) {
                 return false;
             }
-            if (Whitelist != null && !Whitelist.Contains(block)) {
+            if (Whitelist != null && !Whitelist.Contains(state.Block)) {
                 return false;
             }
             return true;

@@ -11,7 +11,7 @@ namespace AnvilPacker.Level
     public class BlockPalette : IEnumerable<BlockState>
     {
         private List<BlockState> _stateById;
-        private DictionarySlim<int, BlockId> _idByState;
+        private DictionarySlim<BlockState, BlockId> _idByState;
 
         public int Count => _stateById.Count;
 
@@ -24,7 +24,7 @@ namespace AnvilPacker.Level
         public BlockId Add(BlockState state)
         {
             var id = (BlockId)_stateById.Count;
-            _idByState.Add(state.Id, id);
+            _idByState.Add(state, id);
             _stateById.Add(state);
             
             return id;
@@ -50,12 +50,21 @@ namespace AnvilPacker.Level
         }
         public bool TryGetId(BlockState state, out BlockId id)
         {
-            return _idByState.TryGetValue(state.Id, out id);
+            return _idByState.TryGetValue(state, out id);
         }
 
         public IEnumerable<(BlockState Block, BlockId Id)> BlocksAndIds()
         {
             return _stateById.Select((b, i) => (b, (BlockId)i));
+        }
+
+        public T[] ToArray<T>(Func<BlockState, T> mapper)
+        {
+            var arr = new T[Count];
+            for (int i = 0; i < Count; i++) {
+                arr[i] = mapper(_stateById[i]);
+            }
+            return arr;
         }
 
         public IEnumerator<BlockState> GetEnumerator() => _stateById.GetEnumerator();

@@ -4,10 +4,10 @@ using AnvilPacker.Data;
 using AnvilPacker.Level;
 using NLog;
 
-namespace AnvilPacker.Level.Versions.v1_8
+namespace AnvilPacker.Level.Versions.v1_2_1
 {
     //quick ref: https://minecraft.gamepedia.com/Chunk_format?oldid=1229175
-    /// <summary> Handles chunks serialization for versions <c>1.8-1.12.2</c>. </summary>
+    /// <summary> Handles chunks serialization for versions <c>1.2.1-1.12.2</c>. </summary>
     public class ChunkSerializer : IChunkSerializer
     {
         public Chunk Deserialize(CompoundTag tag, BlockPalette palette)

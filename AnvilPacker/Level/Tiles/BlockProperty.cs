@@ -16,13 +16,17 @@ namespace AnvilPacker.Level
         {
             return Values[index];
         }
-        public virtual int GetIndex(string str)
+        public int GetIndex(string str)
         {
-            int index = Array.IndexOf(Values, str);
-            if (index >= 0) {
+            if (TryGetIndex(str, out int index)) {
                 return index;
             }
-            throw new FormatException($"Value '{str}' does not exist in property '{Name}' type '{GetType().Name}'");
+            throw new FormatException($"Value '{str}' does not exist in property '{Name}' of type '{GetType().Name}'");
+        }
+        public virtual bool TryGetIndex(string str, out int index)
+        {
+            index = Array.IndexOf(Values, str);
+            return index >= 0;
         }
 
         public abstract bool Equals(BlockProperty other);
@@ -61,12 +65,13 @@ namespace AnvilPacker.Level
                 Values[i - min] = i.ToString();
             }
         }
-        public override int GetIndex(string str)
+        public override bool TryGetIndex(string str, out int index)
         {
-            if (int.TryParse(str, out int value) && value >= Min && value <= Max) {
-                return value - Min;
+            if (int.TryParse(str, out index) && index >= Min && index <= Max) {
+                index -= Min;
+                return true;
             }
-            return -1;
+            return false;
         }
 
         public override bool Equals(BlockProperty other)
@@ -100,40 +105,5 @@ namespace AnvilPacker.Level
             //omitting Values here is fine, this just increases collision prob
             return HashCode.Combine(Name);
         }
-    }
-
-    public struct BlockPropertyValue
-    {
-        public BlockProperty Property { get; init; }
-        /// <summary> Index of the value in the property. </summary>
-        public int Index { get; init; }
-
-        /// <summary> Divisor used to get the value index of a block state id. </summary>
-        public int IdShift { get; init; }
-
-        public int ValueCount => Property.ValueCount;
-
-        /// <param name="props">All properties defined in the block.</param>
-        /// <param name="prop">The property for which the value is being created.</param>
-        /// <param name="stateId">Block state ID offseted by -<see cref="Block.MinStateId"/></param>
-        public static BlockPropertyValue Create(IReadOnlyList<BlockProperty> props, BlockProperty prop, int stateId)
-        {
-            int shift = 1;
-
-            for (int i = props.Count - 1; i >= 0; i--) {
-                var p = props[i];
-                if (p == prop) {
-                    return new BlockPropertyValue() {
-                        Property = prop,
-                        Index = (stateId / shift) % prop.ValueCount,
-                        IdShift = shift
-                    };
-                }
-                shift *= p.ValueCount;
-            }
-            throw new InvalidOperationException("Block does not have the specified property.");
-        }
-        public string GetValue() => Property.GetValue(Index);
-        public int GetIndex(string value) => Property.GetIndex(value);
     }
 }

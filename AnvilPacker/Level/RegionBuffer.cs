@@ -26,7 +26,7 @@ namespace AnvilPacker.Level
         {
             Size = 32;
             Chunks = new Chunk[Size * Size];
-            Palette = new BlockPalette() { BlockState.Air };
+            Palette = new BlockPalette() { BlockRegistry.Air };
         }
 
         /// <summary> Fills the buffer with the chunks at the specified region offset. </summary>
@@ -82,7 +82,7 @@ namespace AnvilPacker.Level
         public void Clear()
         {
             Chunks.Fill(null);
-            Palette = new BlockPalette() { BlockState.Air };
+            Palette = new BlockPalette() { BlockRegistry.Air };
         }
 
         /// <summary> Calculate the min and max Y section coord in all chunks. </summary>

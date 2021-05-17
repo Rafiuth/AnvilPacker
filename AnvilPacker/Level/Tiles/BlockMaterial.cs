@@ -11,6 +11,9 @@ namespace AnvilPacker.Level
     {
         public static ResourceRegistry<BlockMaterial> Registry { get; } = new(64);
 
+        //note: attributes were choosen to not overshot heightmap values.
+        public static BlockMaterial Unknown { get; } = Reg("anvilpacker:unknown", MapColor.ColorMagenta, MaterialAttributes.BlocksMotion | MaterialAttributes.Solid);
+
         private static BlockMaterial Reg(string name, MapColor color, MaterialAttributes flags)
         {
             var mat = new BlockMaterial() {

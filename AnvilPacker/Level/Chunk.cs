@@ -74,7 +74,7 @@ namespace AnvilPacker.Level
         public BlockState GetBlock(int x, int y, int z)
         {
             var sect = GetSection(y >> 4);
-            return sect != null ? sect.GetBlock(x, y & 15, z) : BlockState.Air;
+            return sect != null ? sect.GetBlock(x, y & 15, z) : BlockRegistry.Air;
         }
         public void SetBlock(int x, int y, int z, BlockState block)
         {

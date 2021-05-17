@@ -55,7 +55,7 @@ namespace AnvilPacker.Encoder.v1
             var curr = palette[index];
             if (index != 0) {
                 //Move frequent symbols to front
-                int currWeight = Weight(curr);
+                int currWeight = Weight(curr) + 1;
                 int j = index;
 
                 while (j > 0) {

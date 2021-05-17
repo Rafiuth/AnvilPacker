@@ -144,14 +144,26 @@ namespace AnvilPacker.Encoder.v1
                 string name = stream.ReadNulString();
                 string material = stream.ReadNulString();
 
+                int flags = stream.ReadByte();
                 var attribs = (BlockAttributes)stream.ReadVarUInt();
                 byte light = stream.ReadByte();
                 int emittance = light >> 4;
                 int opacity = light & 15;
 
-                var block = BlockState.Parse(name);
-                //TODO: this
-                Ensure.That(block.Attributes == attribs, "Dynamic block states not supported yet.");
+                BlockState block;
+                if ((flags & (1 << 0)) != 0) {
+                    int legacyId = stream.ReadVarUInt();
+                    block = BlockRegistry.GetLegacyState(legacyId);
+                } else {
+                    block = BlockRegistry.ParseState(name);
+                }
+                Ensure.That(
+                    block.Attributes == attribs &&
+                    block.Material.Name == material &&
+                    block.Emittance == emittance &&
+                    block.Opacity == opacity,
+                    "Dynamic block states not supported yet."
+                );
                 palette.Add(block);
             }
             _region.Palette = palette;

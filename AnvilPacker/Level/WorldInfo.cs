@@ -50,10 +50,9 @@ namespace AnvilPacker.Level
             throw new InvalidOperationException(); //unreachable
         }
 
-
         private static readonly (int MinVersion, int MaxVersion, IChunkSerializer Serializer)[] _serializers = {
-            (2566, 2586, new Versions.v1_16.ChunkSerializer()),
-            (0,    1343, new Versions.v1_8.ChunkSerializer())
+            (2566, 2586, new Versions.v1_13.ChunkSerializer()),
+            (0,    1343, new Versions.v1_2_1.ChunkSerializer())
         };
     }
 }
