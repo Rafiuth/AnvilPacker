@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using AnvilPacker.Util;
 
 namespace AnvilPacker.Data
 {
@@ -13,11 +14,9 @@ namespace AnvilPacker.Data
     public class ResourceRegistry<T> : IEnumerable<T>
         where T : class
     {
-        private readonly List<T> _idToEntry;
+        private readonly DictionarySlim<int, T> _idToEntry;
         private readonly Dictionary<T, int> _entryToId;
         private readonly Dictionary<ResourceName, int> _nameToId;
-
-        private bool _frozen = false;
 
         public int EntryCount => _idToEntry.Count;
 
@@ -32,27 +31,15 @@ namespace AnvilPacker.Data
             _nameToId = new(capacity);
         }
 
-        /// <summary> Adds an entry to the registry, if it has not yet been frozen. </summary>
-        /// <exception cref="InvalidOperationException"> If the registry was frozen. </exception>
         public void Add(ResourceName name, T val)
         {
-            if (_frozen) {
-                throw new InvalidOperationException("Cannot modify Registry after freezing it.");
-            }
-            int id = _idToEntry.Count;
-            _idToEntry.Add(val);
+            Add(name, val, _idToEntry.Count);
+        }
+        public void Add(ResourceName name, T val, int id)
+        {
+            _idToEntry.Add(id, val);
             _entryToId.Add(val, id);
             _nameToId.Add(name, id);
-        }
-        /// <summary> 
-        /// Changes the state of the registry to read only. 
-        /// <see cref="Add(ResourceName, T)"/> will throw a <see cref="InvalidOperationException"/>
-        /// after calling this method
-        /// </summary>
-        public ResourceRegistry<T> Freeze()
-        {
-            _frozen = true;
-            return this;
         }
 
         public T Get(int id) => _idToEntry[id];
@@ -66,7 +53,7 @@ namespace AnvilPacker.Data
             }
         }
 
-        public IEnumerator<T> GetEnumerator() => _idToEntry.GetEnumerator();
+        public IEnumerator<T> GetEnumerator() => _entryToId.Keys.GetEnumerator();
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
     }
 }

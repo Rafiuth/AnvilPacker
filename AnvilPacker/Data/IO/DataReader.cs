@@ -123,6 +123,7 @@ namespace AnvilPacker.Data
 
         public byte ReadByte()       => Read<byte>();
         public sbyte ReadSByte()     => Read<sbyte>();
+        public bool ReadBool()       => ReadByte() != 0;
 
         public short ReadShortLE()   => ReadLE<short>();
         public int ReadIntLE()       => ReadLE<int>();

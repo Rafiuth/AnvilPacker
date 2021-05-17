@@ -205,8 +205,7 @@ namespace AnvilPacker.Encoder.PNbt
         {
             var node = _root;
             foreach (var (k, v) in tag) {
-                node = node.GetChildren(k, v);
-                Process(v);
+                node = node.Children[(k, v.Type)];
             }
             return node.Schema ?? throw new InvalidOperationException();
         }
@@ -215,7 +214,7 @@ namespace AnvilPacker.Encoder.PNbt
         {
             public Node? Parent;
             public SchemaField Field;
-            public Dictionary<SchemaField, Node> Children = new();
+            public Dictionary<(string Name, TagType Type), Node> Children = new();
             public List<NbtTag> Links = new();
             public Schema? Schema = null;
 
@@ -227,11 +226,10 @@ namespace AnvilPacker.Encoder.PNbt
 
             public Node GetChildren(string name, NbtTag tag)
             {
-                var field = new SchemaField(name, tag.Type);
-
-                if (!Children.TryGetValue(field, out var node)) {
-                    node = new Node(this, field);
-                    Children.Add(field, node);
+                var key = (name, tag.Type);
+                if (!Children.TryGetValue(key, out var node)) {
+                    node = new Node(this, new SchemaField(name, tag.Type));
+                    Children.Add(key, node);
                 }
                 FieldData.Merge(ref node.Field.Data, tag);
                 return node;

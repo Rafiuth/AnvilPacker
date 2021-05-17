@@ -1,4 +1,5 @@
 ﻿using System;
+using AnvilPacker.Util;
 
 namespace AnvilPacker.Data
 {
@@ -9,7 +10,7 @@ namespace AnvilPacker.Data
         public string Namespace { get; }
         public string Path { get; }
 
-        /// <summary> Creates a <see cref="ResourceName"/> with the namespace set to <see cref="DefaultNamespace"/></summary>
+        /// <summary> Creates a <see cref="ResourceName"/> with the default namespace and the specified path. </summary>
         public ResourceName(string path)
         {
             Namespace = DefaultNamespace;
@@ -25,9 +26,8 @@ namespace AnvilPacker.Data
         {
             int colon = str.IndexOf(':');
             //empty namespace or path = ":abc" or "abc:"
-            if (str.Length == 0 || colon == 0 || colon == str.Length - 1) {
-                throw new ArgumentException($"Empty namespace or path in resource name. '{str}'");
-            }
+            Ensure.That(str.Length > 0 && colon != 0 && colon != str.Length - 1, $"Empty namespace or path in resource name. '{str}'");
+            
             if (colon < 0) {
                 return new ResourceName(DefaultNamespace, str);
             } else {

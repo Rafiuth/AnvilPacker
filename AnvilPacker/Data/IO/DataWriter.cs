@@ -107,6 +107,7 @@ namespace AnvilPacker.Data
         //Convenience functions
         public void WriteByte(int x)        => Write((byte)x);
         public void WriteSByte(int x)       => Write((sbyte)x);
+        public void WriteBool(bool x)       => WriteByte(x ? 1 : 0);
 
         public void WriteShortLE(int x)     => WriteLE((short)x);
         public void WriteIntLE(int x)       => WriteLE((int)x);

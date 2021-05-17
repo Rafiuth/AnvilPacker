@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 
@@ -123,7 +124,7 @@ namespace AnvilPacker.Data
             }
         }
 
-        /// <summary> Gets/sets the value of a named tag, if this is a compound tag. </summary>
+        /// <summary> Gets/sets the value of a named tag, if this is a compound tag. Null is returned if it doesn't exist. </summary>
         /// <exception cref="InvalidOperationException">If <code>this</code> is not a <see cref="CompoundTag"/></exception>
         public virtual NbtTag this[string name]
         {
@@ -145,13 +146,16 @@ namespace AnvilPacker.Data
             throw new InvalidOperationException();
         }
 
-        public override string ToString()
+        public override string ToString() => ToString(false);
+
+        public string ToString(bool pretty)
         {
-            var pp = new NbtPrinter() {
-                ArraySizeLimit = 128
+            var sw = new StringWriter();
+            var printer = new NbtPrinter(sw) {
+                Pretty = pretty
             };
-            pp.Print(this);
-            return pp.ToString();
+            printer.Print(this);
+            return sw.ToString();
         }
     }
     public class CompoundTag : NbtTag, IEnumerable<KeyValuePair<string, NbtTag>>
@@ -163,7 +167,7 @@ namespace AnvilPacker.Data
         public int Count => _tags.Count;
         public override NbtTag this[string name]
         {
-            get => Get<NbtTag>(name, TagGetMode.Throw);
+            get => Get<NbtTag>(name, TagGetMode.Null);
             set => Set(name, value);
         }
 
@@ -535,38 +539,32 @@ namespace AnvilPacker.Data
     /// <summary> A NBT pretty printer, intended for debugging purpouses. </summary>
     public class NbtPrinter
     {
-        private StringBuilder _sb;
+        private TextWriter _tw;
         private int _level = 0;
+        public bool Pretty = true;
 
-        /// <summary> Truncates primitive arrays if they are larger than this value. </summary>
-        public int ArraySizeLimit { get; set; } = int.MaxValue;
-
-        public NbtPrinter()
-            : this(new StringBuilder())
+        public NbtPrinter(TextWriter tw)
         {
-        }
-        public NbtPrinter(StringBuilder sb)
-        {
-            _sb = sb;
+            _tw = tw;
         }
 
         private void Begin(string brace)
         {
-            _sb.Append(brace);
+            _tw.Write(brace);
             _level++;
         }
         private void End(string brace, bool newLine)
         {
             _level--;
-            if (newLine) {
-                _sb.AppendLine();
+            if (newLine && Pretty) {
+                _tw.Write('\n');
                 Indent();
             }
-            _sb.Append(brace);
+            _tw.Write(brace);
         }
         private void Indent()
         {
-            _sb.Append(' ', _level * 2);
+            _tw.Write(new string(' ', _level * 2));
         }
 
         public void Print(NbtTag tag)
@@ -580,7 +578,7 @@ namespace AnvilPacker.Data
                 case TagType.Double:    PrintPrim(tag, ""); break;
                 case TagType.String: {
                     var str = tag.Value<string>();
-                    _sb.AppendFormat("\"{0}\"", str.Replace("\"", "\\\""));
+                    PrintStr(str);
                     break;
                 }
                 case TagType.ByteArray: PrintArray<byte>("byte", tag); break;
@@ -588,27 +586,17 @@ namespace AnvilPacker.Data
                 case TagType.LongArray: PrintArray<long>("long", tag); break;
                 case TagType.List: {
                     var list = (ListTag)tag;
-                    Begin("[");
-                    for (int i = 0; i < list.Count; i++) {
-                        _sb.Append(i == 0 ? "\n" : ",\n");
-                        Indent();
-                        Print(list[i]);
-                    }
-                    End("]", list.Count > 0);
+                    bool isPrim = PrimitiveTag.TypeMap.Values.Contains(list.ElementType);
+                    PrintSequence("[", "]", isPrim, list, Print);
                     break;
                 }
                 case TagType.Compound: {
                     var comp = (CompoundTag)tag;
-                    Begin("{");
-                    int i = 0;
-                    foreach (var (k, v) in comp) {
-                        _sb.Append(i++ == 0 ? "\n" : ",\n");
-                        Indent();
-                        _sb.Append(k);
-                        _sb.Append(": ");
-                        Print(v);
-                    }
-                    End("}", i > 0);
+                    PrintSequence("{", "}", false, comp, e => {
+                        PrintStr(e.Key);
+                        _tw.Write(Pretty ? ": " : ":");
+                        Print(e.Value);
+                    });
                     break;
                 }
                 default:
@@ -616,39 +604,43 @@ namespace AnvilPacker.Data
             }
         }
 
+        private void PrintStr(string str)
+        {
+            _tw.Write('"');
+            _tw.Write(str.Replace("\"", "\\\""));
+            _tw.Write('"');
+        }
         private void PrintPrim(NbtTag tag, string postfix)
         {
             object val = ((PrimitiveTag)tag).GetValue();
             string str = string.Format(CultureInfo.InvariantCulture, "{0}", val);
 
-            _sb.Append(str);
+            _tw.Write(str);
             if (val is double or float && !str.Contains('.')) {
-                _sb.Append(".0");
+                _tw.Write(".0");
             }
-            _sb.Append(postfix);
+            _tw.Write(postfix);
+        }
+        private void PrintSequence<T>(string openBrace, string closeBrace, bool isPrim, IEnumerable<T> elems, Action<T> printElem)
+        {
+            Begin(openBrace);
+
+            int i = 0;
+            foreach (var elem in elems) {
+                _tw.Write(i == 0 ? "" : (Pretty ? ", " : ","));
+                if (Pretty && (!isPrim || i % 32 == 0)) {
+                    _tw.Write('\n');
+                    Indent();
+                }
+                printElem(elem);
+                i++;
+            }
+            End(closeBrace, i > 0);
         }
         private void PrintArray<T>(string type, NbtTag tag)
         {
-            var arr = (T[])((PrimitiveTag)tag).GetValue();
-
-            Begin($"{type}[");
-
-            int len = Math.Min(arr.Length, ArraySizeLimit);
-            for (int i = 0; i < len; i++) {
-                if (i != 0)      { _sb.Append(", "); }
-                if (i % 32 == 0) { _sb.Append('\n'); Indent(); }
-
-                _sb.Append(arr[i]);
-            }
-            if (arr.Length > ArraySizeLimit) {
-                _sb.Append($" //and more {arr.Length - ArraySizeLimit} elements...");
-            }
-            End("]", arr.Length > 0);
-        }
-
-        public override string ToString()
-        {
-            return _sb.ToString();
+            var arr = ((PrimitiveTag<T[]>)tag).Value;
+            PrintSequence(type + "[", "]", true, arr, v => _tw.Write(v));
         }
     }
 }

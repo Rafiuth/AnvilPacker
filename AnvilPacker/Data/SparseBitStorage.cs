@@ -34,16 +34,14 @@ namespace AnvilPacker.Data
         /// <param name="data">Backing data array. If null, a new array will be allocated. </param>
         public SparseBitStorage(int count, int bits, long[] data = null)
         {
-            if (bits >= 32) {
-                throw new ArgumentOutOfRangeException(nameof(bits), "Bits per element must be less than 32");
-            }
+            Ensure.That(bits < 32, "Bits per element must be less than 32");
             int valsPerLong = 64 / bits;
 
             int dataLen = Maths.CeilDiv(count, valsPerLong);
             if (data == null) {
                 data = new long[dataLen];
             } else if (data.Length != dataLen) {
-                throw new ArgumentException($"Invalid length for data array.", nameof(data));
+                throw new ArgumentException("Invalid length for data array.", nameof(data));
             }
             Data = data;
             BitsPerElement = bits;
@@ -56,9 +54,7 @@ namespace AnvilPacker.Data
         /// <summary> Gets the element at the specified index. </summary>
         public int Get(int index)
         {
-            if ((uint)index >= (uint)Count) {
-                throw new ArgumentOutOfRangeException(nameof(index));
-            }
+            Ensure.IndexValid(index, Count);
             int dataIndex = index / valuesPerLong;
             int shift = (index - dataIndex * valuesPerLong) * BitsPerElement;
 
@@ -68,9 +64,7 @@ namespace AnvilPacker.Data
         /// <summary> Sets the element at the specified index. Value will be truncated to <see cref="BitsPerElement"/> bits.</summary>
         public void Set(int index, int value)
         {
-            if ((uint)index >= (uint)Count) {
-                throw new ArgumentOutOfRangeException(nameof(index));
-            }
+            Ensure.IndexValid(index, Count);
             int dataIndex = index / valuesPerLong;
             int shift = (index - dataIndex * valuesPerLong) * BitsPerElement;
 

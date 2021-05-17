@@ -200,17 +200,6 @@ namespace AnvilPacker.Encoder.PNbt
     )
     {
         public FieldData? Data;
-
-        public virtual bool Equals(SchemaField? other)
-        {
-            return other != null &&
-                   other.Name == Name &&
-                   other.Type == Type;
-        }
-        public override int GetHashCode()
-        {
-            return Name.GetHashCode() * 7 + Type.GetHashCode();
-        }
     }
 
     public abstract class FieldData
