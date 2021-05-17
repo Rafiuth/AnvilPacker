@@ -31,8 +31,8 @@ public class Main
 
         XData data = new XData();
         data.version = version.getName();
-        data.numBlockStates = 0;
         data.worldVersion = version.getWorldVersion();
+        data.numBlockStates = 0;
 
         for (Block block : Registry.BLOCK) {
             Identifier key = Registry.BLOCK.getId(block);
