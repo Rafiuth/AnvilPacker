@@ -121,7 +121,7 @@ public class Main
                     states.add(buildStateString(state));
                 }
                 flags.add(getFlags(state));
-                light.add(state.getLightValue() << 4 | state.getLightOpacity());
+                light.add(state.getLightValue() << 4 | Math.min(15, state.getLightOpacity()));
             }
             this.flags = deduplicate(flags);
             this.light = deduplicate(light);
