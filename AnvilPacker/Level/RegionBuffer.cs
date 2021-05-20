@@ -31,12 +31,14 @@ namespace AnvilPacker.Level
 
         /// <summary> Fills the buffer with the chunks at the specified region offset. </summary>
         /// <param name="path">Full path of the .mca file</param>
-        public void Load(WorldInfo world, string path)
+        /// <returns>True if the region is not empty.</returns>
+        public bool Load(WorldInfo world, string path)
         {
             Ensure.That(Size == 32);
 
             Clear();
             SetPosFromRegionFile(path);
+            int chunksLoaded = 0;
 
             using var reader = new AnvilReader(path);
             for (int cz = 0; cz < 32; cz++) {
@@ -46,9 +48,11 @@ namespace AnvilPacker.Level
                         var serializer = world.GetSerializer(tag);
                         var chunk = serializer.Deserialize(tag, Palette);
                         SetChunk(cx, cz, chunk);
+                        chunksLoaded++;
                     }
                 }
             }
+            return chunksLoaded > 0;
         }
         /// <summary> Creates a new region file with the chunks present in this buffer. </summary>
         /// <param name="path">Full path of the .mca file</param>

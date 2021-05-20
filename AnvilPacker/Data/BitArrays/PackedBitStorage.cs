@@ -6,15 +6,14 @@ using AnvilPacker.Util;
 namespace AnvilPacker.Data
 {
     /// <summary>
-    /// Chunk bit storage used by v1.16 and before.
+    /// Chunk bit storage used before v1.16.
     /// All elements are stored with a fixed bit count. They may occasionally span across multiple longs.
     /// </summary>
-    public class PackedBitStorage
+    public class PackedBitStorage : IBitStorage
     {
-        public readonly long[] Data;
-
-        public readonly int Count;
-        public readonly int BitsPerElement;
+        public long[] Data { get; }
+        public int Count { get; }
+        public int BitsPerElement { get; }
 
         private readonly ulong mask;
 
@@ -33,13 +32,26 @@ namespace AnvilPacker.Data
             int dataLen = (count * bits + 63) / 64;
             if (data == null) {
                 data = new long[dataLen];
-            } else if (data.Length != dataLen) {
-                throw new ArgumentException(nameof(data), "Invalid length for data array");
+            } else {
+                Ensure.That(data.Length == dataLen, "Invalid length for data array");
             }
             Data = data;
             BitsPerElement = bits;
             Count = count;
             mask = (1ul << bits) - 1;
+        }
+
+        public void Unpack<TVisitor>(TVisitor visitor) where TVisitor : IBitStorageVisitor
+        {
+            for (int i = 0; i < Count; i++) {
+                visitor.Use(i, Get(i));
+            }
+        }
+        public void Pack<TVisitor>(TVisitor visitor) where TVisitor : IBitStorageVisitor
+        {
+            for (int i = 0; i < Count; i++) {
+                Set(i, visitor.Create(i));
+            }
         }
 
         /// <summary> Gets the element at the specified index. </summary>

@@ -12,7 +12,8 @@ namespace AnvilPacker.Level
         private static readonly ILogger _logger = LogManager.GetCurrentClassLogger();
 
         public static Dictionary<ResourceName, Block> KnownBlocks { get; } = new(1024);
-        public static DictionarySlim<int, Block> KnownLegacyBlocks { get; set; } = new(256);
+        public static DictionarySlim<int, Block> KnownLegacyBlocks { get; } = new(256);
+        
         public static IntProperty LegacyMetaProp { get; } = new IntProperty("meta", 0, 15);
 
         public static BlockState Air { get; internal set; }

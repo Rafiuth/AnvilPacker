@@ -23,7 +23,17 @@ namespace AnvilPacker.Level
         
         public IEnumerable<string> GetRegionDirs()
         {
-            yield return Path.Combine(RootPath, "region");
+            string[] paths = { 
+                "region/", 
+                "DIM-1/region/", 
+                "DIM1/region/"
+            };
+            foreach (var path in paths) {
+                var fullPath = Path.Combine(RootPath, path);
+                if (Directory.Exists(fullPath)) {
+                    yield return fullPath;
+                }
+            }
         }
 
         /// <summary> Returns a serializer capable of handling the specified anvil tag. </summary>
@@ -39,20 +49,15 @@ namespace AnvilPacker.Level
 
         public IChunkSerializer GetSerializer(int dataVersion)
         {
-            foreach (var (minVer, maxVer, serializer) in _serializers) {
+            foreach (var (minVer, maxVer, serializer) in IChunkSerializer.KnownSerializers) {
                 if (dataVersion >= minVer) {
                     if (dataVersion > maxVer) {
-                        _logger.Warn($"Chunk serializer for v{dataVersion} not available, using latest: v{minVer} to v{maxVer}");
+                        _logger.Warn($"Chunk serializer for data version '{dataVersion}' not available, using latest available: {minVer}-{maxVer}");
                     }
                     return serializer;
                 }
             }
-            throw new InvalidOperationException(); //unreachable
+            throw new InvalidOperationException($"Chunk version '{dataVersion}' not supported.");
         }
-
-        private static readonly (int MinVersion, int MaxVersion, IChunkSerializer Serializer)[] _serializers = {
-            (2566, 2586, new Versions.v1_13.ChunkSerializer()),
-            (0,    1343, new Versions.v1_2_1.ChunkSerializer())
-        };
     }
 }

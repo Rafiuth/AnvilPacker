@@ -56,13 +56,12 @@ namespace AnvilPacker.Encoder.v1
         }
         private unsafe void DecodeBlocks(ChunkIterator chunk, int y, Context[] contexts, Vec3i[] neighbors, ArithmDecoder ac)
         {
-            Debug.Assert(neighbors.Length <= ContextKey.MAX_SAMPLES);
+            Debug.Assert(neighbors.Length <= 4);
             Debug.Assert(chunk.Palette == _region.Palette);
-
-            var key = new ContextKey();
 
             for (int z = 0; z < 16; z++) {
                 for (int x = 0; x < 16; x++) {
+                    ulong key = 0;
 
                     for (int i = 0; i < neighbors.Length; i++) {
                         var rel = neighbors[i];
@@ -70,18 +69,18 @@ namespace AnvilPacker.Encoder.v1
                         int ny = y + rel.Y;
                         int nz = z + rel.Z;
 
-                        key.s[i] = chunk.GetBlockId(nx, ny, nz);
+                        key = (key << 16) | chunk.GetBlockId(nx, ny, nz);
                     }
-                    var ctx = GetContext(contexts, ref key);
+                    var ctx = GetContext(contexts, key);
                     var id = ctx.Read(ac);
 
                     chunk.SetBlockId(x, y, z, id);
                 }
             }
         }
-        private Context GetContext(Context[] contexts, ref ContextKey key)
+        private Context GetContext(Context[] contexts, ulong key)
         {
-            int slot = key.GetSlot(_ctxBits);
+            int slot = Context.GetSlot(key, _ctxBits);
             var ctx = contexts[slot] ??= new Context(_region.Palette);
 
             return ctx;
@@ -158,7 +157,7 @@ namespace AnvilPacker.Encoder.v1
                     block = BlockRegistry.ParseState(name);
                 }
                 Ensure.That(
-                    block.Attributes == attribs &&
+                    (block.Attributes & ~BlockAttributes.InternalMask) == attribs &&
                     block.Material.Name == material &&
                     block.Emittance == emittance &&
                     block.Opacity == opacity,

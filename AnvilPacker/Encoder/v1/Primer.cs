@@ -9,7 +9,7 @@ namespace AnvilPacker.Encoder.v1
     public class Primer
     {
         public RegionBuffer Region { get; init; }
-        public bool CalcHeightmaps { get; init; }
+        public bool CalcHeightmaps { get; init; } = true;
 
         public void Prime(IProgress<double> progress = null)
         {
@@ -21,8 +21,6 @@ namespace AnvilPacker.Encoder.v1
         private void PrimeHeightmaps()
         {
             foreach (var type in HeightMapType.KnownTypes) {
-                if (type == HeightMapType.Legacy) continue;
-
                 var computer = new HeightMapComputer(Region, type);
 
                 foreach (var chunk in Region.Chunks.ExceptNull()) {
@@ -34,9 +32,10 @@ namespace AnvilPacker.Encoder.v1
         }
         private bool ShouldHeightmapExist(Chunk chunk, HeightMapType type)
         {
-            if (!chunk.Opaque.TryGet<string>("Status", out string status)) {
-                return false;
+            if (chunk.DataVersion < DataVersions.v1_13_s5) {
+                return type == HeightMapType.Legacy;
             }
+            var status = chunk.Opaque["Level"]["Status"]?.Value<string>();
             bool statusComplete = status is "full" or "heightmaps" or "spawn" or "light";
             return statusComplete == type.KeepAfterWorldGen;
         }

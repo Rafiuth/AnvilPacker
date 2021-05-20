@@ -74,22 +74,13 @@ namespace AnvilPacker.Encoder.v1
         {
             return Freq[id] / (1 + Hits / 32);
         }
-    }
-    public unsafe struct ContextKey
-    {
-        public const int MAX_SAMPLES = 4;
-        /// <summary> Fixed array for the 4 samples. </summary>
-        public fixed ushort s[MAX_SAMPLES];
+
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public int GetSlot(int bits)
+        public static int GetSlot(ulong key, int bits)
         {
-            ref byte data = ref Unsafe.As<ushort, byte>(ref s[0]);
-            ulong w0 = Mem.ReadLE<ulong>(ref data, 0);
-            ulong hash = Hash(w0);
-            return (int)(hash >> (64 - bits));
+            return (int)(Hash(key) >> (64 - bits));
         }
-
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static ulong Hash(ulong x)
         {

@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using AnvilPacker.Data;
 using AnvilPacker.Level;
+using AnvilPacker.Util;
 using NLog;
 
 namespace AnvilPacker.Level.Versions.v1_2_1
@@ -10,54 +12,48 @@ namespace AnvilPacker.Level.Versions.v1_2_1
     /// <summary> Handles chunks serialization for versions <c>1.2.1-1.12.2</c>. </summary>
     public class ChunkSerializer : IChunkSerializer
     {
-        public Chunk Deserialize(CompoundTag tag, BlockPalette palette)
-        {
-            throw new NotImplementedException();
-        }
-        /*
-
         private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
-        public Chunk Deserialize(CompoundTag tag, BlockPalette palette)
+
+        public Chunk Deserialize(CompoundTag rootTag, BlockPalette palette)
         {
-            int x = Pop<int>("xPos");
-            int z = Pop<int>("zPos");
-            var chunk = new Chunk(x, z, palette);
+            var tag = rootTag.GetCompound("Level");
 
-            foreach (CompoundTag sectTag in Pop<ListTag>("Sections")) {
-                int y = sectTag.GetSByte("Y");
-                DeserializeSection(chunk.GetOrCreateSection(y), sectTag);
+            int x = tag.Pop<int>("xPos");
+            int z = tag.Pop<int>("zPos");
+            var chunk = new Chunk(x, z, 0, 15, palette);
+            chunk.Opaque = rootTag;
+            chunk.DataVersion = rootTag.PopMaybe<int>("DataVersion");
+
+            if (tag.TryGet("Sections", out ListTag sectList)) {
+                for (int i = 0; i < sectList.Count; i++) {
+                    var sectTag = sectList.Get<CompoundTag>(i);
+                    DeserializeSection(chunk, sectTag);
+                    if (sectTag.Count <= 1) { //is "Y" the only value left?
+                        sectList.RemoveAt(i--);
+                    }
+                }
+                if (sectList.Count == 0) {
+                    tag.Remove("Sections");
+                }
             }
-            //chunk.IsLightPopulated = Pop<bool>("LightPopulated");
-            //chunk.IsTerrainPopulated = Pop<bool>("TerrainPopulated");
-            //chunk.LastUpdate = Pop<long>("LastUpdate");
-            //chunk.InhabitedTime = Pop<long>("InhabitedTime");
-            //chunk.HeightMap = Pop<int[]>("HeightMap");
-            //chunk.Biomes = Pop<byte[]>("Biomes");
-
-            chunk.ScheduledTicks = DeserializeTileTicks(x, z, Pop<ListTag>("TileTicks"));
-
-            chunk.Opaque = tag;
+            DeserializeHeightmap(chunk, tag.PopMaybe<int[]>("HeightMap"));
+            chunk.HasLightData = tag.PopMaybe<bool>("LightPopulated");
 
             return chunk;
-
-            T Pop<T>(string name)
-            {
-                if (tag.TryGet(name, out T value)) {
-                    tag.Remove(name);
-                    return value;
-                }
-                return default;
-            }
         }
 
-        private void DeserializeSection(ChunkSection section, CompoundTag tag)
+        private void DeserializeSection(Chunk chunk, CompoundTag tag)
         {
-            var blockId = tag.GetByteArray("Blocks");
-            var blockAdd = tag.GetByteArray("Add");
-            var blockData = tag.GetByteArray("Data");
+            int y = tag.GetSByte("Y");
 
-            var skyLight = tag.GetByteArray("SkyLight");
-            var blockLight = tag.GetByteArray("BlockLight");
+            var section = new ChunkSection(chunk, y);
+
+            var blockId = tag.Pop<byte[]>("Blocks");
+            var blockData = tag.Pop<byte[]>("Data");
+            var blockAdd = tag.PopMaybe<byte[]>("Add");
+
+            var skyLight = tag.PopMaybe<byte[]>("SkyLight");
+            var blockLight = tag.PopMaybe<byte[]>("BlockLight");
             
             if (skyLight != null) {
                 section.SkyLight = new NibbleArray(skyLight);
@@ -66,6 +62,8 @@ namespace AnvilPacker.Level.Versions.v1_2_1
                 section.BlockLight = new NibbleArray(blockLight);
             }
 
+            var globalPalette = section.Palette;
+            var localPalette = new DictionarySlim<ushort, BlockId>(32);
             var blocks = section.Blocks;
 
             for (int i = 0; i < 4096; i += 2) {
@@ -77,44 +75,112 @@ namespace AnvilPacker.Level.Versions.v1_2_1
                     a |= (blockAdd[j] & 15) << 12;
                     b |= (blockAdd[j] >> 4) << 12;
                 }
-                throw new NotImplementedException(); //need to reindex values to internal palette
-                blocks[i + 0] = (ushort)a;
-                blocks[i + 1] = (ushort)b;
+                blocks[i + 0] = GetId((ushort)a);
+                blocks[i + 1] = GetId((ushort)b);
+            }
+            if (localPalette.Count == 1 && globalPalette.GetState(localPalette.First().Value).Material == BlockMaterial.Air) {
+                return;
+            }
+            chunk.SetSection(y, section);
+
+            BlockId GetId(ushort stateId)
+            {
+                if (!localPalette.TryGetValue(stateId, out var id)) {
+                    var state = BlockRegistry.GetLegacyState(stateId);
+                    id = globalPalette.GetOrAddId(state);
+                    localPalette.Add(stateId, id);
+                }
+                return id;
+            }
+        }
+        private void DeserializeHeightmap(Chunk chunk, int[] heights)
+        {
+            short[] dest = chunk.HeightMaps.Get(HeightMapType.Legacy, true);
+            for (int i = 0; i < 256; i++) {
+                dest[i] = (short)heights[i];
             }
         }
 
-        private List<ScheduledTick> DeserializeTileTicks(int cx, int cz, ListTag tag)
-        {
-            var list = new List<ScheduledTick>();
-
-            if (tag == null) {
-                return list;
-            }
-            foreach (CompoundTag entry in tag) {
-                Block type;
-
-                if (entry.TryGet("i", out string typeName)) {
-                    type = LegacyBlocks.GetBlockFromName(typeName);
-                } else {
-                    type = LegacyBlocks.GetBlockFromId(entry.GetInt("i"));
-                }
-
-                var st = new ScheduledTick() {
-                    X = entry.GetInt("x"),
-                    Y = entry.GetInt("y"),
-                    Z = entry.GetInt("z"),
-                    Delay = entry.GetInt("t"),
-                    Priority = entry.GetInt("p"),
-                    Type = type
-                };
-                list.Add(st);
-            }
-            return list;
-        }*/
-
         public CompoundTag Serialize(Chunk chunk)
         {
-            throw new NotImplementedException();
+            var tag = new CompoundTag();
+            tag.SetInt("xPos", chunk.X);
+            tag.SetInt("zPos", chunk.Z);
+
+            var sections = new ListTag();
+            var stateIds = CreateBlockReindexTable(chunk.Palette);
+
+            foreach (var section in chunk.Sections.ExceptNull()) {
+                sections.Add(SerializeSection(section, stateIds));
+            }
+            tag.SetList("Sections", sections);
+            tag.SetIntArray("HeightMap", SerializeHeightmap(chunk));
+            tag.SetBool("LightPopulated", chunk.HasLightData);
+
+            var rootTag = new CompoundTag();
+            rootTag.SetCompound("Level", tag);
+            rootTag.SetInt("DataVersion", chunk.DataVersion);
+            NbtExtensions.CopyOpaque(rootTag, chunk.Opaque);
+
+            return rootTag;
+        }
+
+        private int[] SerializeHeightmap(Chunk chunk)
+        {
+            short[] src = chunk.HeightMaps.Get(HeightMapType.Legacy);
+            Ensure.That(src != null, "Legacy chunk serializer requires heightmap to be present.");
+
+            int[] dst = new int[256];
+            for (int i = 0; i < 256; i++) {
+                dst[i] = src[i];
+            }
+            return dst;
+        }
+
+        private CompoundTag SerializeSection(ChunkSection section, ushort[] stateIds)
+        {
+            var blockId = new byte[4096];
+            var blockData = new byte[2048];
+            var blockAdd = new byte[2048];
+
+            var blocks = section.Blocks;
+            int hasAdd = 0;
+
+            for (int i = 0; i < 4096; i += 2) {
+                int j = i >> 1;
+                ushort a = stateIds[blocks[i + 0]];
+                ushort b = stateIds[blocks[i + 1]];
+
+                blockId[i + 0] = (byte)(a >> 4);
+                blockId[i + 1] = (byte)(b >> 4);
+
+                blockData[j] = (byte)((a & 15) | (b & 15) << 4);
+
+                int add = (a >> 12) | (b >> 12) << 4;
+                blockAdd[j] = (byte)add;
+                hasAdd |= add;
+            }
+
+            var tag = new CompoundTag();
+            tag.SetSByte("Y", (sbyte)section.Y);
+            tag.SetByteArray("Blocks", blockId);
+            tag.SetByteArray("Data", blockData);
+            if (hasAdd != 0) {
+                tag.SetByteArray("Add", blockAdd);
+            }
+            tag.SetByteArray("SkyLight", section.SkyLight?.Data ?? new byte[2048]);
+            tag.SetByteArray("BlockLight", section.BlockLight?.Data ?? new byte[2048]);
+            return tag;
+        }
+        private ushort[] CreateBlockReindexTable(BlockPalette palette)
+        {
+            return palette.ToArray(b => {
+                if (b == BlockRegistry.Air) {
+                    return (ushort)0;
+                }
+                Ensure.That(b.HasAttribs(BlockAttributes.Legacy));
+                return (ushort)b.Id;
+            });
         }
     }
 }

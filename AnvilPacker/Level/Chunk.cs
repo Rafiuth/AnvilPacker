@@ -16,8 +16,7 @@ namespace AnvilPacker.Level
         public BlockPalette Palette;
         public HeightMaps HeightMaps = new();
 
-        public List<ScheduledTick> ScheduledTicks = new();
-        /// <summary> Data that the serializer doesn't know how to handle. This is the "Level" tag from the region chunk. </summary>
+        /// <summary> Data that the serializer doesn't know how to handle. This is the root tag from the region chunk. </summary>
         public CompoundTag? Opaque;
         public int DataVersion;
         public bool HasLightData;
@@ -81,16 +80,5 @@ namespace AnvilPacker.Level
             var sect = GetOrCreateSection(y >> 4);
             sect.SetBlock(x, y & 15, z, block);
         }
-    }
-
-    public struct ScheduledTick
-    {
-        /// <summary> Block X/Z position, relative to the chunk this tick was scheduled into. </summary>
-        public sbyte X, Z;
-        /// <summary> Block Y position, in absolute world coordinates. </summary>
-        public short Y;
-        public int Delay;
-        public int Priority;
-        public Block Type;
     }
 }

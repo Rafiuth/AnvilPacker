@@ -1,10 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using AnvilPacker.Data;
 
 namespace AnvilPacker.Level
 {
-    public class Block
+    public class Block : IEquatable<Block>
     {
         public ResourceName Name { get; init; }
         public BlockState DefaultState { get; set; }
@@ -14,6 +15,20 @@ namespace AnvilPacker.Level
 
         /// <summary> Whether this block was created on the fly, i.e. it is not known in any registry. </summary>
         public bool IsDynamic { get; init; }
+
+        public bool Equals(Block other)
+        {
+            return other.Name == Name && 
+                   Properties.SequenceEqual(other.Properties);
+        }
+        public override bool Equals(object obj)
+        {
+            return obj is Block b && Equals(b);
+        }
+        public override int GetHashCode()
+        {
+            return Name.GetHashCode();
+        }
 
         public override string ToString()
         {

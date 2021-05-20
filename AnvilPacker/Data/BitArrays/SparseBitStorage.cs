@@ -4,21 +4,19 @@ using AnvilPacker.Util;
 namespace AnvilPacker.Data
 {
     /// <summary>
-    /// Chunk bit storage used by v1.16.1 and after
+    /// Chunk bit storage used by v1.16 and after
     /// All elements are stored with a fixed bit count, but their bits will never span across multiple 
     /// longs. Any remaining space is left unused.
     /// </summary>
-    //TODO: optimize
-    //this is about 1.3x slower than PackedBitStorage
+    //this is about 1.3x slower than PackedBitStorage (random access)
     //using a div by const thing like Minecraft does might improve it (see libdivide)
 
     // bit[i] = (data[i / elemBits] >> (i % elemBits)) & mask
-    public class SparseBitStorage
+    public class SparseBitStorage : IBitStorage
     {
-        public readonly long[] Data;
-
-        public readonly int Count;
-        public readonly int BitsPerElement;
+        public long[] Data { get; }
+        public int Count { get; }
+        public int BitsPerElement { get; }
 
         private readonly int valuesPerLong;
         private readonly long mask;
@@ -40,8 +38,8 @@ namespace AnvilPacker.Data
             int dataLen = Maths.CeilDiv(count, valsPerLong);
             if (data == null) {
                 data = new long[dataLen];
-            } else if (data.Length != dataLen) {
-                throw new ArgumentException("Invalid length for data array.", nameof(data));
+            } else {
+                Ensure.That(data.Length == dataLen, "Invalid length for data array");
             }
             Data = data;
             BitsPerElement = bits;
@@ -72,29 +70,33 @@ namespace AnvilPacker.Data
             v = (v & ~(mask << shift)) | (value & mask) << shift;
         }
 
-        /// <summary> 
-        /// Copies the elements from this storage to <paramref name="dst"/>.
-        /// Elements are truncated to the dest storage bit size.
-        /// An exception is thrown if the dest storage count is smaller than this instance's.
-        /// </summary>
-        public void CopyTo(SparseBitStorage dst)
+        public void Unpack<TVisitor>(TVisitor visitor) where TVisitor : IBitStorageVisitor
         {
-            Ensure.That(dst.Count >= Count, "Destination must be at least as large as source.");
+            int dataPos = 0;
+            
+            for (int i = 0; i < Count; i += valuesPerLong) {
+                int valCount = Math.Min(Count - i, valuesPerLong);
+                long vals = Data[dataPos++];
 
-            if (BitsPerElement == dst.BitsPerElement) {
-                int count = Math.Min(Data.Length, dst.Data.Length);
-                Data.AsSpan(0, count).CopyTo(dst.Data);
-                return;
-            }
-            for (int i = 0; i < Data.Length; i++) {
-                int bitPos = i * valuesPerLong;
-                int elemCount = Math.Min(Count - bitPos, valuesPerLong);
-                long elems = Data[i];
-
-                for (int j = 0; j < elemCount; j++) {
-                    dst[bitPos + j] = (int)(elems & mask);
-                    elems >>= BitsPerElement;
+                for (int j = 0; j < valCount; j++) {
+                    visitor.Use(i + j, (int)(vals & mask));
+                    vals >>= BitsPerElement;
                 }
+            }
+        }
+        public void Pack<TVisitor>(TVisitor visitor) where TVisitor : IBitStorageVisitor
+        {
+            int dataPos = 0;
+
+            for (int i = 0; i < Count; i += valuesPerLong) {
+                int valCount = Math.Min(Count - i, valuesPerLong);
+                long vals = 0;
+
+                for (int j = 0; j < valCount; j++) {
+                    long val = visitor.Create(i + j) & mask;
+                    vals |= val << (j * BitsPerElement);
+                }
+                Data[dataPos++] = vals;
             }
         }
     }

@@ -26,6 +26,14 @@ namespace AnvilPacker.Encoder.Transforms
         /// <summary> If not null, specifies which blocks can be replaced. </summary>
         public HashSet<Block> Whitelist;
 
+        // S | R | Cum | File Size | time
+        //    off      | 1074.439KB| 3s
+        //16 | 2 | no  | 542.131KB | 12s
+        //24 | 2 | no  | 426.957KB | 13s
+        //32 | 2 | no  | 381.824KB | 15s
+        // 8 | 2 | yes | 335.672KB | 8s
+        //16 | 2 | yes | 335.139KB | 10s
+
         public HiddenBlockRemovalTransform()
         {
             string[] names = {
@@ -37,22 +45,22 @@ namespace AnvilPacker.Encoder.Transforms
                 //(seems that omitting stone and only keeping the blocks above will increase file size, bug?)
                 "stone", "dirt", "sand", "sandstone"
             };
+            int[] legacyIds = {
+                1,  //stone
+                3,  //dirt
+                12, //sand,
+                24, //sandstone
+            };
             Whitelist = new();
             foreach (var name in names) {
                 Whitelist.Add(BlockRegistry.GetBlock(name));
             }
+            foreach (var id in legacyIds) {
+                Whitelist.Add(BlockRegistry.GetLegacyState(id << 4).Block);
+            }
         }
 
-        // S | R | Cum | File Size | time
-        //    off      | 1074.439KB| 3s
-        //16 | 2 | no  | 542.131KB | 12s
-        //24 | 2 | no  | 426.957KB | 13s
-        //32 | 2 | no  | 381.824KB | 15s
-        // 8 | 2 | yes | 335.672KB | 8s
-        //16 | 2 | yes | 335.139KB | 10s
-
-        private static readonly Vec3i[] SelfAndImmediateNeighbors = {
-            new(0, 0, 0),
+        private static readonly Vec3i[] ImmediateNeighbors = {
             new(-1, 0, 0),
             new(+1, 0, 0),
             new(0, -1, 0),
@@ -66,12 +74,16 @@ namespace AnvilPacker.Encoder.Transforms
             var neighbors = GetNeighbors();
             var freqs = new int[region.Palette.Count];
             var isOpaque = region.Palette.ToArray(IsOpaque);
+            var isWhitelisted = region.Palette.ToArray(s => Whitelist == null || Whitelist.Contains(s.Block));
 
             var mostFrequent = default(BlockId);
 
             foreach (var (chunk, y) in ChunkIterator.CreateLayered(region)) {
                 for (int z = 0; z < 16; z++) {
                     for (int x = 0; x < 16; x++) {
+                        if (!isWhitelisted[chunk.GetBlockIdFast(x, y, z)]) {
+                            continue;
+                        }
                         if (!CummulativeFreqs) {
                             freqs.Clear();
                         }
@@ -92,7 +104,7 @@ namespace AnvilPacker.Encoder.Transforms
             //Check if the block is surrounded by opaque blocks
             bool IsHidden(ChunkIterator chunk, int x, int y, int z)
             {
-                foreach (var pos in SelfAndImmediateNeighbors) {
+                foreach (var pos in ImmediateNeighbors) {
                     var block = chunk.GetBlockId(x + pos.X, y + pos.Y, z + pos.Z);
                     if (!isOpaque[block]) {
                         return false;
@@ -123,9 +135,6 @@ namespace AnvilPacker.Encoder.Transforms
             if ((attrs & (AttrMaskT | AttrMaskF)) != AttrMaskT) {
                 return false;
             }
-            if (Whitelist != null && !Whitelist.Contains(state.Block)) {
-                return false;
-            }
             return true;
         }
 
@@ -145,7 +154,7 @@ namespace AnvilPacker.Encoder.Transforms
             var rng = new Random(12345);
             points.Shuffle(rng.Next);
             //TODO: ensure points are at least some distance appart each other (poisson sampling)
-            return points.Except(SelfAndImmediateNeighbors)
+            return points.Except(ImmediateNeighbors.Append(new Vec3i(0, 0, 0)))
                          .Take(Samples)
                          .OrderBy(v => (v.X + r) + (v.Y + r) * rs + (v.Z + r) * (rs * rs)) //improve cache coherency
                          .ToArray();

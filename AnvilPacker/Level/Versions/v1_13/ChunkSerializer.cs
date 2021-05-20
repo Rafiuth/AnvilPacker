@@ -6,11 +6,11 @@ using NLog;
 
 namespace AnvilPacker.Level.Versions.v1_13
 {
-    /// <summary> Handles chunks serialization for versions <c>1.16-1.16.5</c>. </summary>
+    /// <summary> Handles chunks serialization for versions <c>1.13-1.16.5</c>. </summary>
     public class ChunkSerializer : IChunkSerializer
     {
         private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
-
+        
         public Chunk Deserialize(CompoundTag rootTag, BlockPalette palette)
         {
             var tag = rootTag.GetCompound("Level");
@@ -18,40 +18,47 @@ namespace AnvilPacker.Level.Versions.v1_13
             int x = tag.Pop<int>("xPos");
             int z = tag.Pop<int>("zPos");
             var chunk = new Chunk(x, z, 0, 15, palette);
-            chunk.DataVersion = rootTag.GetInt("DataVersion");
+            chunk.Opaque = rootTag;
+            chunk.DataVersion = rootTag.Pop<int>("DataVersion");
 
-            foreach (CompoundTag section in tag.MaybePop<ListTag>("Sections")) {
-                DeserializeSection(chunk, section);
+            if (tag.TryGet("Sections", out ListTag sectList)) {
+                for (int i = 0; i < sectList.Count; i++) {
+                    var sectTag = sectList.Get<CompoundTag>(i);
+                    DeserializeSection(chunk, sectTag);
+                    if (sectTag.Count <= 1) { //is "Y" the only value left?
+                        sectList.RemoveAt(i--);
+                    }
+                }
+                if (sectList.Count == 0) {
+                    tag.Remove("Sections");
+                }
             }
-            DeserializeHeightmaps(chunk.HeightMaps, tag.MaybePop<CompoundTag>("Heightmaps"));
-            //DeserializeScheduledTicks(chunk, Pop<ListTag>("TileTicks"));
-            //DeserializeScheduledTicks(chunk, Pop<ListTag>("LiquidTicks"));
-            chunk.HasLightData = tag.MaybePop<bool>("isLightOn");
+            DeserializeHeightmaps(chunk, tag.PopMaybe<CompoundTag>("Heightmaps"));
+            chunk.HasLightData = tag.PopMaybe<bool>("isLightOn");
 
             //Remove legacy data from upgrated worlds
             tag.Remove("HeightMap");
-            chunk.Opaque = tag;
 
             return chunk;
         }
 
         private static void DeserializeSection(Chunk chunk, CompoundTag tag)
         {
-            int y = tag.Pop<sbyte>("Y");
+            int y = tag.GetSByte("Y");
             if (y < 0 || y >= 16) {
                 return;
             }
-            var blockStates = tag.MaybePop<long[]>("BlockStates");
-            var palette = DeserializePalette(tag.MaybePop<ListTag>("Palette"), chunk.Palette);
+            var blockStates = tag.PopMaybe<long[]>("BlockStates");
+            var palette = DeserializePalette(tag.PopMaybe<ListTag>("Palette"), chunk.Palette);
             
-            var skyLight = tag.MaybePop<byte[]>("SkyLight");
-            var blockLight = tag.MaybePop<byte[]>("BlockLight");
+            var skyLight = tag.PopMaybe<byte[]>("SkyLight");
+            var blockLight = tag.PopMaybe<byte[]>("BlockLight");
 
             if (blockStates == null || palette == null) {
                 return;
             }
             var section = chunk.GetOrCreateSection(y);
-            UnpackBlocks(blockStates, section.Blocks, palette, chunk.DataVersion >= 2529);
+            UnpackBlocks(blockStates, section, palette);
 
             if (skyLight != null) {
                 section.SkyLight = new NibbleArray(skyLight);
@@ -75,39 +82,19 @@ namespace AnvilPacker.Level.Versions.v1_13
             }
             return palette;
         }
-        private void DeserializeHeightmaps(HeightMaps maps, CompoundTag tag)
+        private void DeserializeHeightmaps(Chunk chunk, CompoundTag tag)
         {
             if (tag == null) return;
 
             foreach (var (typeName, rawBits) in tag) {
-                var packedHeights = new SparseBitStorage(256, 9, rawBits.Value<long[]>());
+                var storage = CreateStorage(chunk, 256, 9, rawBits.Value<long[]>());
 
                 var type = HeightMapType.ForName(typeName);
-                var heights = maps.Get(type, true);
-                for (int i = 0; i < 256; i++) {
-                    heights[i] = (short)packedHeights[i];
-                }
+                var heights = chunk.HeightMaps.Get(type, true);
+                storage.Unpack(heights);
             }
         }
-        private static void DeserializeScheduledTicks(Chunk chunk, ListTag tag)
-        {
-            if (tag == null) return;
 
-            var list = chunk.ScheduledTicks;
-            int xo = chunk.X * 16;
-            int zo = chunk.Z * 16;
-            foreach (CompoundTag entry in tag) {
-                var st = new ScheduledTick() {
-                    Type = BlockRegistry.GetBlock(entry.GetString("i")),
-                    X = (sbyte)(entry.GetInt("x") - xo),
-                    Z = (sbyte)(entry.GetInt("z") - zo),
-                    Y = (short)entry.GetInt("y"),
-                    Delay = entry.GetInt("t"),
-                    Priority = entry.GetInt("p")
-                };
-                list.Add(st);
-            }
-        }
 
         public CompoundTag Serialize(Chunk chunk)
         {
@@ -116,28 +103,28 @@ namespace AnvilPacker.Level.Versions.v1_13
             tag.SetInt("zPos", chunk.Z);
 
             var sections = new ListTag();
-            var reindexTable = new int[chunk.Palette.Count];
+            var reindexTable = new BlockId[chunk.Palette.Count];
 
             foreach (var section in chunk.Sections.ExceptNull()) {
                 sections.Add(SerializeSection(section, reindexTable));
             }
             tag.SetList("Sections", sections);
-            tag.SetCompound("Heightmaps", SerializeHeightmaps(chunk.HeightMaps));
+            tag.SetCompound("Heightmaps", SerializeHeightmaps(chunk));
             tag.SetBool("isLightOn", chunk.HasLightData);
-
-            CopyOpaque(tag, chunk.Opaque);
 
             var rootTag = new CompoundTag();
             rootTag.SetCompound("Level", tag);
             rootTag.SetInt("DataVersion", chunk.DataVersion);
+            NbtExtensions.CopyOpaque(rootTag, chunk.Opaque);
+
             return rootTag;
         }
 
-        private CompoundTag SerializeSection(ChunkSection section, int[] reindexTable)
+        private CompoundTag SerializeSection(ChunkSection section, BlockId[] reindexTable)
         {
             var tag = new CompoundTag();
             var palette = SerializePalette(section, reindexTable);
-            var blocks = PackBlocks(section.Blocks, reindexTable, palette.Count, section.Chunk.DataVersion >= 2529);
+            var blocks = PackBlocks(section, reindexTable, palette.Count);
 
             tag.SetSByte("Y", (sbyte)section.Y);
             tag.SetList("Palette", palette);
@@ -151,14 +138,14 @@ namespace AnvilPacker.Level.Versions.v1_13
             }
             return tag;
         }
-        private ListTag SerializePalette(ChunkSection section, int[] reindexTable)
+        private ListTag SerializePalette(ChunkSection section, BlockId[] indices)
         {
             var palette = section.Palette;
-            reindexTable.Fill(-1);
+            indices.Fill(BlockId.MaxValue);
 
             var list = new ListTag();
             foreach (var id in section.Blocks) {
-                if (reindexTable[id] >= 0) continue;
+                if (indices[id] >= 0) continue;
 
                 var state = palette.GetState(id);
                 var tag = new CompoundTag();
@@ -170,109 +157,62 @@ namespace AnvilPacker.Level.Versions.v1_13
                     }
                     tag.SetCompound("Properties", props);
                 }
-                reindexTable[id] = list.Count;
+                indices[id] = (ushort)list.Count;
                 list.Add(tag);
             }
             return list;
         }
-        private CompoundTag SerializeHeightmaps(HeightMaps maps)
+        private CompoundTag SerializeHeightmaps(Chunk chunk)
         {
             var tag = new CompoundTag();
-            foreach (var (type, heights) in maps) {
-                var packedHeights = new SparseBitStorage(256, 9);
-
-                for (int i = 0; i < 256; i++) {
-                    packedHeights[i] = (short)heights[i];
-                }
-                tag.SetLongArray(type.Name, packedHeights.Data);
+            foreach (var (type, heights) in chunk.HeightMaps) {
+                var storage = CreateStorage(chunk, 256, 9);
+                storage.Pack(heights);
+                tag.SetLongArray(type.Name, storage.Data);
             }
             return tag;
         }
 
-        private void CopyOpaque(CompoundTag tag, CompoundTag opaque)
+        private static void UnpackBlocks(long[] src, ChunkSection section, BlockId[] palette)
         {
-            foreach (var (k, v) in opaque) {
-                if (tag.ContainsKey(k)) {
-                    //TODO: recursive merging?
-                    _logger.Warn($"Opaque tag '{k}' already exists in serialized chunk, keeping existing one.");
-                    continue;
-                }
-                tag.Set(k, v);
-            }
+            int elemBits = GetPaletteBits(palette.Length);
+            var storage = CreateStorage(section.Chunk, 4096, elemBits, src);
+            storage.Unpack(new BlockStorageVisitor() {
+                Blocks = section.Blocks,
+                Palette = palette
+            });
         }
-
-        private static void UnpackBlocks(long[] src, BlockId[] dst, BlockId[] palette, bool sparse)
+        private static long[] PackBlocks(ChunkSection section, BlockId[] palette, int paletteLen)
         {
-            if (sparse) {
-                UnpackSparse(src, dst, palette);
-            } else {
-                Unpack(src, dst, palette);
-            }
-            static void UnpackSparse(long[] src, BlockId[] dst, BlockId[] palette)
-            {
-                int elemBits = GetPaletteBits(palette.Length);
-                int valsPerLong = 64 / elemBits;
-                int mask = (1 << elemBits) - 1;
-                int srcPos = 0;
-
-                for (int i = 0; i < dst.Length; i += valsPerLong) {
-                    int valCount = Math.Min(dst.Length - i, valsPerLong);
-                    long vals = src[srcPos++];
-
-                    for (int j = 0; j < valCount; j++) {
-                        dst[i + j] = palette[vals & mask];
-                        vals >>= elemBits;
-                    }
-                }
-            }
-            static void Unpack(long[] src, BlockId[] dst, BlockId[] palette)
-            {
-                int elemBits = GetPaletteBits(palette.Length);
-                var storage = new PackedBitStorage(dst.Length, elemBits, src);
-                for (int i = 0; i < dst.Length; i++) {
-                    dst[i] = palette[storage[i]];
-                }
-            }
-        }
-        private static long[] PackBlocks(BlockId[] src, int[] reindexTable, int paletteLen, bool sparse)
-        {
-            if (sparse) {
-                return PackSparse(src, reindexTable, paletteLen);
-            } else {
-                return Pack(src, reindexTable, paletteLen);
-            }
-            static long[] PackSparse(BlockId[] src, int[] reindexTable, int paletteLen)
-            {
-                int elemBits = GetPaletteBits(paletteLen);
-                int valsPerLong = 64 / elemBits;
-                var dst = new long[Maths.CeilDiv(src.Length, valsPerLong)];
-                int dstPos = 0;
-
-                for (int i = 0; i < src.Length; i += valsPerLong) {
-                    int valCount = Math.Min(src.Length - i, valsPerLong);
-                    long vals = 0;
-
-                    for (int j = 0; j < valCount; j++) {
-                        vals |= (long)reindexTable[src[i + j]] << (j * elemBits);
-                    }
-                    dst[dstPos++] = vals;
-                }
-                return dst;
-            }
-            static long[] Pack(BlockId[] src, int[] reindexTable, int paletteLen)
-            {
-                int elemBits = GetPaletteBits(paletteLen);
-                var storage = new PackedBitStorage(src.Length, elemBits);
-                for (int i = 0; i < src.Length; i++) {
-                    storage[i] = reindexTable[src[i]];
-                }
-                return storage.Data;
-            }
+            int elemBits = GetPaletteBits(paletteLen);
+            var storage = CreateStorage(section.Chunk, 4096, elemBits);
+            storage.Pack(new BlockStorageVisitor() {
+                Blocks = section.Blocks,
+                Palette = palette
+            });
+            return storage.Data;
         }
         
+        private static IBitStorage CreateStorage(Chunk chunk, int count, int bits, long[] data = null)
+        {
+            if (chunk.DataVersion >= DataVersions.v1_16_s13) {
+                return new SparseBitStorage(count, bits, data);
+            } else {
+                return new PackedBitStorage(count, bits, data);
+            }
+        }
         private static int GetPaletteBits(int size)
         {
             return Math.Max(4, Maths.CeilLog2(size));
+        }
+
+        private struct BlockStorageVisitor : IBitStorageVisitor
+        {
+            public BlockId[] Blocks;
+            public BlockId[] Palette;
+
+            public void Use(int index, int value) => Blocks[index] = Palette[value];
+            public int Create(int index) => Palette[Blocks[index]];
         }
     }
 }

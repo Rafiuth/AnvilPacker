@@ -7,6 +7,8 @@ namespace AnvilPacker.Level
 
     public readonly struct BlockId : IEquatable<BlockId>
     {
+        public static readonly BlockId MaxValue = ushort.MaxValue;
+        
         public readonly ushort Value;
 
         public BlockId(ushort value)

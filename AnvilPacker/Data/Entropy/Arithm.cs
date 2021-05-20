@@ -37,7 +37,8 @@ namespace AnvilPacker.Data.Entropy
         }
         public void Write(bool s, int p)
         {
-            Debug.Assert(p >= 0 && p < K, $"Probability must be >= 0 and < {K}.");
+            //Note: using string interpolation in the assert msg caused a major bottleneck in debug builds...
+            Debug.Assert(p >= 0 && p < K, "Probability must be >= 0 and < K");
             Debug.Assert(s || p != 0, "Probability cannot be 0 when s == 0");
 
             Write(s, (uint)p);
@@ -63,7 +64,6 @@ namespace AnvilPacker.Data.Entropy
             WriteU16(hi >> 16);
             WriteU16(hi >> 0);
         }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void WriteU16(uint x)
         {
             stream.WriteUShortLE((int)x);
@@ -95,7 +95,7 @@ namespace AnvilPacker.Data.Entropy
         }
         public bool ReadBool(int p)
         {
-            Debug.Assert(p >= 0 && p < K, $"Probability must be >= 0 and < {K}.");
+            Debug.Assert(p >= 0 && p < K, "Probability must be >= 0 and < K");
             return Read((uint)p);
         }
 
