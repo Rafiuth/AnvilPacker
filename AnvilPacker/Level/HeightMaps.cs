@@ -44,12 +44,7 @@ namespace AnvilPacker.Level
             _region = region;
             _type = type;
             _populated = new BitSet(16 * 16);
-
-            var palette = region.Palette;
-            _isOpaque = new bool[palette.Count];
-            foreach (var (block, id) in palette.BlocksAndIds()) {
-                _isOpaque[id] = type.IsOpaque(block);
-            }
+            _isOpaque = region.Palette.ToArray(type.IsOpaque);
         }
         public void Compute(Chunk chunk)
         {
@@ -108,10 +103,10 @@ namespace AnvilPacker.Level
             MotionBlockingNoLeaves = new("MOTION_BLOCKING_NO_LEAVES", b => (b.Material.BlocksMotion || HasFluid(b)) && b.Material != BlockMaterial.Leaves);
 
         public string Name { get; }
-        public Predicate<BlockState> IsOpaque { get; }
+        public Func<BlockState, bool> IsOpaque { get; }
         public bool KeepAfterWorldGen { get; }
 
-        private HeightMapType(string name, Predicate<BlockState> isOpaque, bool isKnown = true)
+        private HeightMapType(string name, Func<BlockState, bool> isOpaque, bool isKnown = true)
         {
             Name = name;
             IsOpaque = isOpaque;

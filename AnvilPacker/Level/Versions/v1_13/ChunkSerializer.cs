@@ -115,7 +115,7 @@ namespace AnvilPacker.Level.Versions.v1_13
             var rootTag = new CompoundTag();
             rootTag.SetCompound("Level", tag);
             rootTag.SetInt("DataVersion", chunk.DataVersion);
-            NbtExtensions.CopyOpaque(rootTag, chunk.Opaque);
+            ChunkNbtUtils.MergeOpaque(chunk.Opaque, rootTag);
 
             return rootTag;
         }

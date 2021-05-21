@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using AnvilPacker.Encoder.Transforms;
 using AnvilPacker.Level;
 using AnvilPacker.Util;
 
@@ -9,13 +10,14 @@ namespace AnvilPacker.Encoder.v1
     public class Primer
     {
         public RegionBuffer Region { get; init; }
-        public bool CalcHeightmaps { get; init; } = true;
+        public TransformPipe Transforms { get; init; }
+
 
         public void Prime(IProgress<double> progress = null)
         {
-            if (CalcHeightmaps) {
-                PrimeHeightmaps();
-            }
+            PrimeHeightmaps();
+
+            //Transforms.Reverse(Region);
         }
 
         private void PrimeHeightmaps()

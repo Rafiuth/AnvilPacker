@@ -54,7 +54,7 @@ namespace AnvilPacker.Encoder.v1
                 }
             }
         }
-        private unsafe void DecodeBlocks(ChunkIterator chunk, int y, Context[] contexts, Vec3i[] neighbors, ArithmDecoder ac)
+        private unsafe void DecodeBlocks(ChunkIterator chunk, int y, Span<Context> contexts, Vec3i[] neighbors, ArithmDecoder ac)
         {
             Debug.Assert(neighbors.Length <= 4);
             Debug.Assert(chunk.Palette == _region.Palette);
@@ -78,7 +78,7 @@ namespace AnvilPacker.Encoder.v1
                 }
             }
         }
-        private Context GetContext(Context[] contexts, ulong key)
+        private Context GetContext(Span<Context> contexts, ulong key)
         {
             int slot = Context.GetSlot(key, _ctxBits);
             var ctx = contexts[slot] ??= new Context(_region.Palette);
@@ -140,10 +140,11 @@ namespace AnvilPacker.Encoder.v1
             var palette = new BlockPalette(count);
 
             for (int i = 0; i < count; i++) {
+                int flags = stream.ReadByte();
+                
                 string name = stream.ReadNulString();
                 string material = stream.ReadNulString();
 
-                int flags = stream.ReadByte();
                 var attribs = (BlockAttributes)stream.ReadVarUInt();
                 byte light = stream.ReadByte();
                 int emittance = light >> 4;

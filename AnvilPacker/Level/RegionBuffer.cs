@@ -75,9 +75,9 @@ namespace AnvilPacker.Level
 
         private void SetPosFromRegionFile(string path)
         {
-            var m = Regex.Match(Path.GetFileName(path), @"r\.(-?\d+)\.(-?\d+)\.mca$");
+            var m = Regex.Match(Path.GetFileName(path), @"^r\.(-?\d+)\.(-?\d+)\.mca$");
             if (!m.Success) {
-                throw new FormatException("Region file must have the form of 'r.0.0.mca'.");
+                throw new FormatException("Region file name must have the form of 'r.0.0.mca'.");
             }
             X = int.Parse(m.Groups[1].Value) * 32;
             Z = int.Parse(m.Groups[2].Value) * 32;

@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using AnvilPacker.Level;
 
 namespace AnvilPacker.Encoder.Transforms
 {
@@ -6,6 +8,15 @@ namespace AnvilPacker.Encoder.Transforms
     {
         //Pipe string: hidden_block_removal[samples=64,radius=3,cum_freqs=false],!predict_upgrade_data
         public IReadOnlyList<TransformBase> Transforms { get; }
+
+        public void Apply(RegionBuffer region)
+        {
+            throw new NotImplementedException();
+        }
+        public void Reverse(RegionBuffer region)
+        {
+            throw new NotImplementedException();
+        }
 
         public static void RegisterTransforms()
         {

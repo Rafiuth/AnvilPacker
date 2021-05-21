@@ -6,7 +6,7 @@ using AnvilPacker.Util;
 
 namespace AnvilPacker.Encoder.v1
 {
-    public class Context
+    public sealed class Context
     {
         public BlockId[] Palette;
         public int[] Freq;
@@ -42,7 +42,7 @@ namespace AnvilPacker.Encoder.v1
         private int FindIndex(BlockId[] palette, BlockId value)
         {
             //Try a simple loop first to avoid IndexOf() overhead.
-            for (int i = 0; i < palette.Length && i < 8; i++) {
+            for (int i = 0; i < palette.Length && i < 4; i++) {
                 if (palette[i] == value) return i;
             }
             //This call won't be inlined. JIT produces less asm when passing bounds explicitly.

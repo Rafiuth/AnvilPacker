@@ -67,7 +67,7 @@ namespace AnvilPacker.Encoder.v1
             }
             ac.Flush();
         }
-        private unsafe void EncodeBlocks(ChunkIterator chunk, int y, Context[] contexts, Vec3i[] neighbors, ArithmEncoder ac)
+        private unsafe void EncodeBlocks(ChunkIterator chunk, int y, Span<Context> contexts, Vec3i[] neighbors, ArithmEncoder ac)
         {
             Debug.Assert(neighbors.Length <= 4);
             Debug.Assert(neighbors.All(n => n.Y <= 0 && (n.X <= 0 || n.Z <= 0)));
@@ -92,7 +92,7 @@ namespace AnvilPacker.Encoder.v1
                 }
             }
         }
-        private Context GetContext(Context[] contexts, ulong key)
+        private Context GetContext(Span<Context> contexts, ulong key)
         {
             int slot = Context.GetSlot(key, CTX_BITS);
             var ctx = contexts[slot] ??= new Context(_region.Palette);
@@ -155,12 +155,13 @@ namespace AnvilPacker.Encoder.v1
             stream.WriteVarUInt(palette.Count);
 
             foreach (var block in palette) {
-                stream.WriteNulString(block.ToString());
-                stream.WriteNulString(block.Material.Name.ToString(false));
-
                 int flags = 0;
                 flags |= block.HasAttribs(BlockAttributes.Legacy) ? 1 << 0 : 0;
                 stream.WriteByte(flags);
+                
+                stream.WriteNulString(block.ToString());
+                stream.WriteNulString(block.Material.Name.ToString(false));
+
                 stream.WriteVarUInt((int)(block.Attributes & ~BlockAttributes.InternalMask));
                 stream.WriteByte(block.Emittance << 4 | block.Opacity);
                 
