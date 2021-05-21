@@ -11,9 +11,8 @@ namespace AnvilPacker.Level
     //TODO: support for external chunks aka '.mcc' files
     /// <summary>A simple anvil region file writer.</summary>
     /// <remarks> <para/>
-    /// - This class only supports creating files, not modifying existing files. <br/>
+    /// - This class only supports creating files, not modifying existing ones. <br/>
     /// - A chunk can only be written once, do not call <see cref="Write(int, int, CompoundTag)"/> with the same chunk twice or it will throw an exception. <br/>
-    /// 
     /// - When you are done writing the region, call <see cref="WriteHeader"/> or dispose this object
     /// to ensure the file header is written otherwise you will endup with an corrupted file.
     /// </remarks>
@@ -47,11 +46,13 @@ namespace AnvilPacker.Level
                 _s.WriteIntBE(_locations[i]);
             }
             //Write timestamps (unused by Minecraft)
-            int timestamp = (int)DateTimeOffset.UtcNow.ToUnixTimeSeconds(); //only good for another 15 years lol.
+            int timestamp = (int)DateTimeOffset.UtcNow.ToUnixTimeSeconds();
             for (int i = 0; i < 1024; i++) {
                 _s.WriteIntBE(timestamp);
             }
-
+            //Older versions will corrupt the location table if the file size isn't a multiple of 4096 bytes.
+            //Setting _s.Position isn't enough to change the file size.
+            _s.Length = Align(_s.Length);
             _s.Position = _s.Length;
         }
 

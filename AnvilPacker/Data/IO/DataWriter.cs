@@ -33,7 +33,7 @@ namespace AnvilPacker.Data
             get => BaseStream.Length + _bufPos;
             set {
                 Flush();
-                BaseStream.SetLength(Length);
+                BaseStream.SetLength(value);
             }
         }
         /// <param name="leaveOpen">If true, <paramref name="stream"/> will be disposed when <see cref="Dispose"/> is called. </param>
@@ -59,7 +59,9 @@ namespace AnvilPacker.Data
 
         public void Flush()
         {
-            BaseStream.Write(_buf, 0, _bufPos);
+            if (_bufPos > 0) {
+                BaseStream.Write(_buf, 0, _bufPos);
+            }
             _bufPos = 0;
         }
 

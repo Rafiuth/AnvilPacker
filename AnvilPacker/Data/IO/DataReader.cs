@@ -32,7 +32,7 @@ namespace AnvilPacker.Data
         }
         public long Length
         {
-            get => BaseStream.Length + _bufPos;
+            get => BaseStream.Length;
         }
 
         /// <param name="leaveOpen">If true, <paramref name="stream"/> will be disposed when <see cref="Dispose"/> is called. </param>
