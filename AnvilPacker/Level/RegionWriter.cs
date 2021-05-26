@@ -16,18 +16,18 @@ namespace AnvilPacker.Level
     /// - When you are done writing the region, call <see cref="WriteHeader"/> or dispose this object
     /// to ensure the file header is written otherwise you will endup with an corrupted file.
     /// </remarks>
-    public class AnvilWriter : IDisposable
+    public class RegionWriter : IDisposable
     {
         private readonly DataWriter _s;
         // Chunk index table. each entry is encoded as: `sectorId << 8 | sectorCount`
         private int[] _locations = new int[1024];
         private bool _headerDirty = true;
 
-        public AnvilWriter(string path, int rx, int rz)
+        public RegionWriter(string path, int rx, int rz)
             : this(Path.Combine(path, $"r.{rx}.{rz}.mca"))
         {
         }
-        public AnvilWriter(string filename)
+        public RegionWriter(string filename)
         {
             //disabling buffer allows passing BaseStream without seeking twice
             _s = new DataWriter(File.Create(filename), false, 0);
@@ -36,9 +36,7 @@ namespace AnvilPacker.Level
 
         public void WriteHeader()
         {
-            if (!_headerDirty) {
-                return;
-            }
+            if (!_headerDirty) return;
             _headerDirty = false;
 
             _s.Position = 0;
@@ -64,9 +62,7 @@ namespace AnvilPacker.Level
         public void Write(int x, int z, CompoundTag tag)
         {
             ref int loc = ref _locations[GetIndex(x, z)];
-            if (loc != 0) {
-                throw new NotImplementedException("Chunk can only be written once.");
-            }
+            Ensure.That(loc == 0, "Chunk can only be written once.");
 
             long startPos = _s.Position;
             Debug.Assert(startPos % 4096 == 0, "File pointer should always be aligned to 4KB sectors.");
@@ -101,13 +97,11 @@ namespace AnvilPacker.Level
             int startSector = (int)(offset / 4096);
             int numSectors = Maths.CeilDiv(length, 4096);
 
-            if (startSector > 0xFFFFFF || numSectors > 255) {
-                throw new InvalidOperationException($"Cannot fit chunk in anvil region! Offset={offset} Len={length / 1024}KB");
-            }
+            Ensure.That(startSector <= 0xFFFFFF && numSectors <= 255, $"Can't fit chunk in region! Offset={offset} Len={length / 1024}KB");
             return startSector << 8 | numSectors;
         }
 
-        private long Align(long pos)
+        private static long Align(long pos)
         {
             return (pos + 4095) & ~4095;
         }

@@ -34,7 +34,7 @@ namespace AnvilPacker.Level.Versions.v1_13
                 }
             }
             DeserializeHeightmaps(chunk, tag.PopMaybe<CompoundTag>("Heightmaps"));
-            chunk.HasLightData = tag.PopMaybe<bool>("isLightOn");
+            chunk.SetFlag(ChunkFlags.HasLightData, tag.PopMaybe<bool>("isLightOn"));
 
             //Remove legacy data from upgrated worlds
             tag.Remove("HeightMap");
@@ -110,7 +110,7 @@ namespace AnvilPacker.Level.Versions.v1_13
             }
             tag.SetList("Sections", sections);
             tag.SetCompound("Heightmaps", SerializeHeightmaps(chunk));
-            tag.SetBool("isLightOn", chunk.HasLightData);
+            tag.SetBool("isLightOn", chunk.HasFlag(ChunkFlags.HasLightData));
 
             var rootTag = new CompoundTag();
             rootTag.SetCompound("Level", tag);

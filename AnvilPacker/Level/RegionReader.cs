@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Reflection;
@@ -9,29 +10,53 @@ namespace AnvilPacker.Level
 {
     //TODO: support for external chunks aka '.mcc' files
     //https://minecraft.gamepedia.com/Region_file_format
-    public class AnvilReader : IDisposable
+    public class RegionReader : IDisposable
     {
         private readonly FileDataReader _s;
 
-        public AnvilReader(string filename)
+        public RegionReader(string filename)
         {
             _s = new FileDataReader(filename);
         }
 
+        public IEnumerable<(CompoundTag Tag, int X, int Z)> ReadAll()
+        {
+            if (_s.Length < 8192) {
+                yield break; //file header is missing
+            }
+            var locations = new int[1024];
+            _s.Position = 0;
+            _s.ReadBulkBE<int>(locations);
+
+            for (int i = 0; i < 1024; i++) {
+                var tag = Read(locations[i]);
+                if (tag != null) {
+                    yield return (Tag: tag, X: i % 32, Z: i / 32);
+                }
+            }
+        }
         public CompoundTag Read(int x, int z)
         {
-            var (offset, sectorCount) = ReadLocation(x, z);
-            if (sectorCount == 0) {
+            _s.Position = GetIndex(x, z) * 4;
+            int loc = _s.ReadIntBE();
+            return Read(loc);
+        }
+
+        private CompoundTag Read(int loc)
+        {
+            int offset = (loc >> 8) * 4096;
+            int length = (loc & 0xFF) * 4096;
+            if (length == 0) {
                 return null;
             }
             _s.Position = offset;
-            int len = _s.ReadIntBE() - 1;
+            int actualLen = _s.ReadIntBE() - 1;
             byte compressionType = _s.ReadByte();
 
-            if (len > sectorCount * 4096) {
+            if (actualLen > length) {
                 throw new InvalidDataException($"Corrupted chunk: declared length larger than sector count.");
             }
-            var rawStream = _s.ForkStream(offset + 5, len);
+            var rawStream = _s.ForkStream(offset + 5, actualLen);
 
             using var dataStream = compressionType switch {
                 1 => new GZipStream(rawStream, CompressionMode.Decompress),
@@ -42,14 +67,6 @@ namespace AnvilPacker.Level
             return NbtIO.Read(new DataReader(dataStream));
         }
 
-        private (int Offset, int SectorCount) ReadLocation(int x, int z)
-        {
-            _s.Position = GetIndex(x, z) * 4;
-            int loc = _s.ReadIntBE();
-            int offset = (loc >> 8) * 4096;
-            int sectors = loc & 0xFF;
-            return (offset, sectors);
-        }
         private static Stream new_ZlibStream(Stream stream, CompressionMode mode, bool leaveOpen = false)
         {
             //adapted from here: https://github.com/dotnet/runtime/issues/38022#issuecomment-645612109

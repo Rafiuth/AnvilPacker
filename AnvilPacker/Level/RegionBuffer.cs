@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using AnvilPacker.Data;
 using AnvilPacker.Level;
 using AnvilPacker.Util;
 
@@ -29,10 +30,10 @@ namespace AnvilPacker.Level
             Palette = new BlockPalette() { BlockRegistry.Air };
         }
 
-        /// <summary> Fills the buffer with the chunks at the specified region offset. </summary>
+        /// <summary> Loads the specified region file. </summary>
         /// <param name="path">Full path of the .mca file</param>
-        /// <returns>True if the region is not empty.</returns>
-        public bool Load(WorldInfo world, string path)
+        /// <returns>Number of non empty chunks loaded.</returns>
+        public int Load(WorldInfo world, string path)
         {
             Ensure.That(Size == 32);
 
@@ -40,19 +41,24 @@ namespace AnvilPacker.Level
             SetPosFromRegionFile(path);
             int chunksLoaded = 0;
 
-            using var reader = new AnvilReader(path);
-            for (int cz = 0; cz < 32; cz++) {
-                for (int cx = 0; cx < 32; cx++) {
-                    var tag = reader.Read(cx, cz);
-                    if (tag != null) {
-                        var serializer = world.GetSerializer(tag);
-                        var chunk = serializer.Deserialize(tag, Palette);
-                        SetChunk(cx, cz, chunk);
-                        chunksLoaded++;
-                    }
+            using var reader = new RegionReader(path);
+            foreach (var (tag, x, z) in reader.ReadAll()) {
+                Chunk chunk;
+
+                if (tag.ContainsKey("Level", TagType.Compound)) {
+                    var serializer = world.GetSerializer(tag);
+                    chunk = serializer.Deserialize(tag, Palette);
+                } else {
+                    chunk = new Chunk(X + x, Z + z, 0, -1, Palette);
+                    chunk.Opaque = tag;
+                    chunk.Flags |= ChunkFlags.OpaqueOnly;
                 }
+                Ensure.That((chunk.X & 31) == x && (chunk.Z & 31) == z, "Chunk in wrong location. Relocation is not supported");
+
+                PutChunk(chunk);
+                chunksLoaded++;
             }
-            return chunksLoaded > 0;
+            return chunksLoaded;
         }
         /// <summary> Creates a new region file with the chunks present in this buffer. </summary>
         /// <param name="path">Full path of the .mca file</param>
@@ -60,14 +66,18 @@ namespace AnvilPacker.Level
         {
             Ensure.That(Size == 32);
 
-            using var writer = new AnvilWriter(path);
+            using var writer = new RegionWriter(path);
             for (int cz = 0; cz < 32; cz++) {
                 for (int cx = 0; cx < 32; cx++) {
                     var chunk = GetChunk(cx, cz);
                     if (chunk != null) {
-                        var serializer = world.GetSerializer(chunk);
-                        var tag = serializer.Serialize(chunk);
-                        writer.Write(cx, cz, tag);
+                        if (chunk.HasFlag(ChunkFlags.OpaqueOnly)) {
+                            writer.Write(cx, cz, chunk.Opaque);
+                        } else {
+                            var serializer = world.GetSerializer(chunk);
+                            var tag = serializer.Serialize(chunk);
+                            writer.Write(cx, cz, tag);
+                        }
                     }
                 }
             }
@@ -144,6 +154,7 @@ namespace AnvilPacker.Level
             return unusedCount;
         }
 
+        /// <summary> Gets the chunk at the specified coordinates, relative to this region. </summary>
         public Chunk GetChunk(int x, int z)
         {
             if ((uint)x >= (uint)Size || (uint)z >= (uint)Size) {
@@ -151,15 +162,10 @@ namespace AnvilPacker.Level
             }
             return Chunks[x + z * Size];
         }
-        public void SetChunk(int x, int z, Chunk chunk)
+        public void PutChunk(Chunk chunk)
         {
-            if ((uint)x >= (uint)Size || (uint)z >= (uint)Size) {
-                throw new ArgumentOutOfRangeException();
-            }
-            Ensure.That(chunk.X >= X && chunk.X < X + Size);
-            Ensure.That(chunk.Z >= Z && chunk.Z < Z + Size);
-            Ensure.That((chunk.X & 31) == x && (chunk.Z & 31) == z);
-
+            int x = chunk.X & 31;
+            int z = chunk.Z & 31;
             Chunks[x + z * Size] = chunk;
         }
 

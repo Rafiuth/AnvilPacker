@@ -24,6 +24,14 @@ namespace AnvilPacker.Data
                 return mem.GetBuffer().AsSpan(0, checked((int)mem.Position));
             }
         }
+        public Memory<byte> BufferMem
+        {
+            get {
+                Flush();
+                var mem = (MemoryStream)BaseStream;
+                return mem.GetBuffer().AsMemory(0, checked((int)mem.Position));
+            }
+        }
 
         public MemoryDataWriter(int initialCapacity = 4096) 
             : base(new MemoryStream(initialCapacity), true, 64)

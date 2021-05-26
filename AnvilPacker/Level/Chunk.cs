@@ -19,7 +19,7 @@ namespace AnvilPacker.Level
         /// <summary> Data that the serializer doesn't know how to handle. This is the root tag from the region chunk. </summary>
         public CompoundTag? Opaque;
         public int DataVersion;
-        public bool HasLightData;
+        public ChunkFlags Flags;
 
         public Chunk(int x, int z, int minSy, int maxSy, BlockPalette palette)
         {
@@ -29,6 +29,19 @@ namespace AnvilPacker.Level
             MaxSectionY = maxSy;
             Sections = new ChunkSection[MaxSectionY - MinSectionY + 1];
             Palette = palette;
+        }
+
+        public bool HasFlag(ChunkFlags mask)
+        {
+            return (Flags & mask) == mask;
+        }
+        public void SetFlag(ChunkFlags mask, bool value = true)
+        {
+            if (value) {
+                Flags |= mask;
+            } else {
+                Flags &= ~mask;
+            }
         }
 
         /// <param name="y">Section Y coord (blockY >> 4)</param>
@@ -80,5 +93,13 @@ namespace AnvilPacker.Level
             var sect = GetOrCreateSection(y >> 4);
             sect.SetBlock(x, y & 15, z, block);
         }
+    }
+    [Flags]
+    public enum ChunkFlags
+    {
+        //Warn: don't change values, they are transmitted by the codec.
+        None            = 0,
+        HasLightData    = 1 << 0,
+        OpaqueOnly      = 1 << 1
     }
 }

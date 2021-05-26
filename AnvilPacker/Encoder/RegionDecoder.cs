@@ -9,17 +9,15 @@ using NLog;
 
 namespace AnvilPacker.Encoder.v1
 {
-    public class Decoder
+    public class RegionDecoder
     {
         private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
 
         private RegionBuffer _region;
         private int _blockCount; //updated by ReadChunkBitmap()
+        private BlockCodec _blockCodec;
 
-        private int _ctxBits;
-        private Vec3i[] _ctxNeighbors;
-
-        public Decoder(RegionBuffer region)
+        public RegionDecoder(RegionBuffer region)
         {
             _region = region;
             region.Clear();
@@ -36,54 +34,7 @@ namespace AnvilPacker.Encoder.v1
                 ReadHeader(comp);
                 ReadMetadata(comp);
             }
-            DecodeChunks(stream, progress);
-        }
-
-        private void DecodeChunks(DataReader stream, IProgress<double> progress)
-        {
-            var contexts = new Context[1 << _ctxBits];
-            var ac = new ArithmDecoder(stream);
-            int blocksProcessed = 0;
-
-            foreach (var (chunk, y) in ChunkIterator.CreateLayered(_region)) {
-                DecodeBlocks(chunk, y, contexts, _ctxNeighbors, ac);
-
-                blocksProcessed += 16 * 16;
-                if ((blocksProcessed & 4095) == 0) { //update progress on every chunk
-                    progress?.Report(blocksProcessed / (double)_blockCount);
-                }
-            }
-        }
-        private unsafe void DecodeBlocks(ChunkIterator chunk, int y, Span<Context> contexts, Vec3i[] neighbors, ArithmDecoder ac)
-        {
-            Debug.Assert(neighbors.Length <= 4);
-            Debug.Assert(chunk.Palette == _region.Palette);
-
-            for (int z = 0; z < 16; z++) {
-                for (int x = 0; x < 16; x++) {
-                    ulong key = 0;
-
-                    for (int i = 0; i < neighbors.Length; i++) {
-                        var rel = neighbors[i];
-                        int nx = x + rel.X;
-                        int ny = y + rel.Y;
-                        int nz = z + rel.Z;
-
-                        key = (key << 16) | chunk.GetBlockId(nx, ny, nz);
-                    }
-                    var ctx = GetContext(contexts, key);
-                    var id = ctx.Read(ac);
-
-                    chunk.SetBlockId(x, y, z, id);
-                }
-            }
-        }
-        private Context GetContext(Span<Context> contexts, ulong key)
-        {
-            int slot = Context.GetSlot(key, _ctxBits);
-            var ctx = contexts[slot] ??= new Context(_region.Palette);
-
-            return ctx;
+            _blockCodec.Decode(stream, CodecProgressListener.MaybeCreate(_blockCount, progress));
         }
 
         private void ReadHeader(DataReader stream)
@@ -91,17 +42,12 @@ namespace AnvilPacker.Encoder.v1
             _region.X = stream.ReadVarInt() * _region.Size;
             _region.Z = stream.ReadVarInt() * _region.Size;
 
-            _ctxBits = stream.ReadByte();
-            _ctxNeighbors = new Vec3i[stream.ReadByte()];
-            for (int i = 0; i < _ctxNeighbors.Length; i++) {
-                _ctxNeighbors[i] = new Vec3i(
-                    stream.ReadSByte(),
-                    stream.ReadSByte(),
-                    stream.ReadSByte()
-                );
-            }
             ReadPalette(stream);
             ReadChunkBitmap(stream);
+
+            int blockCodecId = stream.ReadVarUInt();
+            _blockCodec = BlockCodec.CreateFromId(_region, blockCodecId);
+            _blockCodec.ReadSettings(stream);
         }
 
         private void ReadChunkBitmap(DataReader stream)
@@ -114,7 +60,7 @@ namespace AnvilPacker.Encoder.v1
                 for (int x = 0; x < _region.Size; x++) {
                     if (stream.ReadByte() != 0) {
                         var chunk = new Chunk(_region.X + x, _region.Z + z, minY, maxY, _region.Palette);
-                        _region.SetChunk(x, z, chunk);
+                        _region.PutChunk(chunk);
                     }
                 }
             }
@@ -174,8 +120,8 @@ namespace AnvilPacker.Encoder.v1
             Ensure.That(version == 0, "Unsupported version");
 
             foreach (var chunk in _region.Chunks.ExceptNull()) {
+                chunk.Flags = (ChunkFlags)stream.ReadVarUInt();
                 chunk.DataVersion = stream.ReadVarUInt();
-                chunk.HasLightData = false;
                 chunk.Opaque = NbtIO.Read(stream);
             }
         }

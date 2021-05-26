@@ -7,25 +7,20 @@ using AnvilPacker.Level;
 using AnvilPacker.Util;
 using NLog;
 
-namespace AnvilPacker.Encoder.v1
+namespace AnvilPacker.Encoder
 {
-    public class Encoder
+    public class RegionEncoder
     {
-        private const int CTX_BITS = 13;
-        private static readonly Vec3i[] CTX_NEIGHBORS = {
-            new(-1, 0, 0),
-            new(0, -1, 0),
-            new(0, 0, -1),
-        };
-
         private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
         
         private RegionBuffer _region;
         private int _blockCount; //updated by WriteChunkBitmap()
+        private BlockCodec _blockCodec;
 
-        public Encoder(RegionBuffer region)
+        public RegionEncoder(RegionBuffer region)
         {
             _region = region;
+            _blockCodec = new v1.BlockCodecV1(region);
         }
 
         public void Encode(DataWriter stream, IProgress<double> progress = null)
@@ -42,62 +37,14 @@ namespace AnvilPacker.Encoder.v1
             stream.WriteBytes(headerSpan);
 
             long startPos = stream.Position;
-            EncodeChunks(stream, progress);
+            _blockCodec.Encode(stream, CodecProgressListener.MaybeCreate(_blockCount, progress));
+
             double bitsPerBlock = (stream.Position - startPos) * 8.0 / _blockCount;
 
             _logger.Debug($"Stats for region {_region.X >> 5} {_region.Z >> 5}");
             _logger.Debug($" NumBlocks: {_blockCount / 1000000.0:0.0}M  Palette: {_region.Palette.Count}");
-            _logger.Debug($" BitsPerBlock: {bitsPerBlock:0.000}  NumContexts: 2^{CTX_BITS}");
+            _logger.Debug($" BitsPerBlock: {bitsPerBlock:0.000}");
             _logger.Debug($" EncSize: {stream.Position / 1024.0:0.000}KB  Header+Metadata: {headerSpan.Length / 1024.0:0.000}KB");
-        }
-
-        private void EncodeChunks(DataWriter stream, IProgress<double> progress)
-        {
-            var contexts = new Context[1 << CTX_BITS];
-            var ac = new ArithmEncoder(stream);
-            int blocksProcessed = 0;
-
-            foreach (var (chunk, y) in ChunkIterator.CreateLayered(_region)) {
-                EncodeBlocks(chunk, y, contexts, CTX_NEIGHBORS, ac);
-
-                blocksProcessed += 16 * 16;
-                if ((blocksProcessed & 4095) == 0) { //update progress on every chunk
-                    progress?.Report(blocksProcessed / (double)_blockCount);
-                }
-            }
-            ac.Flush();
-        }
-        private unsafe void EncodeBlocks(ChunkIterator chunk, int y, Span<Context> contexts, Vec3i[] neighbors, ArithmEncoder ac)
-        {
-            Debug.Assert(neighbors.Length <= 4);
-            Debug.Assert(neighbors.All(n => n.Y <= 0 && (n.X <= 0 || n.Z <= 0)));
-            Debug.Assert(chunk.Palette == _region.Palette);
-
-            for (int z = 0; z < 16; z++) {
-                for (int x = 0; x < 16; x++) {
-                    ulong key = 0;
-
-                    for (int i = 0; i < neighbors.Length; i++) {
-                        var rel = neighbors[i];
-                        int nx = x + rel.X;
-                        int ny = y + rel.Y;
-                        int nz = z + rel.Z;
-
-                        key = (key << 16) | chunk.GetBlockId(nx, ny, nz);
-                    }
-                    var ctx = GetContext(contexts, key);
-                    var id = chunk.GetBlockIdFast(x, y, z);
-
-                    ctx.Write(ac, id);
-                }
-            }
-        }
-        private Context GetContext(Span<Context> contexts, ulong key)
-        {
-            int slot = Context.GetSlot(key, CTX_BITS);
-            var ctx = contexts[slot] ??= new Context(_region.Palette);
-
-            return ctx;
         }
 
         private void WriteHeader(DataWriter stream)
@@ -105,15 +52,11 @@ namespace AnvilPacker.Encoder.v1
             stream.WriteVarInt(Maths.FloorDiv(_region.X, _region.Size));
             stream.WriteVarInt(Maths.FloorDiv(_region.Z, _region.Size));
 
-            stream.WriteByte(CTX_BITS);
-            stream.WriteByte(CTX_NEIGHBORS.Length);
-            foreach (var (nx, ny, nz) in CTX_NEIGHBORS) {
-                stream.WriteSByte(nx);
-                stream.WriteSByte(ny);
-                stream.WriteSByte(nz);
-            }
             WritePalette(stream);
             WriteChunkBitmap(stream);
+
+            stream.WriteVarUInt(_blockCodec.GetId());
+            _blockCodec.WriteSettings(stream);
         }
 
         private void WriteChunkBitmap(DataWriter stream)
@@ -140,11 +83,9 @@ namespace AnvilPacker.Encoder.v1
                         if (chunk == null) continue;
                         
                         bool exists = chunk.GetSection(y) != null;
-                        stream.WriteByte(exists ? 1 : 0);
 
-                        if (exists) {
-                            _blockCount += 4096;
-                        }
+                        stream.WriteByte(exists ? 1 : 0);
+                        _blockCount += exists ? 4096 : 0;
                     }
                 }
             }
@@ -175,6 +116,7 @@ namespace AnvilPacker.Encoder.v1
             stream.WriteVarUInt(0); //version
 
             foreach (var chunk in _region.Chunks.ExceptNull()) {
+                stream.WriteVarUInt((int)chunk.Flags);
                 stream.WriteVarUInt(chunk.DataVersion);
                 NbtIO.Write(chunk.Opaque, stream);
             }

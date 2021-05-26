@@ -6,8 +6,15 @@ namespace AnvilPacker.Encoder.Transforms
 {
     public class TransformPipe
     {
+        public static TransformPipe Empty { get; } = new();
+
         //Pipe string: hidden_block_removal[samples=64,radius=3,cum_freqs=false],!predict_upgrade_data
         public IReadOnlyList<TransformBase> Transforms { get; }
+
+        public TransformPipe(params TransformBase[] transforms)
+        {
+            Transforms = transforms;
+        }
 
         public void Apply(RegionBuffer region)
         {

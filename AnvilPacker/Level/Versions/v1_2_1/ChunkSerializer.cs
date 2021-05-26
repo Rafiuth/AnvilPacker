@@ -37,7 +37,7 @@ namespace AnvilPacker.Level.Versions.v1_2_1
                 }
             }
             DeserializeHeightmap(chunk, tag.PopMaybe<int[]>("HeightMap"));
-            chunk.HasLightData = tag.PopMaybe<bool>("LightPopulated");
+            chunk.SetFlag(ChunkFlags.HasLightData, tag.PopMaybe<bool>("LightPopulated"));
 
             return chunk;
         }
@@ -115,7 +115,7 @@ namespace AnvilPacker.Level.Versions.v1_2_1
             }
             tag.SetList("Sections", sections);
             tag.SetIntArray("HeightMap", SerializeHeightmap(chunk));
-            tag.SetBool("LightPopulated", chunk.HasLightData);
+            tag.SetBool("LightPopulated", chunk.HasFlag(ChunkFlags.HasLightData));
 
             var rootTag = new CompoundTag();
             rootTag.SetCompound("Level", tag);

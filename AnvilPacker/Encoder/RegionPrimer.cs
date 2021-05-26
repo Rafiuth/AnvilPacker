@@ -4,14 +4,19 @@ using AnvilPacker.Encoder.Transforms;
 using AnvilPacker.Level;
 using AnvilPacker.Util;
 
-namespace AnvilPacker.Encoder.v1
+namespace AnvilPacker.Encoder
 {
-    /// <summary> Calculates metadata for decoded chunks. </summary>
-    public class Primer
+    /// <summary> Responsible of reconstruction of non critical data in decoded regions. </summary>
+    public class RegionPrimer
     {
-        public RegionBuffer Region { get; init; }
-        public TransformPipe Transforms { get; init; }
+        public RegionBuffer Region { get; }
+        public TransformPipe Transforms { get;}
 
+        public RegionPrimer(RegionBuffer region, TransformPipe transforms)
+        {
+            Region = region;
+            Transforms = transforms;
+        }
 
         public void Prime(IProgress<double> progress = null)
         {
