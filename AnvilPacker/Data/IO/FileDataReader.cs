@@ -1,3 +1,5 @@
+#nullable enable
+
 using System;
 using System.IO;
 using System.IO.MemoryMappedFiles;
@@ -8,20 +10,25 @@ namespace AnvilPacker.Data
     public unsafe class FileDataReader : DataReader
     {
         private const int BASE_BUF_SIZE = 128;
-        private MemoryMappedFile _file;
+        private FileStream _fs;
+        private MemoryMappedFile? _mappedFile;
 
         public FileDataReader(string path)
-            : base(CreateBaseStream(path, out var file), false, BASE_BUF_SIZE)
+            : base(CreateBaseStream(path, out var fs, out var file), false, BASE_BUF_SIZE)
         {
-            _file = file;
+            _fs = fs;
+            _mappedFile = file;
         }
 
-        private static Stream CreateBaseStream(string path, out MemoryMappedFile file)
+        private static Stream CreateBaseStream(string path, out FileStream fs, out MemoryMappedFile? mappedFile)
         {
-            //CreateViewStream() will randomly throw UnauthorizedAccessException if we dont set
-            //access to ReadWrite.
-            file = MemoryMappedFile.CreateFromFile(path, FileMode.Open, null, 0, MemoryMappedFileAccess.ReadWrite);
-            return file.CreateViewStream(0, 0, MemoryMappedFileAccess.Read);
+            fs = File.OpenRead(path);
+            if (fs.Length == 0) {
+                mappedFile = null; //can't map an empty file, weird.
+                return fs;
+            }
+            mappedFile = MemoryMappedFile.CreateFromFile(fs, null, 0, MemoryMappedFileAccess.Read, HandleInheritability.None, false);
+            return mappedFile.CreateViewStream(0, 0, MemoryMappedFileAccess.Read);
         }
         
         /// <summary> Creates a new view in the specified portion this file. </summary>
@@ -29,14 +36,18 @@ namespace AnvilPacker.Data
         {
             return new DataReader(ForkStream(offset, length), false, BASE_BUF_SIZE);
         }
-        public MemoryMappedViewStream ForkStream(long offset, long length)
+        public Stream ForkStream(long offset, long length)
         {
-            return _file.CreateViewStream(offset, length);
+            if (_mappedFile == null) {
+                throw new ArgumentException("Cannot fork empty file");
+            }
+            return _mappedFile.CreateViewStream(offset, length, MemoryMappedFileAccess.Read);
         }
 
         public override void Dispose()
         {
-            _file.Dispose();
+            _mappedFile?.Dispose();
+            _fs?.Dispose();
         }
     }
 }

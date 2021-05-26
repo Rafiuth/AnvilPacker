@@ -27,7 +27,7 @@ namespace AnvilPacker.Level
         }
 
         /// <summary> Gets or creates the state for the given block and properties. </summary>
-        /// <param name="props">The block state property values. Note that this array will not be copied, changes made to it may reflect into the resulting state. </param>
+        /// <param name="props">The block state property values. Note that the block state will take the ownership of this array. Do not change it after calling this method. </param>
         public static BlockState GetState(ResourceName blockName, (string Name, string Value)[] props)
         {
             return FindState(blockName, props) ?? 
