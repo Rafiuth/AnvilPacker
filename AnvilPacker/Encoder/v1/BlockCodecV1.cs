@@ -9,6 +9,7 @@ using AnvilPacker.Util;
 
 namespace AnvilPacker.Encoder.v1
 {
+    // Fixed Order Context + CABAC based
     public class BlockCodecV1 : BlockCodec
     {
         public int ContextBits = 13; //log2 number of contexts to use

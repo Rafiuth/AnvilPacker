@@ -39,7 +39,8 @@ namespace AnvilPacker.Encoder
             return ver;
         }
         public static readonly (int Id, Type Class)[] KnownCodecs = {
-            (1, typeof(v1.BlockCodecV1))
+            (1, typeof(v1.BlockCodecV1)), //Fixed Order Context + CABAC
+            (3, typeof(v3.BlockCodecV3))  //Brotli
         };
     }
     public class CodecProgressListener
