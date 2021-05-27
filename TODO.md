@@ -1,21 +1,22 @@
 # Chunk serialization
-[x] 1.16 (de)serializer
-[ ] 1.13-1.15 (de)serializer
-[ ] 1.x-1.12.2 (de)serializer
+[x] 1.16
+[x] 1.13-1.15
+[x] 1.2.1-1.12.2
 
 # Encoder
 [ ] Scheduled ticks
 [ ] Biomes
 
 # Decoder
-[ ] Prime light data
+[ ] Calculate light data, (1.12.2 and prior doesn't seem to recalculate it as expected with LightPopulated=0)
+[x] Fix legacy_blocks.json, light (opacity) values are wrong
 
 # CLI
 [ ] Encoder/decoder CLI **medium**
 [ ] Utility commands (nbt print, region strip/repack)
 
 # Architeture
-[ ] Allow BlockStates to be dynamically defined **medium**
+[x] Allow BlockStates to be dynamically defined
 
 # Features and Improvements
 [ ] Better NBT compression
