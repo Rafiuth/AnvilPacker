@@ -13,29 +13,6 @@ namespace AnvilPacker.Encoder
 
     public static class CodecPrimitives
     {
-        public static void WriteVLC(this BitWriter bw, int val)
-        {
-            int len = BitOperations.Log2((uint)val);
-
-            int rangeMin  = len == 0 ? 0 : (1 << len);
-            int valueBits = len == 0 ? 1 : len;
-
-            bw.WriteBits(~0, len);
-            bw.WriteBit(0);
-            bw.WriteBits(val - rangeMin, valueBits);
-        }
-        public static int ReadVLC(this BitReader br)
-        {
-            int len = 0;
-            while (br.ReadBool()) {
-                len++;
-            }
-            int rangeMin  = len == 0 ? 0 : (1 << len);
-            int valueBits = len == 0 ? 1 : len;
-
-            return rangeMin + br.ReadBits(valueBits);
-        }
-
         public static void WriteVarUInt(this DataWriter dw, int val)
         {
             while ((val & ~0x7F) != 0) {
@@ -111,66 +88,6 @@ namespace AnvilPacker.Encoder
         {
             return 1 + BitOperations.Log2((ulong)val) / 7;
         }
-
-        public static void RunLengthEncode(int length, Func<int, int, bool> compare, Action<int> writeLiteral, Action<int> writeRunLen)
-        {
-            int literals = 0;
-            int i = 0;
-            while (i < length) {
-                //calculate run length
-                int j = i + 1;
-                while (j < length && compare(i, j)) j++;
-
-                int len = j - i;
-                bool isRun = len >= 2;
-
-                if (isRun && literals > 0) {
-                    //encode pending literals
-                    Encode(i - literals, literals, true);
-                    literals = 0;
-                }
-                if (isRun) {
-                    Encode(i, len, false);
-                } else {
-                    literals += len;
-                }
-                i = j;
-            }
-            if (literals > 0) {
-                //encode last pending literals
-                Encode(length - literals, literals, true);
-            }
-            void Encode(int start, int count, bool isLiteral)
-            {
-                int numLiterals = isLiteral ? count : 2;
-                for (int i = 0; i < numLiterals; i++) {
-                    writeLiteral(start + i);
-                }
-                if (!isLiteral) {
-                    writeRunLen(count - 2);
-                }
-            }
-        }
-        public static void RunLengthDecode<T>(int length, Func<T> readLiteral, Func<int> readRunLen, Action<int, T> consume) where T : IEquatable<T>
-        {
-            T prev = default;
-
-            for (int i = 0; i < length; ) {
-                var val = readLiteral();
-                consume(i, val);
-                i++;
-
-                if (i > 1 && prev.Equals(val)) {
-                    int reps = readRunLen();
-
-                    for (int j = 0; j < reps; j++) {
-                        consume(i + j, val);
-                    }
-                    i += reps;
-                }
-                prev = val;
-            }
-        }
     }
     //Note: stolen from FLIF's symbol.hpp
     public class NzCoder
@@ -206,6 +123,7 @@ namespace AnvilPacker.Encoder
             Debug.Assert(min <= max);
             Debug.Assert(value >= min);
             Debug.Assert(value <= max);
+            Debug.Assert(Math.Abs(value) < (1 << bits));
 
             // avoid doing anything if the value is already known
             if (min == max) return;
