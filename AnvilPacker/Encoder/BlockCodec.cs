@@ -19,28 +19,31 @@ namespace AnvilPacker.Encoder
             Region = region;
         }
 
+        /// <summary> Encodes the blocks in the current region to the specified stream. </summary>
         public abstract void Encode(DataWriter stream, CodecProgressListener? progress = null);
+        /// <summary> Decodes the blocks for the current region from the specified stream. </summary>
         public abstract void Decode(DataReader reader, CodecProgressListener? progress = null);
 
+        /// <summary> Writes the codec header/settings to the specified stream. </summary>
         public abstract void WriteSettings(DataWriter stream);
         public abstract void ReadSettings(DataReader stream);
 
         public static BlockCodec CreateFromId(RegionBuffer region, int id)
         {
             var (_, klass) = KnownCodecs.FirstOrDefault(v => v.Id == id);
-            Ensure.That(klass != null, $"Unknown block codec version '{id}'");
+            Ensure.That(klass != null, $"Unknown block codec id '{id}'");
 
             return (BlockCodec)Activator.CreateInstance(klass, region)!;
         }
         public int GetId()
         {
-            var (ver, klass) = KnownCodecs.FirstOrDefault(v => v.Class == GetType());
+            var (id, klass) = KnownCodecs.FirstOrDefault(v => v.Class == GetType());
             Ensure.That(klass != null, $"Unregistered block codec {GetType().Name}");
-            return ver;
+            return id;
         }
         public static readonly (int Id, Type Class)[] KnownCodecs = {
-            (1, typeof(v1.BlockCodecV1)), //Fixed Order Context + CABAC
-            (3, typeof(v3.BlockCodecV3))  //Brotli
+            (1, typeof(v1.BlockCodecV1)),
+            (2, typeof(v2.BrotliBlockCodec))
         };
     }
     public class CodecProgressListener
@@ -49,6 +52,7 @@ namespace AnvilPacker.Encoder
         public int CodedBlocks { get; private set; }
         public IProgress<double> Listener { get; private init; } = null!;
 
+        /// <summary> Creates an instance of this class if <paramref name="listener"/> is not null. </summary>
         public static CodecProgressListener? MaybeCreate(int totalBlocks, IProgress<double>? listener)
         {
             if (listener == null) {

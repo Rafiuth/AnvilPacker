@@ -9,11 +9,12 @@ using AnvilPacker.Util;
 
 namespace AnvilPacker.Encoder.v1
 {
-    // Fixed Order Context + CABAC based
+    //Based on Fixed Order Model and Adaptive Arithmetic Coding
+    //TODO: Pick a name for this codec
     public class BlockCodecV1 : BlockCodec
     {
         public int ContextBits = 13; //log2 number of contexts to use
-        public Vec3i[] ContextNeighbors = { //context of a block - each coord is relative and points to an already decoded block
+        public Vec3i[] ContextNeighbors = { //context of a block (relative coords to previously coded blocks)
             new(-1, 0, 0),
             new(0, -1, 0),
             new(0, 0, -1),
