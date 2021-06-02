@@ -145,7 +145,7 @@ namespace AnvilPacker.Level.Versions.v1_13
 
             var list = new ListTag();
             foreach (var id in section.Blocks) {
-                if (indices[id] >= 0) continue;
+                if (indices[id] != BlockId.MaxValue) continue;
 
                 var state = palette.GetState(id);
                 var tag = new CompoundTag();
