@@ -26,7 +26,9 @@ namespace AnvilPacker.Data
         {
             int colon = str.IndexOf(':');
             //empty namespace or path = ":abc" or "abc:"
-            Ensure.That(str.Length > 0 && colon != 0 && colon != str.Length - 1, $"Empty namespace or path in resource name. '{str}'");
+            if (str.Length == 0 || colon == 0 || colon == str.Length - 1) {
+                throw new FormatException($"Empty namespace or path in resource name. '{str}'");
+            }
             
             if (colon < 0) {
                 return new ResourceName(DefaultNamespace, str);

@@ -130,7 +130,11 @@ namespace AnvilPacker.Level
             var props = Array.Empty<(string, string)>();
 
             if (tag.TryGet("Properties", out CompoundTag propsTag)) {
-                props = propsTag.Select(e => (e.Key, e.Value.Value<string>())).ToArray();
+                props = new (string, string)[propsTag.Count];
+                int i = 0;
+                foreach (var (k, v) in propsTag) {
+                    props[i++] = (k, v.Value<string>());
+                }
             }
             return GetState(blockName, props);
         }

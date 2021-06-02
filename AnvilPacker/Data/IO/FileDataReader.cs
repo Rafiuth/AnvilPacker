@@ -28,7 +28,8 @@ namespace AnvilPacker.Data
                 return fs;
             }
             mappedFile = MemoryMappedFile.CreateFromFile(fs, null, 0, MemoryMappedFileAccess.Read, HandleInheritability.None, false);
-            return mappedFile.CreateViewStream(0, 0, MemoryMappedFileAccess.Read);
+            //Passing 0 as the view size will fallback to the file size on disk. (aligned to page size/4KBs?)
+            return mappedFile.CreateViewStream(0, fs.Length, MemoryMappedFileAccess.Read);
         }
         
         /// <summary> Creates a new view in the specified portion this file. </summary>

@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Runtime.Intrinsics;
+using System.Runtime.Intrinsics.X86;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -55,6 +57,22 @@ namespace AnvilPacker.Util
             ref byte ptr = ref Unsafe.As<T, byte>(ref MemoryMarshal.GetArrayDataReference(arr));
             return ref Unsafe.AddByteOffset(ref ptr, byteOffset);
         }
+        /// <summary> Returns a reference to the n-th byte of the span. </summary>
+        [MethodImpl(Inline)]
+        public static ref byte GetByteRef<T>(ReadOnlySpan<T> span, nint byteOffset = 0)
+        {
+            // return (byte*)&buf[0] + byteOffset
+            ref byte ptr = ref Unsafe.As<T, byte>(ref MemoryMarshal.GetReference(span));
+            return ref Unsafe.AddByteOffset(ref ptr, byteOffset);
+        }
+        /// <summary> Returns a reference to the n-th byte of the span. </summary>
+        [MethodImpl(Inline)]
+        public static ref byte GetByteRef<T>(Span<T> span, nint byteOffset = 0)
+        {
+            // return (byte*)&buf[0] + byteOffset
+            ref byte ptr = ref Unsafe.As<T, byte>(ref MemoryMarshal.GetReference(span));
+            return ref Unsafe.AddByteOffset(ref ptr, byteOffset);
+        }
 
         /// <summary> Returns a reference to the n-th element of the array. </summary>
         [MethodImpl(Inline)]
@@ -67,6 +85,13 @@ namespace AnvilPacker.Util
         /// <summary> Returns a reference to the n-th element of the span. </summary>
         [MethodImpl(Inline)]
         public static ref T GetRef<T>(ReadOnlySpan<T> span, nint elemOffset = 0)
+        {
+            // return &buf[bytePos]
+            return ref Unsafe.Add(ref MemoryMarshal.GetReference(span), elemOffset);
+        }
+        /// <summary> Returns a reference to the n-th element of the span. </summary>
+        [MethodImpl(Inline)]
+        public static ref T GetRef<T>(Span<T> span, nint elemOffset = 0)
         {
             // return &buf[bytePos]
             return ref Unsafe.Add(ref MemoryMarshal.GetReference(span), elemOffset);
@@ -221,6 +246,72 @@ namespace AnvilPacker.Util
             if (sizeof(T) == 8) return O(BinaryPrimitives.ReverseEndianness(I<ulong>(value)));
 
             throw new NotSupportedException();
+        }
+
+        /// <summary> Swaps the bytes of the elements in <paramref name="buf"/></summary>
+        public static void BSwapBulk<T>(Span<T> buf) where T : unmanaged
+        {
+            BSwapBulk(ref GetByteRef(buf), buf.Length * sizeof(T), sizeof(T));
+        }
+        /// <summary> Swaps the bytes of the elements in <paramref name="ptr"/></summary>
+        /// <param name="sizeInBytes">Size in bytes of <paramref name="ptr"/></param>
+        /// <param name="elemSize">Size of the element. Must be in {1, 2, 4, 8}</param>
+        public static void BSwapBulk(ref byte ptr, nint sizeInBytes, int elemSize)
+        {
+            var BSWAP2_SHUFFMASK = Vector256.Create(
+                 1,  0, /**/  3,  2, /**/  5,  4, /**/  7,  6, 
+                 9,  8, /**/ 11, 10, /**/ 14, 13, /**/ 16, 15, 
+                18, 17, /**/ 20, 19, /**/ 22, 21, /**/ 24, 23,
+                26, 25, /**/ 28, 27, /**/ 30, 29, /**/ 32, 31
+            ).AsByte();
+            var BSWAP4_SHUFFMASK = Vector256.Create(
+                 3,  2,  1,  0, /**/  7,  6,  5,  4,
+                11, 10,  9,  8, /**/ 15, 14, 13, 12,
+                19, 18, 17, 16, /**/ 23, 22, 21, 20,
+                27, 26, 25, 24, /**/ 31, 30, 29, 28
+            ).AsByte();
+            var BSWAP8_SHUFFMASK = Vector256.Create(
+                 7,  6,  5,  4,  3,  2,  1,  0,
+                15, 14, 13, 12, 11, 10,  9,  8,
+                23, 22, 21, 20, 19, 18, 17, 16,
+                31, 30, 29, 28, 27, 26, 25, 24
+            ).AsByte();
+
+            switch (elemSize) {
+                case 1: break;
+                case 2: BSwapBulk<ushort>(ref ptr, sizeInBytes, BSWAP2_SHUFFMASK); break;
+                case 4: BSwapBulk<uint  >(ref ptr, sizeInBytes, BSWAP4_SHUFFMASK); break;
+                case 8: BSwapBulk<ulong >(ref ptr, sizeInBytes, BSWAP8_SHUFFMASK); break;
+                default: Ensure.That(false, "bswap element size must be in {1, 2, 4, 8}"); break;
+            }
+        }
+        private static void BSwapBulk<T>(ref byte ptr, nint sizeInBytes, Vector256<byte> shuffMask) where T : unmanaged
+        {
+            ref byte startPtr = ref ptr;
+
+            if (Avx2.IsSupported) {
+                ref byte endPtrAlign = ref Unsafe.Add(ref startPtr, sizeInBytes & ~31);
+                while (Unsafe.IsAddressLessThan(ref ptr, ref endPtrAlign)) {
+                    ref var vec = ref Unsafe.As<byte, Vector256<byte>>(ref ptr);
+                    vec = Avx2.Shuffle(vec, shuffMask);
+                    ptr = ref Unsafe.Add(ref ptr, 32);
+                }
+            }
+            if (Ssse3.IsSupported) {
+                ref byte endPtrAlign = ref Unsafe.Add(ref startPtr, sizeInBytes & ~15);
+                var mask128 = shuffMask.GetLower();
+                while (Unsafe.IsAddressLessThan(ref ptr, ref endPtrAlign)) {
+                    ref var vec = ref Unsafe.As<byte, Vector128<byte>>(ref ptr);
+                    vec = Ssse3.Shuffle(vec, mask128);
+                    ptr = ref Unsafe.Add(ref ptr, 16);
+                }
+            }
+            ref byte endPtr = ref Unsafe.Add(ref startPtr, sizeInBytes);
+            while (Unsafe.IsAddressLessThan(ref ptr, ref endPtr)) {
+                ref var val = ref Unsafe.As<byte, T>(ref ptr);
+                val = Mem.BSwap(val);
+                ptr = ref Unsafe.Add(ref ptr, sizeof(T));
+            }
         }
 
         /// <summary> Allocates a unmanaged memory block of <paramref name="count"/> <typeparamref name="T"/> elements from the heap. </summary>

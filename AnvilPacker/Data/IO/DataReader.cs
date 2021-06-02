@@ -169,9 +169,7 @@ namespace AnvilPacker.Data
         {
             ReadBytes(MemoryMarshal.AsBytes(buf));
             if (revElemBytes && sizeof(T) > 1) {
-                for (int i = 0; i < buf.Length; i++) {
-                    buf[i] = Mem.BSwap(buf[i]);
-                }
+                Mem.BSwapBulk(buf);
             }
         }
 
