@@ -23,7 +23,7 @@ namespace AnvilPacker.Level
 
         public BlockMaterial Material => Block.Material;
 
-        public bool HasAttribs(BlockAttributes attribs)
+        public bool HasAttrib(BlockAttributes attribs)
         {
             return (Attributes & attribs) == attribs;
         }

@@ -67,18 +67,16 @@ namespace AnvilPacker.Level
             Ensure.That(Size == 32);
 
             using var writer = new RegionWriter(path);
-            for (int cz = 0; cz < 32; cz++) {
-                for (int cx = 0; cx < 32; cx++) {
-                    var chunk = GetChunk(cx, cz);
-                    if (chunk != null) {
-                        if (chunk.HasFlag(ChunkFlags.OpaqueOnly)) {
-                            writer.Write(cx, cz, chunk.Opaque);
-                        } else {
-                            var serializer = world.GetSerializer(chunk);
-                            var tag = serializer.Serialize(chunk);
-                            writer.Write(cx, cz, tag);
-                        }
-                    }
+            foreach (var chunk in Chunks.ExceptNull()) {
+                int cx = chunk.X & 31;
+                int cz = chunk.Z & 31;
+                
+                if (chunk.HasFlag(ChunkFlags.OpaqueOnly)) {
+                    writer.Write(cx, cz, chunk.Opaque);
+                } else {
+                    var serializer = world.GetSerializer(chunk);
+                    var tag = serializer.Serialize(chunk);
+                    writer.Write(cx, cz, tag);
                 }
             }
         }

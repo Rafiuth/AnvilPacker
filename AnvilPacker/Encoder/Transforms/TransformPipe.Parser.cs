@@ -30,6 +30,8 @@ namespace AnvilPacker.Encoder.Transforms
         //TODO: Allow mutating presets, e.g. remove specific transforms and update values of existing ones.
         private static readonly Parser<char, TransformPipe> _parser = CreateParser();
 
+        public static JsonSerializer SettingSerializer { get; } = CreateSettingSerializer();
+
         private static Parser<char, TransformPipe> CreateParser()
         {
             var LBrace = Char('{');
@@ -112,7 +114,7 @@ namespace AnvilPacker.Encoder.Transforms
 
             var Transform = 
                 Identifier
-                    .Then(Object.Optional(), CreateTransform);
+                    .Then(Object.Optional(), (name, settings) => CreateTransform(name, settings.GetValueOrDefault()));
 
             var Pipe =
                 Transform
@@ -121,7 +123,13 @@ namespace AnvilPacker.Encoder.Transforms
 
             return Pipe;
         }
-
+        private static JsonSerializer CreateSettingSerializer()
+        {
+            var serializerSettings = new JsonSerializerSettings();
+            serializerSettings.Converters.Add(new BlockConverter());
+            serializerSettings.ObjectCreationHandling = ObjectCreationHandling.Replace;
+            return JsonSerializer.CreateDefault(serializerSettings);
+        }
 
         public static TransformPipe Parse(string str)
         {
@@ -171,7 +179,6 @@ namespace AnvilPacker.Encoder.Transforms
             }
             return result.Value;
         }
-
         private static int GetIndex(string str, SourcePos pos)
         {
             //https://github.com/benjamin-hodgson/Pidgin/blob/7f7f2b4164720bfd5690e0420f58cc27a605285b/Pidgin/ParseState.ComputeSourcePos.cs#L53
@@ -190,22 +197,22 @@ namespace AnvilPacker.Encoder.Transforms
             return i;
         }
 
-        private static TransformBase CreateTransform(string name, Maybe<JToken> settings)
+        public static TransformBase CreateTransform(string name, JToken? settings)
         {
             if (!KnownTransforms.TryGetValue(name, out var type)) {
                 throw new InvalidOperationException($"Unknown transform `{name}`");
             }
             var transform = (TransformBase)Activator.CreateInstance(type)!;
 
-            if (settings.HasValue) {
-                var serializerSettings = new JsonSerializerSettings();
-                serializerSettings.Converters.Add(new BlockConverter());
-                serializerSettings.ObjectCreationHandling = ObjectCreationHandling.Replace;
-                var serializer = JsonSerializer.CreateDefault(serializerSettings);
-                serializer.Populate(settings.Value.CreateReader(), transform);
+            if (settings != null) {
+                SettingSerializer.Populate(settings.CreateReader(), transform);
             }
-
             return transform;
+        }
+
+        public static string GetTransformName(TransformBase transform)
+        {
+            return KnownTransforms.First(e => e.Value == transform.GetType()).Key;
         }
 
         private class BlockConverter : JsonConverter<Block>
@@ -227,7 +234,14 @@ namespace AnvilPacker.Encoder.Transforms
             }
             public override void WriteJson(JsonWriter writer, Block? value, JsonSerializer serializer)
             {
-                throw new NotImplementedException();
+                Ensure.That(value != null);
+
+                var state = value.DefaultState;
+                if (state.HasAttrib(BlockAttributes.Legacy)) {
+                    writer.WriteValue(state.Id >> 4);
+                } else {
+                    writer.WriteValue(state.ToString());
+                }
             }
         }
     }

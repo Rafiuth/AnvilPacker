@@ -178,7 +178,7 @@ namespace AnvilPacker.Level.Versions.v1_2_1
                 if (b == BlockRegistry.Air) {
                     return (ushort)0;
                 }
-                Ensure.That(b.HasAttribs(BlockAttributes.Legacy));
+                Ensure.That(b.HasAttrib(BlockAttributes.Legacy));
                 return (ushort)b.Id;
             });
         }

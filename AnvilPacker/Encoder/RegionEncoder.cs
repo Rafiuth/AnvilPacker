@@ -25,6 +25,8 @@ namespace AnvilPacker.Encoder
 
         public void Encode(DataWriter stream, IProgress<double> progress = null)
         {
+            var sw = Stopwatch.StartNew();
+
             var headerBuf = new MemoryDataWriter(1024 * 256);
             using (var comp = Compressors.NewBrotliEncoder(headerBuf, true, 9, 22)) {
                 WriteHeader(comp);
@@ -36,15 +38,22 @@ namespace AnvilPacker.Encoder
             stream.WriteIntLE(headerSpan.Length);
             stream.WriteBytes(headerSpan);
 
+            long headerTime = sw.ElapsedMilliseconds;
+            sw.Restart();
+
             long startPos = stream.Position;
             _blockCodec.Encode(stream, CodecProgressListener.MaybeCreate(_blockCount, progress));
+
+            long blockEncTime = sw.ElapsedMilliseconds;
+            sw.Restart();
 
             double bitsPerBlock = (stream.Position - startPos) * 8.0 / _blockCount;
 
             _logger.Debug($"Stats for region {_region.X >> 5} {_region.Z >> 5}");
             _logger.Debug($" NumBlocks: {_blockCount / 1000000.0:0.0}M  Palette: {_region.Palette.Count}");
             _logger.Debug($" BitsPerBlock: {bitsPerBlock:0.000}");
-            _logger.Debug($" EncSize: {stream.Position / 1024.0:0.000}KB  Header+Metadata: {headerSpan.Length / 1024.0:0.000}KB");
+            _logger.Debug($" EncSize: {stream.Position / 1024.0:0.000}KB  Meta: {headerSpan.Length / 1024.0:0.000}KB");
+            _logger.Debug($" EncTime: Meta: {headerTime}ms  Blocks: {blockEncTime}ms  Speed: {_blockCount / 1000.0 / blockEncTime:0.0}m blocks/sec");
         }
 
         private void WriteHeader(DataWriter stream)
@@ -95,19 +104,22 @@ namespace AnvilPacker.Encoder
             var palette = _region.Palette;
             stream.WriteVarUInt(palette.Count);
 
-            foreach (var block in palette) {
+            foreach (var state in palette) {
                 int flags = 0;
-                flags |= block.HasAttribs(BlockAttributes.Legacy) ? 1 << 0 : 0;
+                flags |= state.HasAttrib(BlockAttributes.Legacy) ? 1 << 0 : 0;
                 stream.WriteByte(flags);
                 
-                stream.WriteNulString(block.ToString());
-                stream.WriteNulString(block.Material.Name.ToString(false));
+                stream.WriteNulString(state.ToString());
+                stream.WriteNulString(state.Material.Name.ToString(false));
 
-                stream.WriteVarUInt((int)(block.Attributes & ~BlockAttributes.InternalMask));
-                stream.WriteByte(block.Emittance << 4 | block.Opacity);
+                stream.WriteVarUInt((int)(state.Attributes & ~BlockAttributes.InternalMask));
+                stream.WriteByte(state.Emittance << 4 | state.Opacity);
                 
-                if (block.HasAttribs(BlockAttributes.Legacy)) {
-                    stream.WriteVarUInt(block.Id);
+                if (state.HasAttrib(BlockAttributes.Legacy)) {
+                    stream.WriteVarUInt(state.Id);
+                }
+                if (state.Block.IsDynamic) {
+                    _logger.Warn("Dynamic block in region {0} {1}. Decoder may generate innacurate lighting/heightmaps.", _region.X >> 5, _region.Z >> 5);
                 }
             }
         }

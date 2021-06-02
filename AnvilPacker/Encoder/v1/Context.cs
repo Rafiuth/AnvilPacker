@@ -8,33 +8,33 @@ namespace AnvilPacker.Encoder.v1
 {
     public sealed class Context
     {
-        public BlockId[] Palette;
-        public int[] Freq;
-        public int Hits;
+        private BlockId[] _palette;
+        private int[] _freq;
+        private int _hits;
 
-        public NzCoder Nz = new NzCoder();
+        private NzCoder _nz = new();
 
         public Context(BlockPalette palette)
         {
-            Palette = new BlockId[palette.Count];
-            for (int i = 0; i < Palette.Length; i++) {
-                Palette[i] = (BlockId)i;
+            _palette = new BlockId[palette.Count];
+            for (int i = 0; i < _palette.Length; i++) {
+                _palette[i] = (BlockId)i;
             }
-            Freq = new int[palette.Count];
+            _freq = new int[palette.Count];
         }
 
         public void Write(ArithmEncoder ac, BlockId value)
         {
-            int index = FindIndex(Palette, value);
-            Update(Palette, index);
-            Nz.Write(ac, index, 0, Palette.Length - 1);
+            int index = FindIndex(_palette, value);
+            Update(_palette, index);
+            _nz.Write(ac, index, 0, _palette.Length - 1);
         }
 
         public BlockId Read(ArithmDecoder ac)
         {
-            int delta = Nz.Read(ac, 0, Palette.Length - 1);
-            var id = Palette[delta];
-            Update(Palette, delta);
+            int delta = _nz.Read(ac, 0, _palette.Length - 1);
+            var id = _palette[delta];
+            Update(_palette, delta);
             return id;
         }
 
@@ -53,6 +53,9 @@ namespace AnvilPacker.Encoder.v1
         private void Update(BlockId[] palette, int index)
         {
             var curr = palette[index];
+            _freq[curr]++;
+            _hits++;
+
             if (index != 0) {
                 //Move frequent symbols to front
                 int currWeight = Weight(curr) + 1;
@@ -66,13 +69,11 @@ namespace AnvilPacker.Encoder.v1
                 }
                 palette[j] = curr;
             }
-            Freq[curr]++;
-            Hits++;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private int Weight(int id)
         {
-            return Freq[id] / (1 + Hits / 32);
+            return _freq[id] / (1 + _hits / 32);
         }
 
 

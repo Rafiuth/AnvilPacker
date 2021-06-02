@@ -118,7 +118,7 @@ namespace AnvilPacker.Level
 
         private static bool HasFluid(BlockState block)
         {
-            return block.HasAttribs(BlockAttributes.IsImmerse);
+            return block.HasAttrib(BlockAttributes.IsImmerse);
         }
 
         public static HeightMapType ForName(string name)

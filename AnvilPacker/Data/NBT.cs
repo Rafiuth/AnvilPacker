@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.IO.Compression;
@@ -158,6 +159,8 @@ namespace AnvilPacker.Data
             return sw.ToString();
         }
     }
+    [DebuggerTypeProxy(typeof(DebugView))]
+    [DebuggerDisplay("Count = {Count}")]
     public class CompoundTag : NbtTag, IEnumerable<KeyValuePair<string, NbtTag>>
     {
         private Dictionary<string, NbtTag> _tags;
@@ -297,6 +300,24 @@ namespace AnvilPacker.Data
 
         public IEnumerator<KeyValuePair<string, NbtTag>> GetEnumerator() => _tags.GetEnumerator();
         IEnumerator IEnumerable.GetEnumerator() => _tags.GetEnumerator();
+
+        protected class DebugView
+        {
+            private CompoundTag _tag;
+
+            public DebugView(CompoundTag tag)
+            {
+                _tag = tag;
+            }
+
+            [DebuggerBrowsable(DebuggerBrowsableState.RootHidden)]
+            public KeyValuePair<string, NbtTag>[] Items
+            {
+                get {
+                    return _tag.ToArray();
+                }
+            }
+        }
     }
     //TODO: Write a efficient generic version of this class for primitives
     //(maybe not worth because it is very uncommon for lists to store primitives)

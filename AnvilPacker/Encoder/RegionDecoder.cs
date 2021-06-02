@@ -7,7 +7,7 @@ using AnvilPacker.Level;
 using AnvilPacker.Util;
 using NLog;
 
-namespace AnvilPacker.Encoder.v1
+namespace AnvilPacker.Encoder
 {
     public class RegionDecoder
     {
