@@ -16,29 +16,31 @@ namespace AnvilPacker.Tests
         public void TestDataIntact()
         {
             var data = new bool[1024 * 256 * 8];
+            var prob = new int[1024 * 256 * 8];
+
             var rng = new Random(1234);
-            int p0 = 0;
             for (int i = 0; i < data.Length; i++) {
                 data[i] = rng.Next(3) == 0;
-                p0 += data[i] ? 0 : 1;
+                prob[i] = rng.Next(ArithmCoderConsts.K);
+                if (!data[i] && prob[i] == 0) {
+                    prob[i]++;
+                }
             }
-            p0 = (int)(p0 * (long)ArithmCoderConsts.K / data.Length);
 
             var writer = new MemoryDataWriter();
             var enc = new ArithmEncoder(writer);
 
             for (int i = 0; i < data.Length; i++) {
-                enc.Write(data[i], p0);
+                enc.Write(data[i], prob[i]);
             }
             enc.Flush();
-            writer.Flush();
-            //Console.WriteLine($"Encoded size: {s.Length} Ratio: {s.Length / (data.Length / 8.0)}");
+            writer.Position = 0;
 
             var dec = new ArithmDecoder(new DataReader(writer.BaseStream));
 
             for (int i = 0; i < data.Length; i++) {
                 int expected = data[i] ? 1 : 0;
-                int actual = dec.Read(p0);
+                int actual = dec.Read(prob[i]);
                 Assert.Equal(expected, actual);
             }
         }
