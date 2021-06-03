@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using AnvilPacker.Data;
@@ -19,40 +20,40 @@ namespace AnvilPacker
             hash.TransformFinalBlock(new byte[0], 0, 0);
             return BitConverter.ToString(hash.Hash).Replace("-", "");
         }
+
         public static bool CompareBlocks(RegionBuffer r1, RegionBuffer r2)
         {
             if (r1.Size != r2.Size) {
                 return false;
             }
-            for (int z = 0; z < r1.Size; z++) {
-                for (int x = 0; x < r1.Size; x++) {
-                    var c1 = r1.GetChunk(x, z);
-                    var c2 = r2.GetChunk(x, z);
-
-                    if ((c1 == null) != (c2 == null)) {
-                        return false;
-                    }
-                    if (c1 != null && !CompareBlocks(c1, c2)) {
-                        return false;
-                    }
+            if (!ComparePalettes(r1.Palette, r2.Palette)) {
+                return false;
+            }
+            var itr1 = ChunkIterator.GetSections(r1);
+            var itr2 = ChunkIterator.GetSections(r2);
+            foreach (var (s1, s2) in itr1.Zip(itr2)) {
+                if ((s1 == null) != (s2 == null)) {
+                    return false; //r1.NumSections != r2.NumSections
+                }
+                if (s1.X != s2.X || s1.Y != s2.Y || s1.Z != s2.Z) {
+                    return false;
+                }
+                //check blocks
+                if (!s1.Blocks.SequenceEqual(s2.Blocks)) {
+                    return false;
                 }
             }
             return true;
         }
 
-        private static bool CompareBlocks(Chunk c1, Chunk c2)
+        private static bool ComparePalettes(BlockPalette palette1, BlockPalette palette2)
         {
-            if (c1.MinSectionY != c2.MinSectionY || c1.MaxSectionY != c2.MaxSectionY) {
-                return false;
-            }
-            for (int sy = c1.MinSectionY; sy <= c1.MaxSectionY; sy++) {
-                var s1 = c1.GetSection(sy);
-                var s2 = c2.GetSection(sy);
-                if ((s1 == null) != (s2 == null)) {
-                    return false;
-                }
-                if (s1 != null && !s1.Blocks.AsSpan().SequenceEqual(s2.Blocks)) {
-                    Console.WriteLine("Wrong at " + c1.X + " " +sy+" " + c1.Z);
+            //don't care if one is larger, IDs just need to refer to the same block
+            int len = Math.Min(palette1.Count, palette2.Count);
+            for (int i = 0; i < len; i++) {
+                var b1 = palette1.GetState((BlockId)i);
+                var b2 = palette2.GetState((BlockId)i);
+                if (!b1.Equals(b2)) {
                     return false;
                 }
             }

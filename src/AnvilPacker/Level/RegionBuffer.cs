@@ -115,43 +115,6 @@ namespace AnvilPacker.Level
             return (min, max);
         }
 
-        /// <summary> Removes unused entries from the chunk's block palette. </summary>
-        /// <returns> The number of entries removed. </returns>
-        public int OptimizePalette()
-        {
-            var used = new bool[Palette.Count];
-
-            foreach (var section in ChunkIterator.GetSections(this)) {
-                foreach (var block in section.Blocks) {
-                    used[block] = true;
-                }
-            }
-
-            int unusedCount = used.Count(false);
-            if (unusedCount > 0) {
-                var newId = new BlockId[Palette.Count];
-                var newPalette = new BlockPalette(Palette.Count - unusedCount);
-
-                foreach (var (block, idx) in Palette.BlocksAndIds()) {
-                    if (used[idx]) {
-                        newId[idx] = newPalette.Add(block);
-                    }
-                }
-                Palette = newPalette;
-
-                foreach (var section in ChunkIterator.GetSections(this)) {
-                    section.Chunk.Palette = newPalette;
-                    section.Palette = newPalette;
-
-                    var blocks = section.Blocks;
-                    for (int i = 0; i < blocks.Length; i++) {
-                        blocks[i] = newId[blocks[i]];
-                    }
-                }
-            }
-            return unusedCount;
-        }
-
         /// <summary> Gets the chunk at the specified coordinates, relative to this region. </summary>
         public Chunk GetChunk(int x, int z)
         {
