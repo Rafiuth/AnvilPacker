@@ -81,7 +81,7 @@ namespace AnvilPacker.Data
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static ulong ReadLE(long[] data, int bytePos)
         {
-            ref byte ptr = ref Mem.GetByteRef(data, 0);
+            ref byte ptr = ref Mem.GetByteRef(data);
             int limit = (data.Length - 1) * 8;
 
             if (bytePos < limit) {
@@ -95,7 +95,7 @@ namespace AnvilPacker.Data
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static void WriteLE(long[] data, int bytePos, ulong value)
         {
-            ref byte ptr = ref Mem.GetByteRef(data, 0);
+            ref byte ptr = ref Mem.GetByteRef(data);
             int limit = (data.Length - 1) * 8;
 
             if (bytePos < limit) {

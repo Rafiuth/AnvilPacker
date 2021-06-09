@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Buffers.Binary;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -12,11 +13,6 @@ using System.Threading.Tasks;
 namespace AnvilPacker.Util
 {
     /// <summary> Provides high performance, low level memory related functions. </summary>
-    /// <remarks>
-    /// Most methods in this class are unsafe, in the sense that they do not
-    /// validate parameters, nor perform bounds check. It is the user's responsability
-    /// to ensure that arguments are valid and that no invalid memory accesses are attempted.
-    /// </remarks>
     public static unsafe class Mem
     {
         private const MethodImplOptions Inline = MethodImplOptions.AggressiveInlining;
@@ -50,28 +46,27 @@ namespace AnvilPacker.Util
         }
 
         /// <summary> Returns a reference to the n-th byte of the array. </summary>
+        /// <remarks> This method only supports one dimensional arrays. </remarks>
         [MethodImpl(Inline)]
-        public static ref byte GetByteRef<T>(T[] arr, nint byteOffset = 0)
+        public static ref byte GetByteRef(Array array)
         {
-            // return (byte*)&buf[0] + byteOffset
-            ref byte ptr = ref Unsafe.As<T, byte>(ref MemoryMarshal.GetArrayDataReference(arr));
-            return ref Unsafe.AddByteOffset(ref ptr, byteOffset);
+            Debug.Assert(array.Rank == 1 && array.GetType().GetElementType().IsPrimitive);
+            // return &arr.data + byteOffset
+            return ref MemoryMarshal.GetArrayDataReference(Unsafe.As<byte[]>(array));
         }
         /// <summary> Returns a reference to the n-th byte of the span. </summary>
         [MethodImpl(Inline)]
-        public static ref byte GetByteRef<T>(ReadOnlySpan<T> span, nint byteOffset = 0)
+        public static ref byte GetByteRef<T>(ReadOnlySpan<T> span)
         {
-            // return (byte*)&buf[0] + byteOffset
-            ref byte ptr = ref Unsafe.As<T, byte>(ref MemoryMarshal.GetReference(span));
-            return ref Unsafe.AddByteOffset(ref ptr, byteOffset);
+            // return (byte*)&buf[0]
+            return ref Unsafe.As<T, byte>(ref MemoryMarshal.GetReference(span));
         }
         /// <summary> Returns a reference to the n-th byte of the span. </summary>
         [MethodImpl(Inline)]
-        public static ref byte GetByteRef<T>(Span<T> span, nint byteOffset = 0)
+        public static ref byte GetByteRef<T>(Span<T> span)
         {
-            // return (byte*)&buf[0] + byteOffset
-            ref byte ptr = ref Unsafe.As<T, byte>(ref MemoryMarshal.GetReference(span));
-            return ref Unsafe.AddByteOffset(ref ptr, byteOffset);
+            // return (byte*)&buf[0]
+            return ref Unsafe.As<T, byte>(ref MemoryMarshal.GetReference(span));
         }
 
         /// <summary> Returns a reference to the n-th element of the array. </summary>
@@ -99,9 +94,9 @@ namespace AnvilPacker.Util
 
         /// <summary> Reads a <typeparamref name="T"/> element from the array, in the platform's native byte order. Unaligned access is assumed. </summary>
         [MethodImpl(Inline)]
-        public static T Read<T>(byte[] buf, nint bytePos) where T : unmanaged
+        public static T Read<T>(Array buf, nint bytePos) where T : unmanaged
         {
-            return Read<T>(ref GetByteRef(buf, 0), bytePos);
+            return Read<T>(ref GetByteRef(buf), bytePos);
         }
 
         /// <summary> Reads a <typeparamref name="T"/> element from the array, in little-endian byte order. Unaligned access is assumed. </summary>
@@ -110,9 +105,9 @@ namespace AnvilPacker.Util
         /// This method does not perform bounds check. Use carefully. 
         /// </remarks>
         [MethodImpl(Inline)]
-        public static T ReadLE<T>(byte[] buf, nint bytePos) where T : unmanaged
+        public static T ReadLE<T>(Array buf, nint bytePos) where T : unmanaged
         {
-            return ReadLE<T>(ref GetByteRef(buf, 0), bytePos);
+            return ReadLE<T>(ref GetByteRef(buf), bytePos);
         }
         /// <summary> Reads a <typeparamref name="T"/> element from the array, in big-endian byte order. Unaligned access is assumed. </summary>
         /// <remarks>
@@ -120,9 +115,9 @@ namespace AnvilPacker.Util
         /// This method does not perform bounds check. Use carefully. 
         /// </remarks>
         [MethodImpl(Inline)]
-        public static T ReadBE<T>(byte[] buf, nint bytePos) where T : unmanaged
+        public static T ReadBE<T>(Array buf, nint bytePos) where T : unmanaged
         {
-            return ReadBE<T>(ref GetByteRef(buf, 0), bytePos);
+            return ReadBE<T>(ref GetByteRef(buf), bytePos);
         }
 
         [MethodImpl(Inline)]
@@ -165,11 +160,11 @@ namespace AnvilPacker.Util
             return value;
         }
 
-        /// <summary> Writes a <typeparamref name="T"/> element to the array, in the platform's native byte order. Unaligned access is assumed. </summary>
+        /// <summary> Writes a <typeparamref name="T"/> element to the primitive array, in the platform's native byte order. </summary>
         [MethodImpl(Inline)]
-        public static void Write<T>(byte[] buf, nint bytePos, T value)
+        public static void Write<T>(Array arr, nint bytePos, T value) where T : unmanaged
         {
-            Unsafe.WriteUnaligned<T>(ref GetByteRef(buf, bytePos), value);
+            Write<T>(ref GetByteRef(arr), bytePos, value);
         }
 
         /// <summary> Writes a <typeparamref name="T"/> element to the array, in little-endian byte order. Unaligned access is assumed. </summary>
@@ -178,9 +173,9 @@ namespace AnvilPacker.Util
         /// This method does not perform bounds check. Use carefully. 
         /// </remarks>
         [MethodImpl(Inline)]
-        public static void WriteLE<T>(byte[] buf, nint bytePos, T value) where T : unmanaged
+        public static void WriteLE<T>(Array buf, nint bytePos, T value) where T : unmanaged
         {
-            WriteLE<T>(ref GetByteRef(buf, 0), bytePos, value);
+            WriteLE<T>(ref GetByteRef(buf), bytePos, value);
         }
         /// <summary> Writes a <typeparamref name="T"/> element to the array, in big-endian byte order. Unaligned access is assumed. </summary>
         /// <remarks>
@@ -188,9 +183,9 @@ namespace AnvilPacker.Util
         /// This method does not perform bounds check. Use carefully. 
         /// </remarks>
         [MethodImpl(Inline)]
-        public static void WriteBE<T>(byte[] buf, nint bytePos, T value) where T : unmanaged
+        public static void WriteBE<T>(Array buf, nint bytePos, T value) where T : unmanaged
         {
-            WriteBE<T>(ref GetByteRef(buf, 0), bytePos, value);
+            WriteBE<T>(ref GetByteRef(buf), bytePos, value);
         }
 
         [MethodImpl(Inline)]
@@ -213,7 +208,7 @@ namespace AnvilPacker.Util
         [MethodImpl(Inline)]
         public static void Write<T>(ref byte ptr, nint bytePos, T value) where T : unmanaged
         {
-            Unsafe.WriteUnaligned<T>(ref Unsafe.AddByteOffset(ref ptr, bytePos), value);
+            Unsafe.WriteUnaligned<T>(ref Unsafe.Add(ref ptr, bytePos), value);
         }
         [MethodImpl(Inline)]
         public static void WriteLE<T>(ref byte ptr, nint bytePos, T value) where T : unmanaged
@@ -253,9 +248,9 @@ namespace AnvilPacker.Util
         {
             BSwapBulk(ref GetByteRef(buf), buf.Length * sizeof(T), sizeof(T));
         }
-        /// <summary> Swaps the bytes of the elements in <paramref name="ptr"/></summary>
-        /// <param name="sizeInBytes">Size in bytes of <paramref name="ptr"/></param>
-        /// <param name="elemSize">Size of the element. Must be in {1, 2, 4, 8}</param>
+        /// <summary> Reverses the bytes of each <paramref name="elemSize"/> chunk in <paramref name="ptr"/></summary>
+        /// <param name="sizeInBytes">Size in bytes of <paramref name="ptr"/>. Must be a multiple of <paramref name="elemSize"/>.</param>
+        /// <param name="elemSize">Chunk size in bytes. Must be in {1, 2, 4, 8}</param>
         public static void BSwapBulk(ref byte ptr, nint sizeInBytes, int elemSize)
         {
             var BSWAP2_SHUFFMASK = Vector256.Create(

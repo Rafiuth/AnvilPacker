@@ -41,13 +41,13 @@ namespace AnvilPacker.Encoder
             long headerTime = sw.ElapsedMilliseconds;
             sw.Restart();
 
-            long startPos = stream.Position;
+            long blocksStartPos = stream.Position;
             _blockCodec.Encode(stream, CodecProgressListener.MaybeCreate(_blockCount, progress));
 
             long blockEncTime = sw.ElapsedMilliseconds;
             sw.Restart();
 
-            double bitsPerBlock = (stream.Position - startPos) * 8.0 / _blockCount;
+            double bitsPerBlock = (stream.Position - blocksStartPos) * 8.0 / _blockCount;
 
             _logger.Debug($"Stats for region {_region.X >> 5} {_region.Z >> 5}");
             _logger.Debug($" NumBlocks: {_blockCount / 1000000.0:0.0}M  Palette: {_region.Palette.Count}");
