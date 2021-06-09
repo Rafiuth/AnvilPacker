@@ -9,9 +9,9 @@
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build",
-            "program": "${workspaceFolder}/AnvilPacker/bin/Debug/AnvilPacker.dll",
+            "program": "${workspaceFolder}/src/AnvilPacker/bin/Debug/AnvilPacker.dll",
             "args": [],
-            "cwd": "${workspaceFolder}/AnvilPacker/bin/Debug/",
+            "cwd": "${workspaceFolder}/src/AnvilPacker/bin/Debug/",
             "console": "internalConsole",
             "stopAtEntry": false,
             "suppressJITOptimizations": true
@@ -21,9 +21,9 @@
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "buildRelease",
-            "program": "${workspaceFolder}/AnvilPacker/bin/Release/AnvilPacker.dll",
+            "program": "${workspaceFolder}/src/AnvilPacker/bin/Release/AnvilPacker.dll",
             "args": [],
-            "cwd": "${workspaceFolder}/AnvilPacker/bin/Release/",
+            "cwd": "${workspaceFolder}/src/AnvilPacker/bin/Release/",
             "console": "internalConsole",
             "stopAtEntry": false,
             "suppressJITOptimizations": false
