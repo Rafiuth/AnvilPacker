@@ -7,6 +7,12 @@ namespace AnvilPacker.Cli
 {
     public abstract class CliOptions
     {
+        [Option('i', "input", Required = true, HelpText = "Path of the input file/directory.")]
+        public string Input { get; set; }
+
+        [Option('o', "output", HelpText = "Path of the resulting file.")]
+        public string Output { get; set; }
+
         [Option('y', "overwrite", HelpText = "Overwrite the output file if it already exists.")]
         public bool Overwrite { get; set; } = false;
 
@@ -19,24 +25,13 @@ namespace AnvilPacker.Cli
     [Verb("pack", HelpText = "Compresses a given world.")]
     public class PackOptions : CliOptions
     {
-        [Option('i', "input", Required = true, HelpText = "Path of the world to be compressed.")]
-        public string Input { get; set; }
-
-        [Option('o', "output", HelpText = "Name of the resulting file.")]
-        public string Output { get; set; }
-
-        [Option("verify", HelpText = "Verifies that the compressed world was correctly encoded.")]
+        [Option("verify", HelpText = "Verifies that the compressed world was correctly encoded, by decoding it and comparing with the original.")]
         public bool Verify { get; set; } = false;
     }
 
     [Verb("unpack", HelpText = "Decompresses a given world.")]
     public class UnpackOptions : CliOptions
     {
-        [Option('i', "input", Required = true, HelpText = "Path of the compressed world.")]
-        public string Input { get; set; }
-
-        [Option('o', "output", HelpText = "Name of the resulting world folder.")]
-        public string Output { get; set; }
     }
 
     [Verb("dump", HelpText = "Generates debug files for a given world.")]
@@ -44,12 +39,6 @@ namespace AnvilPacker.Cli
     {
         [Option('t', "type", Required = true, HelpText = "Specifies what data to generate.")]
         public DumpType Type { get; set; }
-
-        [Option('i', "input", Required = true, HelpText = "Input file.")]
-        public string Input { get; set; }
-
-        [Option('o', "output", HelpText = "Name of the resulting file/directory.")]
-        public string Output { get; set; }
     }
     public enum DumpType
     {
