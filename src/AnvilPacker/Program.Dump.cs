@@ -9,7 +9,7 @@ namespace AnvilPacker
 {
     public partial class Program
     {
-        private static void Run(DumpOptions opts)
+        private static void RunDumper(DumpOptions opts)
         {
             if (!File.Exists(opts.Input)) {
                 Error($"Input file '{opts.Input}' does not exist.");
@@ -35,8 +35,12 @@ namespace AnvilPacker
 
         private static void DumpNbt(string input, string output)
         {
-            var root = new CompoundTag();
-            root.Set("Content", ReadFileAsNbt(input));
+            var tag = ReadFileAsNbt(input);
+            var root = tag as CompoundTag;
+            if (root == null) {
+                root = new CompoundTag();
+                root.Set("_root", tag);
+            }
 
             if (output.EndsWith(".gz")) {
                 NbtIO.WriteCompressed(root, output);
@@ -64,6 +68,8 @@ namespace AnvilPacker
             var (minSy, maxSy) = region.GetChunkYExtents();
 
             using var fs = new DataWriter(File.Create(output));
+            fs.WriteBool(extendedId);
+
             for (int y = minSy * 16; y < (maxSy + 1) * 16; y++) {
                 for (int z = 0; z < 512; z++) {
                     for (int x = 0; x < 512; x++) {
@@ -96,18 +102,21 @@ namespace AnvilPacker
             var (minSy, maxSy) = region.GetChunkYExtents();
 
             using var fs = new DataWriter(File.Create(output));
+            fs.WriteBool(extendedId);
             foreach (var chunk in ChunkIterator.Create(region)) {
-                for (int y = 0; y < 16; y++) {
-                    for (int z = 0; z < 16; z++) {
-                        for (int x = 0; x < 16; x++) {
-                            var id = chunk.GetBlockId(x, y, z);
+                fs.WriteByte(1);
+                fs.WriteShortLE(chunk.X & 31);
+                fs.WriteShortLE(chunk.Y);
+                fs.WriteShortLE(chunk.Z & 31);
+            }
+            fs.WriteByte(0);
 
-                            if (extendedId) {
-                                fs.WriteUShortLE(id);
-                            } else {
-                                fs.WriteByte(id);
-                            }
-                        }
+            foreach (var chunk in ChunkIterator.Create(region)) {
+                foreach (var id in chunk.Blocks) {
+                    if (extendedId) {
+                        fs.WriteUShortLE(id);
+                    } else {
+                        fs.WriteByte(id);
                     }
                 }
             }
