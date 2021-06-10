@@ -20,7 +20,7 @@ namespace AnvilPacker.Level.Versions.v1_2_1
 
             int x = tag.Pop<int>("xPos");
             int z = tag.Pop<int>("zPos");
-            var chunk = new Chunk(x, z, 0, 15, palette);
+            var chunk = new Chunk(x, z, palette);
             chunk.Opaque = rootTag;
             chunk.DataVersion = rootTag.PopMaybe<int>("DataVersion");
 

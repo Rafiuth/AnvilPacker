@@ -10,8 +10,8 @@ namespace AnvilPacker.Level
     public interface IChunkSerializer
     {
         public static readonly (int MinVersion, int MaxVersion, IChunkSerializer Serializer)[] KnownSerializers = {
-            (v1_13_s6,    v1_16_5, new Versions.v1_13.ChunkSerializer()),
-            (0,          v1_13_s5, new Versions.v1_2_1.ChunkSerializer())
+            (v1_13_s6,    v1_17,    new Versions.v1_13.ChunkSerializer()),
+            (0,          v1_13_s5,  new Versions.v1_2_1.ChunkSerializer())
         };
 
         /// <param name="tag">The "Level" tag.</param>
@@ -29,5 +29,6 @@ namespace AnvilPacker.Level
         public const int v1_16_s13  = 2529; //20w17a: Bit storage is now sparse
 
         public const int v1_16_5    = 2586;
+        public const int v1_17      = 2724;
     }
 }

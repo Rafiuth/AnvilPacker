@@ -9,10 +9,12 @@ namespace AnvilPacker.Level
 {
     public class Chunk
     {
+        public const int MIN_ALLOWED_SECTION_Y = -32, MAX_ALLOWED_SECTION_Y = 31;
+
         public readonly int X, Z;
         /// <summary> Section Y extents, in chunk coordinates (blockPos / 16). Values are inclusive. </summary>
-        public readonly int MinSectionY, MaxSectionY;
-        public readonly ChunkSection?[] Sections;
+        public int MinSectionY, MaxSectionY;
+        public ChunkSection?[] Sections;
         public BlockPalette Palette;
         public HeightMaps HeightMaps = new();
 
@@ -21,12 +23,12 @@ namespace AnvilPacker.Level
         public int DataVersion;
         public ChunkFlags Flags;
 
-        public Chunk(int x, int z, int minSy, int maxSy, BlockPalette palette)
+        public Chunk(int x, int z, BlockPalette palette, int initialMinY = 0, int initialMaxY = 8)
         {
             X = x;
             Z = z;
-            MinSectionY = minSy;
-            MaxSectionY = maxSy;
+            MinSectionY = initialMinY;
+            MaxSectionY = initialMaxY;
             Sections = new ChunkSection[MaxSectionY - MinSectionY + 1];
             Palette = palette;
         }
@@ -58,16 +60,41 @@ namespace AnvilPacker.Level
         {
             Sections[y - MinSectionY] = section;
         }
-        public ChunkSection GetOrCreateSection(int y)
+        public ChunkSection GetOrCreateSection(int sy)
         {
-            var section = GetSection(y);
+            var section = GetSection(sy);
             if (section == null) {
-                Ensure.That(y >= MinSectionY && y <= MaxSectionY, "Cannot create section outside world Y bounds.");
+                EnsureSectionFits(sy);
 
-                section = new ChunkSection(this, y);
-                SetSection(y, section);
+                section = new ChunkSection(this, sy);
+                SetSection(sy, section);
             }
             return section;
+        }
+
+        private void EnsureSectionFits(int sy)
+        {
+            const int GROW_AMOUNT = 4;
+            
+            Ensure.That(sy >= MIN_ALLOWED_SECTION_Y && sy <= MAX_ALLOWED_SECTION_Y, "Section outside allowed Y bounds.");
+
+            if (sy < MinSectionY) {
+                MinSectionY = Math.Max(MIN_ALLOWED_SECTION_Y, sy - GROW_AMOUNT);
+            }
+            if (sy > MaxSectionY) {
+                MaxSectionY = Math.Min(MAX_ALLOWED_SECTION_Y, sy + GROW_AMOUNT);
+            }
+            int newHeight = MaxSectionY - MinSectionY + 1;
+            
+            if (Sections.Length < newHeight) {
+                var newSections = new ChunkSection[newHeight];
+                foreach (var section in Sections) {
+                    if (section != null) {
+                        newSections[section.Y - MinSectionY] = section;
+                    }
+                }
+                Sections = newSections;
+            }
         }
 
         /// <summary> Computes the min and max non-empty section Y coords. </summary>

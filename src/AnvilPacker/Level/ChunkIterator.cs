@@ -11,7 +11,7 @@ namespace AnvilPacker.Level
     /// </summary>
     public class ChunkIterator
     {
-        private static readonly Chunk EmptyChunk = new Chunk(0, 0, 0, 0, new BlockPalette());
+        private static readonly Chunk EmptyChunk = new Chunk(0, 0, new BlockPalette());
         private static readonly ChunkSection EmptySection = EmptyChunk.GetOrCreateSection(0);
 
         public RegionBuffer Region;

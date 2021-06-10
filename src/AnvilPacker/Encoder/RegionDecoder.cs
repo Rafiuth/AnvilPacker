@@ -59,7 +59,7 @@ namespace AnvilPacker.Encoder
             for (int z = 0; z < _region.Size; z++) {
                 for (int x = 0; x < _region.Size; x++) {
                     if (stream.ReadByte() != 0) {
-                        var chunk = new Chunk(_region.X + x, _region.Z + z, minY, maxY, _region.Palette);
+                        var chunk = new Chunk(_region.X + x, _region.Z + z, _region.Palette, minY, maxY);
                         _region.PutChunk(chunk);
                     }
                 }

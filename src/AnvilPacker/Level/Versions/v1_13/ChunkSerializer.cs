@@ -17,7 +17,7 @@ namespace AnvilPacker.Level.Versions.v1_13
             
             int x = tag.Pop<int>("xPos");
             int z = tag.Pop<int>("zPos");
-            var chunk = new Chunk(x, z, 0, 15, palette);
+            var chunk = new Chunk(x, z, palette);
             chunk.Opaque = rootTag;
             chunk.DataVersion = rootTag.Pop<int>("DataVersion");
 
@@ -45,9 +45,7 @@ namespace AnvilPacker.Level.Versions.v1_13
         private static void DeserializeSection(Chunk chunk, CompoundTag tag)
         {
             int y = tag.GetSByte("Y");
-            if (y < 0 || y >= 16) {
-                return;
-            }
+ 
             var blockStates = tag.PopMaybe<long[]>("BlockStates");
             var palette = DeserializePalette(tag.PopMaybe<ListTag>("Palette"), chunk.Palette);
             

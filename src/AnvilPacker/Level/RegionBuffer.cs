@@ -49,7 +49,7 @@ namespace AnvilPacker.Level
                     var serializer = world.GetSerializer(tag);
                     chunk = serializer.Deserialize(tag, Palette);
                 } else {
-                    chunk = new Chunk(X + x, Z + z, 0, -1, Palette);
+                    chunk = new Chunk(X + x, Z + z, Palette, 0, -1);
                     chunk.Opaque = tag;
                     chunk.Flags |= ChunkFlags.OpaqueOnly;
                 }
