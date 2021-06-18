@@ -16,16 +16,23 @@ namespace AnvilPacker.Encoder
         private RegionBuffer _region;
         private int _blockCount; //updated by WriteChunkBitmap()
         private BlockCodec _blockCodec;
+        private EstimatedBlockAttribs _estimAttribs;
 
         public RegionEncoder(RegionBuffer region)
         {
             _region = region;
             _blockCodec = new v1.BlockCodecV1(region);
+            _estimAttribs = new();
         }
 
         public void Encode(DataWriter stream, IProgress<double> progress = null)
         {
             var sw = Stopwatch.StartNew();
+
+            _estimAttribs.Estimate(_region);
+            long attribEstimTime = sw.ElapsedMilliseconds;
+
+            sw.Restart();
 
             var headerBuf = new MemoryDataWriter(1024 * 256);
             using (var comp = Compressors.NewBrotliEncoder(headerBuf, true, 9, 22)) {
@@ -45,24 +52,26 @@ namespace AnvilPacker.Encoder
             _blockCodec.Encode(stream, CodecProgressListener.MaybeCreate(_blockCount, progress));
 
             long blockEncTime = sw.ElapsedMilliseconds;
-            sw.Restart();
 
-            double bitsPerBlock = (stream.Position - blocksStartPos) * 8.0 / _blockCount;
+            if (_logger.IsDebugEnabled) {
+                double bitsPerBlock = (stream.Position - blocksStartPos) * 8.0 / _blockCount;
 
-            _logger.Debug($"Stats for region {_region.X >> 5} {_region.Z >> 5}");
-            _logger.Debug($" NumBlocks: {_blockCount / 1000000.0:0.0}M  Palette: {_region.Palette.Count}");
-            _logger.Debug($" BitsPerBlock: {bitsPerBlock:0.000}");
-            _logger.Debug($" EncSize: {stream.Position / 1024.0:0.000}KB  Meta: {headerSpan.Length / 1024.0:0.000}KB");
-            _logger.Debug($" EncTime: Meta: {headerTime}ms  Blocks: {blockEncTime}ms  Speed: {_blockCount / 1000.0 / blockEncTime:0.0}m blocks/sec");
+                _logger.Debug($"Encoder stats @ {_region}");
+                _logger.Debug($" NumBlocks: {_blockCount / 1000000.0:0.0}M | PaletteSize: {_region.Palette.Count}");
+                _logger.Debug($" EncSize: {stream.Position / 1024.0:0.000}KB | Meta: {headerSpan.Length / 1024.0:0.000}KB | BitsPerBlock: {bitsPerBlock:0.000}");
+                _logger.Debug($" Times: AttribEstim: {attribEstimTime}ms | Meta: {headerTime}ms | Blocks: {blockEncTime}ms");
+                _logger.Debug($" Speed: {_blockCount / 1000.0 / blockEncTime:0.0}M blocks/sec");
+            }
         }
 
         private void WriteHeader(DataWriter stream)
         {
-            stream.WriteVarInt(Maths.FloorDiv(_region.X, _region.Size));
-            stream.WriteVarInt(Maths.FloorDiv(_region.Z, _region.Size));
+            stream.WriteVarInt(_region.X >> 5);
+            stream.WriteVarInt(_region.Z >> 5);
 
-            WritePalette(stream);
-            WriteChunkBitmap(stream);
+            WritePalette(stream); //no deps
+            WriteHeightmapAttribs(stream); //depends on palette
+            WriteChunkBitmap(stream); //no deps
 
             stream.WriteVarUInt(_blockCodec.GetId());
             _blockCodec.WriteSettings(stream);
@@ -72,6 +81,7 @@ namespace AnvilPacker.Encoder
         {
             var (minY, maxY) = _region.GetChunkYExtents();
 
+            stream.WriteVarUInt(0); //version
             stream.WriteVarInt(minY);
             stream.WriteVarInt(maxY);
 
@@ -80,7 +90,7 @@ namespace AnvilPacker.Encoder
             for (int z = 0; z < _region.Size; z++) {
                 for (int x = 0; x < _region.Size; x++) {
                     bool exists = _region.GetChunk(x, z) != null;
-                    stream.WriteByte(exists ? 1 : 0);
+                    stream.WriteBool(exists);
                 }
             }
             //section bitmap
@@ -93,7 +103,7 @@ namespace AnvilPacker.Encoder
                         
                         bool exists = chunk.GetSection(y) != null;
 
-                        stream.WriteByte(exists ? 1 : 0);
+                        stream.WriteBool(exists);
                         _blockCount += exists ? 4096 : 0;
                     }
                 }
@@ -102,7 +112,10 @@ namespace AnvilPacker.Encoder
         private void WritePalette(DataWriter stream)
         {
             var palette = _region.Palette;
+
+            stream.WriteVarUInt(0); //version
             stream.WriteVarUInt(palette.Count);
+            bool hasDynamicBlocks = false;
 
             foreach (var state in palette) {
                 int flags = 0;
@@ -113,16 +126,37 @@ namespace AnvilPacker.Encoder
                 stream.WriteNulString(state.Material.Name.ToString(false));
 
                 stream.WriteVarUInt((int)(state.Attributes & ~BlockAttributes.InternalMask));
-                stream.WriteByte(state.Emittance << 4 | state.Opacity);
+                stream.WriteByte(state.LightEmission << 4 | state.LightOpacity);
                 
                 if (state.HasAttrib(BlockAttributes.Legacy)) {
                     stream.WriteVarUInt(state.Id);
                 }
-                if (state.Block.IsDynamic) {
-                    _logger.Warn("Dynamic block in region {0} {1}. Decoder may generate innacurate lighting/heightmaps.", _region.X >> 5, _region.Z >> 5);
+                hasDynamicBlocks |= state.Block.IsDynamic;
+            }
+
+            if (hasDynamicBlocks) {
+                _logger.Warn("Region {0} contains dynamic blocks, this is not fully supported yet. The decoder may not be able to reconstruct lighting/heightmaps correctly.", _region);
+            }
+        }
+        private void WriteHeightmapAttribs(DataWriter stream)
+        {
+            var attribs = _estimAttribs.HeightmapAttribs;
+
+            stream.WriteVarUInt(0); //version
+            stream.WriteVarUInt(attribs.BlockOpacityPerType.Count);
+
+            foreach (var (type, isOpaque) in attribs.BlockOpacityPerType) {
+                Ensure.That(isOpaque.Length == _region.Palette.Count);
+
+                stream.WriteNulString(type);
+                stream.WriteByte(0);
+
+                for (int i = 0; i < isOpaque.Length; i++) {
+                    stream.WriteBool(isOpaque[i]);
                 }
             }
         }
+
         private void WriteMetadata(DataWriter stream)
         {
             stream.WriteVarUInt(0); //version

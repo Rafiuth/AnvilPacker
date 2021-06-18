@@ -65,8 +65,8 @@ namespace AnvilPacker.Level
                         Id = id,
                         Block = block,
                         Attributes = (BlockAttributes)flags,
-                        Opacity = (byte)(light & 15),
-                        Emittance = (byte)(light >> 4),
+                        LightOpacity = (byte)(light & 15),
+                        LightEmission = (byte)(light >> 4),
                         Properties = CreatePropertyValues(props, i)
                     };
                 }
@@ -128,8 +128,8 @@ namespace AnvilPacker.Level
                         Id = stateId,
                         Block = block,
                         Attributes = (BlockAttributes)flags | BlockAttributes.Legacy,
-                        Opacity = (byte)(light & 15),
-                        Emittance = (byte)(light >> 4)
+                        LightOpacity = (byte)(light & 15),
+                        LightEmission = (byte)(light >> 4)
                     };
                     if (rawVals != null) {
                         var vals = rawVals.Split(',');

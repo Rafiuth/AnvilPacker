@@ -86,8 +86,8 @@ namespace AnvilPacker.Level
             var state = new BlockState() {
                 Block = block,
                 Id = -1,
-                Opacity = 15,
-                Emittance = 0,
+                LightOpacity = 15,
+                LightEmission = 0,
                 Properties = props,
                 Attributes = BlockAttributes.None
             };

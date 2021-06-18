@@ -16,7 +16,7 @@ namespace AnvilPacker.Level
         public int MinSectionY, MaxSectionY;
         public ChunkSection?[] Sections;
         public BlockPalette Palette;
-        public HeightMaps HeightMaps = new();
+        public DictionarySlim<string, Heightmap> Heightmaps = new();
 
         /// <summary> Data that the serializer doesn't know how to handle. This is the root tag from the region chunk. </summary>
         public CompoundTag? Opaque;
@@ -47,6 +47,7 @@ namespace AnvilPacker.Level
         }
 
         /// <param name="y">Section Y coord (blockY >> 4)</param>
+        /// <remarks>null is returned if y is outside the chunk height.</remarks>
         public ChunkSection? GetSection(int y)
         {
             if (y >= MinSectionY && y <= MaxSectionY) {
@@ -55,11 +56,12 @@ namespace AnvilPacker.Level
             return null;
         }
         /// <param name="y">Section Y coord (blockY >> 4)</param>
-        /// <remarks><see cref="IndexOutOfRangeException"/> is thrown if y is outside Y limits.</remarks>
+        /// <remarks><see cref="IndexOutOfRangeException"/> is thrown if y is outside the chunk height.</remarks>
         public void SetSection(int y, ChunkSection? section)
         {
             Sections[y - MinSectionY] = section;
         }
+
         public ChunkSection GetOrCreateSection(int sy)
         {
             var section = GetSection(sy);
@@ -74,15 +76,15 @@ namespace AnvilPacker.Level
 
         private void EnsureSectionFits(int sy)
         {
-            const int GROW_AMOUNT = 4;
-            
             Ensure.That(sy >= MIN_ALLOWED_SECTION_Y && sy <= MAX_ALLOWED_SECTION_Y, "Section outside allowed Y bounds.");
 
+            const int GROW_STEP = 4;
+
             if (sy < MinSectionY) {
-                MinSectionY = Math.Max(MIN_ALLOWED_SECTION_Y, sy - GROW_AMOUNT);
+                MinSectionY = Math.Max(MIN_ALLOWED_SECTION_Y, sy - GROW_STEP);
             }
             if (sy > MaxSectionY) {
-                MaxSectionY = Math.Min(MAX_ALLOWED_SECTION_Y, sy + GROW_AMOUNT);
+                MaxSectionY = Math.Min(MAX_ALLOWED_SECTION_Y, sy + GROW_STEP);
             }
             int newHeight = MaxSectionY - MinSectionY + 1;
             
@@ -117,8 +119,12 @@ namespace AnvilPacker.Level
         }
         public void SetBlock(int x, int y, int z, BlockState block)
         {
+            SetBlockId(x, y, z, Palette.GetOrAddId(block));
+        }
+        public void SetBlockId(int x, int y, int z, BlockId id)
+        {
             var sect = GetOrCreateSection(y >> 4);
-            sect.SetBlock(x, y & 15, z, block);
+            sect.SetBlockId(x, y & 15, z, id);
         }
     }
     [Flags]

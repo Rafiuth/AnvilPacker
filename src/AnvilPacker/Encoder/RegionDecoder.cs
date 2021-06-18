@@ -39,8 +39,8 @@ namespace AnvilPacker.Encoder
 
         private void ReadHeader(DataReader stream)
         {
-            _region.X = stream.ReadVarInt() * _region.Size;
-            _region.Z = stream.ReadVarInt() * _region.Size;
+            _region.X = stream.ReadVarInt() << 5;
+            _region.Z = stream.ReadVarInt() << 5;
 
             ReadPalette(stream);
             ReadChunkBitmap(stream);
@@ -106,8 +106,8 @@ namespace AnvilPacker.Encoder
                 Ensure.That(
                     (block.Attributes & ~BlockAttributes.InternalMask) == attribs &&
                     block.Material.Name == material &&
-                    block.Emittance == emittance &&
-                    block.Opacity == opacity,
+                    block.LightEmission == emittance &&
+                    block.LightOpacity == opacity,
                     "Dynamic block states not supported yet."
                 );
                 palette.Add(block);

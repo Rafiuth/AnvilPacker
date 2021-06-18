@@ -75,7 +75,8 @@ namespace AnvilPacker.Level
                 BlockLight[GetIndex(x, y, z)] = value;
             }
         }
-        
+
+        public static bool IsCoordInside(int x, int y, int z) => (uint)(x | y | z) < 16;
         public static int GetIndex(int x, int y, int z) => y << 8 | z << 4 | x;
     }
 }

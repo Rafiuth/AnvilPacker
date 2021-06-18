@@ -95,10 +95,11 @@ namespace AnvilPacker.Level.Versions.v1_2_1
         }
         private void DeserializeHeightmap(Chunk chunk, int[] heights)
         {
-            short[] dest = chunk.HeightMaps.Get(HeightMapType.Legacy, true);
+            var heightmap = new Heightmap();
             for (int i = 0; i < 256; i++) {
-                dest[i] = (short)heights[i];
+                heightmap.Values[i] = (short)heights[i];
             }
+            chunk.Heightmaps.Add(Heightmap.TYPE_LEGACY, heightmap);
         }
 
         public CompoundTag Serialize(Chunk chunk)
@@ -127,9 +128,11 @@ namespace AnvilPacker.Level.Versions.v1_2_1
 
         private int[] SerializeHeightmap(Chunk chunk)
         {
-            short[] src = chunk.HeightMaps.Get(HeightMapType.Legacy);
-            Ensure.That(src != null, "Legacy chunk serializer requires heightmap to be present.");
+            if (!chunk.Heightmaps.TryGetValue(Heightmap.TYPE_LEGACY, out var map)) {
+                throw new NotSupportedException("Legacy chunk serializer requires heightmap to be present.");
+            }
 
+            short[] src = map.Values;
             int[] dst = new int[256];
             for (int i = 0; i < 256; i++) {
                 dst[i] = src[i];

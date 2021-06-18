@@ -22,6 +22,8 @@ namespace AnvilPacker.Level
         /// <summary> Position of the first chunk in this region, in global world chunk coordinates. </summary>
         public int X, Z;
 
+        private string _lastLoadedRegionFilename = null;
+
         /// <param name="count">Capacity of the buffer, in regions of 32x32 chunks.</param>
         public RegionBuffer()
         {
@@ -58,6 +60,8 @@ namespace AnvilPacker.Level
                 PutChunk(chunk);
                 chunksLoaded++;
             }
+            _lastLoadedRegionFilename = Path.GetRelativePath(world.RootPath, path).Replace('\\', '/');
+
             return chunksLoaded;
         }
         /// <summary> Creates a new region file with the chunks present in this buffer. </summary>
@@ -95,6 +99,7 @@ namespace AnvilPacker.Level
         {
             Chunks.Fill(null);
             Palette = new BlockPalette() { BlockRegistry.Air };
+            _lastLoadedRegionFilename = null;
         }
 
         /// <summary> Calculate the min and max Y section coord in all chunks. </summary>
@@ -103,13 +108,10 @@ namespace AnvilPacker.Level
             int min = int.MaxValue, max = int.MinValue;
 
             foreach (var chunk in Chunks) {
-                if (chunk == null) continue;
-
-                for (int y = chunk.MinSectionY; y <= chunk.MaxSectionY; y++) {
-                    if (chunk.GetSection(y) != null) {
-                        min = Math.Min(min, y);
-                        max = Math.Max(max, y);
-                    }
+                if (chunk != null) {
+                    var bounds = chunk.GetActualYExtents();
+                    min = Math.Min(min, bounds.Min);
+                    max = Math.Max(max, bounds.Max);
                 }
             }
             return (min, max);
@@ -123,6 +125,12 @@ namespace AnvilPacker.Level
             }
             return Chunks[x + z * Size];
         }
+        /// <summary> Get the chunk at the specified absolute world coordinates. </summary>
+        public Chunk GetChunkAbsCoords(int x, int z)
+        {
+            return GetChunk(x - X, z - Z);
+        }
+
         public void PutChunk(Chunk chunk)
         {
             int x = chunk.X & 31;
@@ -133,6 +141,11 @@ namespace AnvilPacker.Level
         public ChunkSection GetSection(int x, int y, int z)
         {
             return GetChunk(x, z)?.GetSection(y);
+        }
+
+        public override string ToString()
+        {
+            return _lastLoadedRegionFilename ?? $"r.{X >> 5}.{Z >> 5}";
         }
     }
 }

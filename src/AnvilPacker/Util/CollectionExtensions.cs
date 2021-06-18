@@ -77,5 +77,15 @@ namespace AnvilPacker.Util
             }
             return hash.ToHashCode();
         }
+
+        public static TValue GetOrAdd<TKey, TValue>(this Dictionary<TKey, TValue> dict, TKey key, Func<TValue> valueFactory)
+            where TKey : notnull
+        {
+            if (!dict.TryGetValue(key, out var val)) {
+                val = valueFactory();
+                dict.Add(key, val);
+            }
+            return val;
+        }
     }
 }

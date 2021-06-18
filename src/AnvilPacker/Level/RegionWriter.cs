@@ -29,8 +29,7 @@ namespace AnvilPacker.Level
         }
         public RegionWriter(string filename)
         {
-            //disabling buffer allows passing BaseStream without seeking twice
-            _s = new DataWriter(File.Create(filename), false, 0);
+            _s = new DataWriter(File.Create(filename));
             _s.Position = 8192;
         }
 
@@ -65,7 +64,7 @@ namespace AnvilPacker.Level
             Ensure.That(loc == 0, "Chunk can only be written once.");
 
             long startPos = _s.Position;
-            Debug.Assert(startPos % 4096 == 0, "File pointer should always be aligned to 4KB sectors.");
+            Debug.Assert(startPos % 4096 == 0, "File position should always be aligned to 4096 bytes.");
 
             const int HDR_LEN = 5;
             _s.Position = startPos + HDR_LEN;
@@ -75,19 +74,15 @@ namespace AnvilPacker.Level
             }
             long endPos = _s.Position;
             int totalLen = (int)(endPos - startPos);
+            
             loc = PackLocation(startPos, totalLen);
-
-            endPos = Align(endPos);
 
             //go back and write header
             _s.Position = startPos;
-
-            loc = PackLocation(startPos, totalLen);
-
             _s.WriteIntBE(totalLen - HDR_LEN + 1); //length
             _s.WriteByte(2); //compressionMethod: zlib
 
-            _s.Position = endPos;
+            _s.Position = Align(endPos);
 
             _headerDirty = true;
         }
@@ -97,7 +92,7 @@ namespace AnvilPacker.Level
             int startSector = (int)(offset / 4096);
             int numSectors = Maths.CeilDiv(length, 4096);
 
-            Ensure.That(startSector <= 0xFFFFFF && numSectors <= 255, $"Can't fit chunk in region! Offset={offset} Len={length / 1024}KB");
+            Ensure.That(startSector <= 0xFFFFFF && numSectors <= 255, "Can't fit chunk in region");
             return startSector << 8 | numSectors;
         }
 

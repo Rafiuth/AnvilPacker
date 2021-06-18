@@ -27,11 +27,13 @@ namespace AnvilPacker.Level
             var locations = new int[1024];
             _s.Position = 0;
             _s.ReadBulkBE<int>(locations);
-
-            for (int i = 0; i < 1024; i++) {
-                var tag = Read(locations[i]);
-                if (tag != null) {
-                    yield return (Tag: tag, X: i % 32, Z: i / 32);
+            
+            for (int z = 0; z < 32; z++) {
+                for (int x = 0; x < 32; x++) {
+                    var tag = Read(locations[GetIndex(x, z)]);
+                    if (tag != null) {
+                        yield return (tag, x, z);
+                    }
                 }
             }
         }

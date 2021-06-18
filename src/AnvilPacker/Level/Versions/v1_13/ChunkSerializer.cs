@@ -84,12 +84,12 @@ namespace AnvilPacker.Level.Versions.v1_13
         {
             if (tag == null) return;
 
-            foreach (var (typeName, rawBits) in tag) {
+            foreach (var (type, rawBits) in tag) {
                 var storage = CreateStorage(chunk, 256, 9, rawBits.Value<long[]>());
 
-                var type = HeightMapType.ForName(typeName);
-                var heights = chunk.HeightMaps.Get(type, true);
-                storage.Unpack(heights);
+                var heightmap = new Heightmap();
+                storage.Unpack(heightmap.Values);
+                chunk.Heightmaps.Add(type, heightmap);
             }
         }
 
@@ -163,10 +163,10 @@ namespace AnvilPacker.Level.Versions.v1_13
         private CompoundTag SerializeHeightmaps(Chunk chunk)
         {
             var tag = new CompoundTag();
-            foreach (var (type, heights) in chunk.HeightMaps) {
+            foreach (var (type, heights) in chunk.Heightmaps) {
                 var storage = CreateStorage(chunk, 256, 9);
-                storage.Pack(heights);
-                tag.SetLongArray(type.Name, storage.Data);
+                storage.Pack(heights.Values);
+                tag.SetLongArray(type, storage.Data);
             }
             return tag;
         }

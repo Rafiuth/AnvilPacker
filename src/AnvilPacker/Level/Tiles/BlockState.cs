@@ -17,9 +17,9 @@ namespace AnvilPacker.Level
         public BlockAttributes Attributes { get; set; }
 
         /// <summary> Amount of light this block absorbs. [0..15] </summary>
-        public byte Opacity { get; set; }
+        public byte LightOpacity { get; set; }
         /// <summary> Amount of light this block emits. [0..15] </summary>
-        public byte Emittance { get; set; }
+        public byte LightEmission { get; set; }
 
         public BlockMaterial Material => Block.Material;
 

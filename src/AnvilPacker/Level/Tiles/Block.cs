@@ -51,7 +51,7 @@ namespace AnvilPacker.Level
         //TODO: Remove IsAir and OpaqueFullCube
 
         //Internal
-        Legacy              = 1 << 30,
-        InternalMask        = Legacy
+        Legacy              = 1 << 28,
+        InternalMask        = ~0 << 28
     }
 }
