@@ -1,0 +1,634 @@
+[
+  {
+    "name": "ocean",
+    "temperature": 0.5,
+    "downfall": 0.5,
+    "depth": -1,
+    "scale": 0.1,
+    "precipitation": "rain"
+  },
+  {
+    "name": "plains",
+    "temperature": 0.8,
+    "downfall": 0.4,
+    "depth": 0.125,
+    "scale": 0.05,
+    "precipitation": "rain"
+  },
+  {
+    "name": "desert",
+    "temperature": 2,
+    "downfall": 0,
+    "depth": 0.125,
+    "scale": 0.05,
+    "precipitation": "none"
+  },
+  {
+    "name": "mountains",
+    "temperature": 0.2,
+    "downfall": 0.3,
+    "depth": 1,
+    "scale": 0.5,
+    "precipitation": "rain"
+  },
+  {
+    "name": "forest",
+    "temperature": 0.7,
+    "downfall": 0.8,
+    "depth": 0.1,
+    "scale": 0.2,
+    "precipitation": "rain"
+  },
+  {
+    "name": "taiga",
+    "temperature": 0.25,
+    "downfall": 0.8,
+    "depth": 0.2,
+    "scale": 0.2,
+    "precipitation": "rain"
+  },
+  {
+    "name": "swamp",
+    "temperature": 0.8,
+    "downfall": 0.9,
+    "depth": -0.2,
+    "scale": 0.1,
+    "precipitation": "rain"
+  },
+  {
+    "name": "river",
+    "temperature": 0.5,
+    "downfall": 0.5,
+    "depth": -0.5,
+    "scale": 0,
+    "precipitation": "rain"
+  },
+  {
+    "name": "nether_wastes",
+    "temperature": 2,
+    "downfall": 0,
+    "depth": 0.1,
+    "scale": 0.2,
+    "precipitation": "none"
+  },
+  {
+    "name": "the_end",
+    "temperature": 0.5,
+    "downfall": 0.5,
+    "depth": 0.1,
+    "scale": 0.2,
+    "precipitation": "none"
+  },
+  {
+    "name": "frozen_ocean",
+    "temperature": 0,
+    "downfall": 0.5,
+    "depth": -1,
+    "scale": 0.1,
+    "precipitation": "snow"
+  },
+  {
+    "name": "frozen_river",
+    "temperature": 0,
+    "downfall": 0.5,
+    "depth": -0.5,
+    "scale": 0,
+    "precipitation": "snow"
+  },
+  {
+    "name": "snowy_tundra",
+    "temperature": 0,
+    "downfall": 0.5,
+    "depth": 0.125,
+    "scale": 0.05,
+    "precipitation": "snow"
+  },
+  {
+    "name": "snowy_mountains",
+    "temperature": 0,
+    "downfall": 0.5,
+    "depth": 0.45,
+    "scale": 0.3,
+    "precipitation": "snow"
+  },
+  {
+    "name": "mushroom_fields",
+    "temperature": 0.9,
+    "downfall": 1,
+    "depth": 0.2,
+    "scale": 0.3,
+    "precipitation": "rain"
+  },
+  {
+    "name": "mushroom_field_shore",
+    "temperature": 0.9,
+    "downfall": 1,
+    "depth": 0,
+    "scale": 0.025,
+    "precipitation": "rain"
+  },
+  {
+    "name": "beach",
+    "temperature": 0.8,
+    "downfall": 0.4,
+    "depth": 0,
+    "scale": 0.025,
+    "precipitation": "rain"
+  },
+  {
+    "name": "desert_hills",
+    "temperature": 2,
+    "downfall": 0,
+    "depth": 0.45,
+    "scale": 0.3,
+    "precipitation": "none"
+  },
+  {
+    "name": "wooded_hills",
+    "temperature": 0.7,
+    "downfall": 0.8,
+    "depth": 0.45,
+    "scale": 0.3,
+    "precipitation": "rain"
+  },
+  {
+    "name": "taiga_hills",
+    "temperature": 0.25,
+    "downfall": 0.8,
+    "depth": 0.45,
+    "scale": 0.3,
+    "precipitation": "rain"
+  },
+  {
+    "name": "mountain_edge",
+    "temperature": 0.2,
+    "downfall": 0.3,
+    "depth": 0.8,
+    "scale": 0.3,
+    "precipitation": "rain"
+  },
+  {
+    "name": "jungle",
+    "temperature": 0.95,
+    "downfall": 0.9,
+    "depth": 0.1,
+    "scale": 0.2,
+    "precipitation": "rain"
+  },
+  {
+    "name": "jungle_hills",
+    "temperature": 0.95,
+    "downfall": 0.9,
+    "depth": 0.45,
+    "scale": 0.3,
+    "precipitation": "rain"
+  },
+  {
+    "name": "jungle_edge",
+    "temperature": 0.95,
+    "downfall": 0.8,
+    "depth": 0.1,
+    "scale": 0.2,
+    "precipitation": "rain"
+  },
+  {
+    "name": "deep_ocean",
+    "temperature": 0.5,
+    "downfall": 0.5,
+    "depth": -1.8,
+    "scale": 0.1,
+    "precipitation": "rain"
+  },
+  {
+    "name": "stone_shore",
+    "temperature": 0.2,
+    "downfall": 0.3,
+    "depth": 0.1,
+    "scale": 0.8,
+    "precipitation": "rain"
+  },
+  {
+    "name": "snowy_beach",
+    "temperature": 0.05,
+    "downfall": 0.3,
+    "depth": 0,
+    "scale": 0.025,
+    "precipitation": "snow"
+  },
+  {
+    "name": "birch_forest",
+    "temperature": 0.6,
+    "downfall": 0.6,
+    "depth": 0.1,
+    "scale": 0.2,
+    "precipitation": "rain"
+  },
+  {
+    "name": "birch_forest_hills",
+    "temperature": 0.6,
+    "downfall": 0.6,
+    "depth": 0.45,
+    "scale": 0.3,
+    "precipitation": "rain"
+  },
+  {
+    "name": "dark_forest",
+    "temperature": 0.7,
+    "downfall": 0.8,
+    "depth": 0.1,
+    "scale": 0.2,
+    "precipitation": "rain"
+  },
+  {
+    "name": "snowy_taiga",
+    "temperature": -0.5,
+    "downfall": 0.4,
+    "depth": 0.2,
+    "scale": 0.2,
+    "precipitation": "snow"
+  },
+  {
+    "name": "snowy_taiga_hills",
+    "temperature": -0.5,
+    "downfall": 0.4,
+    "depth": 0.45,
+    "scale": 0.3,
+    "precipitation": "snow"
+  },
+  {
+    "name": "giant_tree_taiga",
+    "temperature": 0.3,
+    "downfall": 0.8,
+    "depth": 0.2,
+    "scale": 0.2,
+    "precipitation": "rain"
+  },
+  {
+    "name": "giant_tree_taiga_hills",
+    "temperature": 0.3,
+    "downfall": 0.8,
+    "depth": 0.45,
+    "scale": 0.3,
+    "precipitation": "rain"
+  },
+  {
+    "name": "wooded_mountains",
+    "temperature": 0.2,
+    "downfall": 0.3,
+    "depth": 1,
+    "scale": 0.5,
+    "precipitation": "rain"
+  },
+  {
+    "name": "savanna",
+    "temperature": 1.2,
+    "downfall": 0,
+    "depth": 0.125,
+    "scale": 0.05,
+    "precipitation": "none"
+  },
+  {
+    "name": "savanna_plateau",
+    "temperature": 1,
+    "downfall": 0,
+    "depth": 1.5,
+    "scale": 0.025,
+    "precipitation": "none"
+  },
+  {
+    "name": "badlands",
+    "temperature": 2,
+    "downfall": 0,
+    "depth": 0.1,
+    "scale": 0.2,
+    "precipitation": "none"
+  },
+  {
+    "name": "wooded_badlands_plateau",
+    "temperature": 2,
+    "downfall": 0,
+    "depth": 1.5,
+    "scale": 0.025,
+    "precipitation": "none"
+  },
+  {
+    "name": "badlands_plateau",
+    "temperature": 2,
+    "downfall": 0,
+    "depth": 1.5,
+    "scale": 0.025,
+    "precipitation": "none"
+  },
+  {
+    "name": "small_end_islands",
+    "temperature": 0.5,
+    "downfall": 0.5,
+    "depth": 0.1,
+    "scale": 0.2,
+    "precipitation": "none"
+  },
+  {
+    "name": "end_midlands",
+    "temperature": 0.5,
+    "downfall": 0.5,
+    "depth": 0.1,
+    "scale": 0.2,
+    "precipitation": "none"
+  },
+  {
+    "name": "end_highlands",
+    "temperature": 0.5,
+    "downfall": 0.5,
+    "depth": 0.1,
+    "scale": 0.2,
+    "precipitation": "none"
+  },
+  {
+    "name": "end_barrens",
+    "temperature": 0.5,
+    "downfall": 0.5,
+    "depth": 0.1,
+    "scale": 0.2,
+    "precipitation": "none"
+  },
+  {
+    "name": "warm_ocean",
+    "temperature": 0.5,
+    "downfall": 0.5,
+    "depth": -1,
+    "scale": 0.1,
+    "precipitation": "rain"
+  },
+  {
+    "name": "lukewarm_ocean",
+    "temperature": 0.5,
+    "downfall": 0.5,
+    "depth": -1,
+    "scale": 0.1,
+    "precipitation": "rain"
+  },
+  {
+    "name": "cold_ocean",
+    "temperature": 0.5,
+    "downfall": 0.5,
+    "depth": -1,
+    "scale": 0.1,
+    "precipitation": "rain"
+  },
+  {
+    "name": "deep_warm_ocean",
+    "temperature": 0.5,
+    "downfall": 0.5,
+    "depth": -1.8,
+    "scale": 0.1,
+    "precipitation": "rain"
+  },
+  {
+    "name": "deep_lukewarm_ocean",
+    "temperature": 0.5,
+    "downfall": 0.5,
+    "depth": -1.8,
+    "scale": 0.1,
+    "precipitation": "rain"
+  },
+  {
+    "name": "deep_cold_ocean",
+    "temperature": 0.5,
+    "downfall": 0.5,
+    "depth": -1.8,
+    "scale": 0.1,
+    "precipitation": "rain"
+  },
+  {
+    "name": "deep_frozen_ocean",
+    "temperature": 0.5,
+    "downfall": 0.5,
+    "depth": -1.8,
+    "scale": 0.1,
+    "precipitation": "rain"
+  },
+  {
+    "name": "the_void",
+    "temperature": 0.5,
+    "downfall": 0.5,
+    "depth": 0.1,
+    "scale": 0.2,
+    "precipitation": "none"
+  },
+  {
+    "name": "sunflower_plains",
+    "temperature": 0.8,
+    "downfall": 0.4,
+    "depth": 0.125,
+    "scale": 0.05,
+    "precipitation": "rain"
+  },
+  {
+    "name": "desert_lakes",
+    "temperature": 2,
+    "downfall": 0,
+    "depth": 0.225,
+    "scale": 0.25,
+    "precipitation": "none"
+  },
+  {
+    "name": "gravelly_mountains",
+    "temperature": 0.2,
+    "downfall": 0.3,
+    "depth": 1,
+    "scale": 0.5,
+    "precipitation": "rain"
+  },
+  {
+    "name": "flower_forest",
+    "temperature": 0.7,
+    "downfall": 0.8,
+    "depth": 0.1,
+    "scale": 0.4,
+    "precipitation": "rain"
+  },
+  {
+    "name": "taiga_mountains",
+    "temperature": 0.25,
+    "downfall": 0.8,
+    "depth": 0.3,
+    "scale": 0.4,
+    "precipitation": "rain"
+  },
+  {
+    "name": "swamp_hills",
+    "temperature": 0.8,
+    "downfall": 0.9,
+    "depth": -0.1,
+    "scale": 0.3,
+    "precipitation": "rain"
+  },
+  {
+    "name": "ice_spikes",
+    "temperature": 0,
+    "downfall": 0.5,
+    "depth": 0.425,
+    "scale": 0.45000002,
+    "precipitation": "snow"
+  },
+  {
+    "name": "modified_jungle",
+    "temperature": 0.95,
+    "downfall": 0.9,
+    "depth": 0.2,
+    "scale": 0.4,
+    "precipitation": "rain"
+  },
+  {
+    "name": "modified_jungle_edge",
+    "temperature": 0.95,
+    "downfall": 0.8,
+    "depth": 0.2,
+    "scale": 0.4,
+    "precipitation": "rain"
+  },
+  {
+    "name": "tall_birch_forest",
+    "temperature": 0.6,
+    "downfall": 0.6,
+    "depth": 0.2,
+    "scale": 0.4,
+    "precipitation": "rain"
+  },
+  {
+    "name": "tall_birch_hills",
+    "temperature": 0.6,
+    "downfall": 0.6,
+    "depth": 0.55,
+    "scale": 0.5,
+    "precipitation": "rain"
+  },
+  {
+    "name": "dark_forest_hills",
+    "temperature": 0.7,
+    "downfall": 0.8,
+    "depth": 0.2,
+    "scale": 0.4,
+    "precipitation": "rain"
+  },
+  {
+    "name": "snowy_taiga_mountains",
+    "temperature": -0.5,
+    "downfall": 0.4,
+    "depth": 0.3,
+    "scale": 0.4,
+    "precipitation": "snow"
+  },
+  {
+    "name": "giant_spruce_taiga",
+    "temperature": 0.25,
+    "downfall": 0.8,
+    "depth": 0.2,
+    "scale": 0.2,
+    "precipitation": "rain"
+  },
+  {
+    "name": "giant_spruce_taiga_hills",
+    "temperature": 0.25,
+    "downfall": 0.8,
+    "depth": 0.2,
+    "scale": 0.2,
+    "precipitation": "rain"
+  },
+  {
+    "name": "modified_gravelly_mountains",
+    "temperature": 0.2,
+    "downfall": 0.3,
+    "depth": 1,
+    "scale": 0.5,
+    "precipitation": "rain"
+  },
+  {
+    "name": "shattered_savanna",
+    "temperature": 1.1,
+    "downfall": 0,
+    "depth": 0.3625,
+    "scale": 1.225,
+    "precipitation": "none"
+  },
+  {
+    "name": "shattered_savanna_plateau",
+    "temperature": 1,
+    "downfall": 0,
+    "depth": 1.05,
+    "scale": 1.2125001,
+    "precipitation": "none"
+  },
+  {
+    "name": "eroded_badlands",
+    "temperature": 2,
+    "downfall": 0,
+    "depth": 0.1,
+    "scale": 0.2,
+    "precipitation": "none"
+  },
+  {
+    "name": "modified_wooded_badlands_plateau",
+    "temperature": 2,
+    "downfall": 0,
+    "depth": 0.45,
+    "scale": 0.3,
+    "precipitation": "none"
+  },
+  {
+    "name": "modified_badlands_plateau",
+    "temperature": 2,
+    "downfall": 0,
+    "depth": 0.45,
+    "scale": 0.3,
+    "precipitation": "none"
+  },
+  {
+    "name": "bamboo_jungle",
+    "temperature": 0.95,
+    "downfall": 0.9,
+    "depth": 0.1,
+    "scale": 0.2,
+    "precipitation": "rain"
+  },
+  {
+    "name": "bamboo_jungle_hills",
+    "temperature": 0.95,
+    "downfall": 0.9,
+    "depth": 0.45,
+    "scale": 0.3,
+    "precipitation": "rain"
+  },
+  {
+    "name": "soul_sand_valley",
+    "temperature": 2,
+    "downfall": 0,
+    "depth": 0.1,
+    "scale": 0.2,
+    "precipitation": "none"
+  },
+  {
+    "name": "crimson_forest",
+    "temperature": 2,
+    "downfall": 0,
+    "depth": 0.1,
+    "scale": 0.2,
+    "precipitation": "none"
+  },
+  {
+    "name": "warped_forest",
+    "temperature": 2,
+    "downfall": 0,
+    "depth": 0.1,
+    "scale": 0.2,
+    "precipitation": "none"
+  },
+  {
+    "name": "basalt_deltas",
+    "temperature": 2,
+    "downfall": 0,
+    "depth": 0.1,
+    "scale": 0.2,
+    "precipitation": "none"
+  }
+]

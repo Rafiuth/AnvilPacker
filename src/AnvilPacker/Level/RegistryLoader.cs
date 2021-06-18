@@ -21,11 +21,23 @@ namespace AnvilPacker.Level
 
             LoadBlocks();
             LoadLegacyBlocks();
+            LoadBiomes();
 
             BlockRegistry.Air = BlockRegistry.GetBlock("air").DefaultState;
 
             sw.Stop();
             _logger.Debug($"Block registry loaded in {sw.ElapsedMilliseconds}ms");
+        }
+
+        private static void LoadBiomes()
+        {
+            using var reader = new JsonTextReader(new StreamReader("Resources/biomes.json", Encoding.UTF8));
+            JArray json = JArray.Load(reader);
+
+            Biome.Registry = json.ToObject<Biome[]>();
+            for (int i = 0; i < Biome.Registry.Length; i++) {
+                Biome.Registry[i].Id = i;
+            }
         }
 
         private static void LoadBlocks()

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -10,6 +11,8 @@ namespace AnvilPacker.Util
     /// <summary> Math extensions </summary>
     public static class Maths
     {
+        private const MethodImplOptions Inline = MethodImplOptions.AggressiveInlining;
+
         public static int CeilLog2(int x)
         {
             return x == 0 ? 0 : BitOperations.Log2((uint)x - 1) + 1;
@@ -71,6 +74,43 @@ namespace AnvilPacker.Util
         public static int Sign(int x)
         {
             return (x >> 31) | (int)((uint)(-x) >> 31);
+        }
+
+        public static double Lerp(double a, double b, double t)
+        {
+            return a + (b - a) * t;
+        }
+        [MethodImpl(Inline)]
+        public static double ClampedLerp(double a, double b, double t)
+        {
+            if (t <= 0) return a;
+            if (t >= 1) return b;
+
+            return Lerp(a, b, t);
+        }
+
+        [MethodImpl(Inline)]
+        public static double Lerp3(
+            double v000, double v100,
+            double v010, double v110,
+            double v001, double v101,
+            double v011, double v111,
+            double tx, double ty, double tz
+        )
+        {
+            return Lerp(
+                Lerp(
+                    Lerp(v000, v100, tx),
+                    Lerp(v010, v110, tx),
+                    ty
+                ),
+                Lerp(
+                    Lerp(v001, v101, tx),
+                    Lerp(v011, v111, tx),
+                    ty
+                ),
+                tz
+            );
         }
     }
 }
