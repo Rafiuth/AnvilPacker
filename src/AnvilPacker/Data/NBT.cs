@@ -11,7 +11,7 @@ using System.Text;
 
 namespace AnvilPacker.Data
 {
-    //Note: all tags must have a public constructor that takes no arguments.
+    //Note: all derived tags must have a public constructor that takes no arguments.
     public abstract class NbtTag
     {
         public abstract TagType Type { get; }
@@ -357,6 +357,13 @@ namespace AnvilPacker.Data
             CheckType(tag);
             _tags.Add(tag);
         }
+        public void AddRange(IEnumerable<NbtTag> tags)
+        {
+            foreach (var tag in tags) {
+                Add(tag);
+            }
+        }
+
         /// <summary> Gets the value of a PrimitiveTag at the specified index. </summary>
         public T Get<T>(int index)
         {
@@ -373,6 +380,11 @@ namespace AnvilPacker.Data
         public void RemoveAt(int index)
         {
             _tags.RemoveAt(index);
+        }
+        
+        public void Clear()
+        {
+            _tags.Clear();
         }
 
         private void CheckType(NbtTag value)
@@ -534,8 +546,9 @@ namespace AnvilPacker.Data
         public static byte[] Compress(CompoundTag tag)
         {
             using var mem = new MemoryStream();
-            using var dos = new DataWriter(new GZipStream(mem, CompressionMode.Compress, true));
-            Write(tag, dos);
+            using (var dos = new DataWriter(new GZipStream(mem, CompressionMode.Compress, true))) {
+                Write(tag, dos);
+            }
             return mem.ToArray();
         }
 

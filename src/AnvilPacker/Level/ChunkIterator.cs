@@ -11,13 +11,12 @@ namespace AnvilPacker.Level
     /// </summary>
     public class ChunkIterator
     {
-        private static readonly Chunk EmptyChunk = new Chunk(0, 0, new BlockPalette());
+        private static readonly Chunk EmptyChunk = new Chunk(0, 0, new BlockPalette(), 0, 0);
         private static readonly ChunkSection EmptySection = EmptyChunk.GetOrCreateSection(0);
 
-        public RegionBuffer Region;
-        public ChunkSection Section;
-        /// <summary> An array containing 3x3x3 (27) neighbor chunks of the current section. Lazily populated.</summary>
-        public ChunkSection[] NeighborCache = new ChunkSection[3 * 3 * 3];
+        public RegionBuffer Region { get; init; }
+        public ChunkSection Section { get; private set; }
+        private ChunkSection[] _neighborCache = new ChunkSection[3 * 3 * 3];
 
         public Chunk Chunk => Section.Chunk;
         public BlockPalette Palette => Section.Palette;
@@ -28,12 +27,17 @@ namespace AnvilPacker.Level
         public int Y => Section.Y;
         public int Z => Section.Z;
 
+        private ChunkIterator(RegionBuffer region)
+        {
+            Region = region;
+        }
+
         /// <summary> Creates a stream with the chunk sections in specified region, in YZX order. </summary>
         public static IEnumerable<ChunkIterator> Create(RegionBuffer region)
         {
-            var itr = new ChunkIterator();
+            var itr = new ChunkIterator(region);
             foreach (var (section, _) in GetSections(region, 1)) {
-                itr.SetCurrent(region, section);
+                itr.SetCurrent(section);
                 yield return itr;
             }
         }
@@ -46,9 +50,9 @@ namespace AnvilPacker.Level
         /// </summary>
         public static IEnumerable<(ChunkIterator Chunk, int Y)> CreateLayered(RegionBuffer region)
         {
-            var itr = new ChunkIterator();
+            var itr = new ChunkIterator(region);
             foreach (var (section, y) in GetSections(region, 16)) {
-                itr.SetCurrent(region, section);
+                itr.SetCurrent(section);
                 yield return (itr, y);
             }
         }
@@ -61,38 +65,27 @@ namespace AnvilPacker.Level
 
         private static IEnumerable<(ChunkSection Section, int LayerY)> GetSections(RegionBuffer region, int layers)
         {
-            int minY = 0, maxY = 15;
-            int x = 0, z = 0;
+            var (minSy, maxSy) = region.GetChunkYExtents();
 
-            yLoop:
-            for (int y = minY; y <= maxY; y++) {
+            for (int sy = minSy; sy <= maxSy; sy++) {
                 for (int by = 0; by < layers; by++) {
-                    for (; z < region.Size; z++) {
-                        for (; x < region.Size; x++) {
+                    for (int z = 0; z < region.Size; z++) {
+                        for (int x = 0; x < region.Size; x++) {
                             var chunk = region.GetChunk(x, z);
-                            var section = chunk?.GetSection(y);
+                            var section = chunk?.GetSection(sy);
                             if (section != null) {
-                                //Reset Y loop if this chunk is taller, but keep XZ
-                                if (chunk.MinSectionY < minY || chunk.MaxSectionY > maxY) {
-                                    minY = Math.Min(minY, chunk.MinSectionY);
-                                    maxY = Math.Max(maxY, chunk.MaxSectionY);
-                                    goto yLoop;
-                                }
                                 yield return (section, by);
                             }
                         }
-                        x = 0;
                     }
-                    z = 0;
                 }
             }
         }
 
-        public void SetCurrent(RegionBuffer region, ChunkSection section)
+        private void SetCurrent(ChunkSection section)
         {
-            Region = region;
             Section = section;
-            NeighborCache.Clear();
+            _neighborCache.Clear();
         }
 
         /// <summary> Gets the block at the specified position. </summary>
@@ -102,24 +95,16 @@ namespace AnvilPacker.Level
         /// </remarks>
         public BlockState GetBlock(int x, int y, int z)
         {
-            if ((uint)(x | y | z) < 16) {
-                return Section.GetBlock(x, y, z);
-            }
-            return GetInterBlock(x, y, z);
+            return Palette.GetState(GetBlockId(x, y, z));
         }
         public BlockId GetBlockId(int x, int y, int z)
         {
-            if ((uint)(x | y | z) < 16) {
+            if (ChunkSection.IsCoordInside(x, y, z)) {
                 return Section.GetBlockId(x, y, z);
             }
             return GetInterBlockId(x, y, z);
         }
 
-        private BlockState GetInterBlock(int x, int y, int z)
-        {
-            var neighbor = GetNeighbor(x, y, z);
-            return neighbor.GetBlock(x & 15, y & 15, z & 15);
-        }
         private BlockId GetInterBlockId(int x, int y, int z)
         {
             var neighbor = GetNeighbor(x, y, z);
@@ -147,10 +132,11 @@ namespace AnvilPacker.Level
         }
 
         /// <summary> Returns the neighbor section at given block coordinates. </summary>
+        /// <remarks> If the section does not exist, a globally shared empty section is returned instead. </summary>
         public ChunkSection GetNeighbor(int x, int y, int z)
         {
             int index = GetNeighborIndex(x, y, z);
-            return NeighborCache[index] ?? InitNeighbor(x, y, z, index);
+            return _neighborCache[index] ?? InitNeighbor(x, y, z, index);
         }
         private ChunkSection InitNeighbor(int x, int y, int z, int index)
         {
@@ -159,7 +145,7 @@ namespace AnvilPacker.Level
             int sz = Z + (z >> 4) - Region.Z;
 
             var neighbor = Region.GetSection(sx, sy, sz) ?? EmptySection;
-            NeighborCache[index] = neighbor;
+            _neighborCache[index] = neighbor;
             return neighbor;
         }
         private static int GetNeighborIndex(int x, int y, int z)

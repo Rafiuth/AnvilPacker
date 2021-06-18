@@ -17,30 +17,43 @@ namespace AnvilPacker.Data
         private int _bufPos;
 
         private bool _leaveOpen;
-
-        public Stream BaseStream { get; }
+        
+        private Stream _stream;
+        
+        /// <summary> Returns the stream in which the data is being written to. </summary>
+        /// <remarks>
+        /// Accessing this property causes the buffer to be flushed. Data can be written directly 
+        /// to this stream, for as long as this writer is not used.
+        /// </remarks>
+        public Stream BaseStream
+        {
+            get {
+                Flush();
+                return _stream;
+            }
+        }
 
         public long Position
         {
-            get => BaseStream.Position + _bufPos;
+            get => _stream.Position + _bufPos;
             set {
                 Flush();
-                BaseStream.Position = value;
+                _stream.Position = value;
             }
         }
         public long Length
         {
-            get => BaseStream.Length + _bufPos;
+            get => _stream.Length + _bufPos;
             set {
                 Flush();
-                BaseStream.SetLength(value);
+                _stream.SetLength(value);
             }
         }
         /// <param name="leaveOpen">If true, <paramref name="stream"/> will be disposed when <see cref="Dispose"/> is called. </param>
         /// <param name="bufferSize">Size of the internal buffer. Can be disabled by setting it to 0, but note that disabling buffering will increase overhead when working small primitives. </param>
         public DataWriter(Stream stream, bool leaveOpen = false, int bufferSize = 4096)
         {
-            BaseStream = stream;
+            _stream = stream;
             _buf = new byte[bufferSize];
             _bufPos = 0;
             _leaveOpen = leaveOpen;
@@ -53,14 +66,14 @@ namespace AnvilPacker.Data
                 _bufPos += data.Length;
             } else {
                 Flush();
-                BaseStream.Write(data);
+                _stream.Write(data);
             }
         }
 
         public void Flush()
         {
             if (_bufPos > 0) {
-                BaseStream.Write(_buf, 0, _bufPos);
+                _stream.Write(_buf, 0, _bufPos);
             }
             _bufPos = 0;
         }
@@ -102,7 +115,7 @@ namespace AnvilPacker.Data
         {
             Flush();
             if (!_leaveOpen) {
-                BaseStream.Dispose();
+                _stream.Dispose();
             }
         }
 

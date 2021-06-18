@@ -8,8 +8,6 @@ using AnvilPacker.Util;
 namespace AnvilPacker.Data
 {
     /// <summary> Provides an efficient binary data reader over <see cref="Stream" />. </summary>
-    //Design note: this class doesn't allow abstraction because it's whole point
-    //is to provide a "efficient" way to read binary data.
     public partial class DataReader : IDisposable
     {
         private const MethodImplOptions Inline = MethodImplOptions.AggressiveInlining;
@@ -19,7 +17,9 @@ namespace AnvilPacker.Data
         private int _bufPos, _bufLen;
 
         private bool _leaveOpen;
-
+        
+        /// <summary> Returns the stream in which the data is being read from. </summary>
+        /// <remarks> The position of this stream may be wrong, as this reader might buffer data. Use AsStream() if you need a raw Stream. </remarks>
         public Stream BaseStream { get; }
 
         public long Position
