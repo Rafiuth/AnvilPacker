@@ -12,11 +12,11 @@ namespace AnvilPacker.Level
     //https://minecraft.gamepedia.com/Region_file_format
     public class RegionReader : IDisposable
     {
-        private readonly FileDataReader _s;
+        private readonly DataReader _s;
 
         public RegionReader(string filename)
         {
-            _s = new FileDataReader(filename);
+            _s = new DataReader(File.OpenRead(filename));
         }
 
         public IEnumerable<(CompoundTag Tag, int X, int Z)> ReadAll()
@@ -58,7 +58,7 @@ namespace AnvilPacker.Level
             if (actualLen > length) {
                 throw new InvalidDataException($"Corrupted chunk: declared length larger than sector count.");
             }
-            var rawStream = _s.ForkStream(offset + 5, actualLen);
+            var rawStream = _s.AsStream(actualLen);
 
             using var dataStream = compressionType switch {
                 1 => new GZipStream(rawStream, CompressionMode.Decompress),

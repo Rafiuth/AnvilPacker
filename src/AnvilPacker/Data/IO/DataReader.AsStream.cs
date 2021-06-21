@@ -9,40 +9,49 @@ namespace AnvilPacker.Data
 {    
     public partial class DataReader
     {
-        public Stream AsStream(bool leaveOpen = true)
+        /// <summary> Wraps this reader into a new <see cref="Stream"/>. </summary>
+        /// <param name="length">Maximum number of bytes that can be read from the returned stream.</param>
+        /// <param name="leaveOpen">Whether to close this reader when the returned stream is closed/disposed.</param>
+        public Stream AsStream(long length = long.MaxValue, bool leaveOpen = true)
         {
-            return new StreamProxy(this, leaveOpen);
+            return new StreamWrapper(this, length, leaveOpen);
         }
 
-        private class StreamProxy : Stream
+        private class StreamWrapper : Stream
         {
             private DataReader _dr;
             private bool _leaveOpen;
+            private long _remainingBytes;
+            private long _length;
 
             private byte[] _buf => _dr._buf;
             private int _bufPos { get => _dr._bufPos; set => _dr._bufPos = value; }
             private int _bufLen => _dr._bufLen;
 
-
             public override bool CanRead => true;
             public override bool CanSeek => _dr.BaseStream.CanSeek;
             public override bool CanWrite => false;
 
-            public override long Length => _dr.Length;
+            public override long Length => Math.Min(_length + _dr.Position, _dr.Length);
             public override long Position
             {
                 get => _dr.Position;
                 set => _dr.Position = value;
             }
 
-            public StreamProxy(DataReader dr, bool leaveOpen)
+            public StreamWrapper(DataReader dr, long length, bool leaveOpen)
             {
                 _dr = dr;
+                _remainingBytes = length;
+                _length = length;
                 _leaveOpen = leaveOpen;
             }
 
             public override int Read(Span<byte> dest)
             {
+                if (dest.Length > _remainingBytes) {
+                    dest = dest[0..(int)_remainingBytes];
+                }
                 int orgLen = dest.Length;
                 //Duplicating logic here because DataReader will always throw on EOF
                 int bufAvail = Math.Min(dest.Length, _bufLen - _bufPos);
@@ -56,7 +65,9 @@ namespace AnvilPacker.Data
                     if (bytesRead <= 0) break;
                     dest = dest[bytesRead..];
                 }
-                return orgLen - dest.Length;
+                int totalBytesRead = orgLen - dest.Length;
+                _remainingBytes -= totalBytesRead;
+                return totalBytesRead;
             }
             public override int Read(byte[] buffer, int offset, int count)
             {
