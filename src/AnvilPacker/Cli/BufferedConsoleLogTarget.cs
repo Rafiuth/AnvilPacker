@@ -25,13 +25,23 @@ namespace AnvilPacker.Cli
         public static void Flush()
         {
             var sb = new StringBuilder();
+            var color = ConsoleColor.Black;
+
             while (_queue.TryDequeue(out var evt)) {
+                var eventColor = GetLevelColor(evt.Level);
+                if (eventColor != color) {
+                    Console.Write(sb);
+                    sb.Clear();
+                    Console.ForegroundColor = eventColor;
+                    color = eventColor;
+                }
                 sb.AppendFormat("[{0}] {1}{2}{3}\n", evt.Level.ToString().ToUpper(), evt.FormattedMessage, evt.Exception == null ? "" : "\n", evt.Exception);
             }
             Console.Write(sb);
+            Console.ResetColor();
         }
 
-        private ConsoleColor GetLevelColor(LogLevel level)
+        private static ConsoleColor GetLevelColor(LogLevel level)
         {
             return level.Ordinal switch {
                 0 /* Trace */ => ConsoleColor.DarkGray,
