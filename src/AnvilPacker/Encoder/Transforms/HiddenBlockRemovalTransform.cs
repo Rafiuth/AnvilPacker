@@ -77,11 +77,14 @@ namespace AnvilPacker.Encoder.Transforms
             var isWhitelisted = region.Palette.ToArray(s => Whitelist == null || Whitelist.Contains(s.Block));
 
             var mostFrequent = default(BlockId);
+            int changedBlocks = 0;
+            int totalBlocks = 0;
 
             foreach (var (chunk, y) in ChunkIterator.CreateLayered(region)) {
                 for (int z = 0; z < 16; z++) {
                     for (int x = 0; x < 16; x++) {
-                        if (!isWhitelisted[chunk.GetBlockIdFast(x, y, z)]) {
+                        var id = chunk.GetBlockIdFast(x, y, z);
+                        if (!isWhitelisted[id]) {
                             continue;
                         }
                         if (!CummulativeFreqs) {
@@ -96,10 +99,15 @@ namespace AnvilPacker.Encoder.Transforms
 
                             UpdateFreq(chunk.GetBlockId(nx, ny, nz));
                         }
-                        chunk.SetBlockId(x, y, z, mostFrequent);
+                        if (mostFrequent != id) {
+                            chunk.SetBlockId(x, y, z, mostFrequent);
+                            changedBlocks++;
+                        }
                     }
                 }
+                totalBlocks += 256;
             }
+            _logger.Debug($"Simplified {changedBlocks}/{totalBlocks} ({changedBlocks * 100 / totalBlocks}%) hidden blocks");
 
             //Check if the block is surrounded by opaque blocks
             bool IsHidden(ChunkIterator chunk, int x, int y, int z)
@@ -116,9 +124,7 @@ namespace AnvilPacker.Encoder.Transforms
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             void UpdateFreq(BlockId id)
             {
-                ref int freq = ref freqs[id];
-                freq++;
-                if (freq > freqs[mostFrequent]) {
+                if (++freqs[id] > freqs[mostFrequent]) {
                     mostFrequent = id;
                 }
             }
@@ -127,7 +133,7 @@ namespace AnvilPacker.Encoder.Transforms
         private bool IsOpaque(BlockState state)
         {
             //Attributes required to be true
-            const BlockAttributes AttrMaskT = BlockAttributes.OpaqueFullCube;
+            const BlockAttributes AttrMaskT = BlockAttributes.Opaque | BlockAttributes.FullCube;
             //Attributes required to be false
             const BlockAttributes AttrMaskF = BlockAttributes.Translucent;
 

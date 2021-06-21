@@ -11,7 +11,7 @@ namespace AnvilPacker.Level
         public BlockState DefaultState { get; set; }
         public BlockMaterial Material { get; init; }
         public List<BlockProperty> Properties { get; init; }
-        public BlockState[] States { get; set; }
+        public BlockState[] States { get; init; }
 
         /// <summary> Whether this block was created on the fly, i.e. it is not known in any registry. </summary>
         public bool IsDynamic { get; init; }
@@ -43,12 +43,12 @@ namespace AnvilPacker.Level
         Opaque              = 1 << 0,
         Translucent         = 1 << 1,
         FullCube            = 1 << 2,
-        OpaqueFullCube      = 1 << 3, // Opaque && FullCube
+        //OpaqueFullCube      = 1 << 3, // Opaque && FullCube
         HasRandomTicks      = 1 << 4,
         EmitsRedstonePower  = 1 << 5,
-        IsImmerse           = 1 << 6, // !state.getFluidState().isEmpty()
-        IsAir               = 1 << 7,
-        //TODO: Remove IsAir and OpaqueFullCube
+        HasFluid            = 1 << 6, // !state.getFluidState().isEmpty()
+        //IsAir               = 1 << 7,
+        //TODO: Remove IsAir and OpaqueFullCube from datagen
 
         //Internal
         Legacy              = 1 << 28,
