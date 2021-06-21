@@ -16,7 +16,7 @@ namespace AnvilPacker
         {
             ValidatePaths(opts, true, false);
 
-            var packer = new WorldPacker(opts.Input, opts.Output, opts.MaxThreads);
+            using var packer = new WorldPacker(opts.Input, opts.Output, opts.MaxThreads);
             var task = packer.Encode();
             ShowPackerProgress(packer, task);
         }
@@ -25,7 +25,7 @@ namespace AnvilPacker
         {
             ValidatePaths(opts, false, true);
 
-            var packer = new WorldPacker(opts.Input, opts.Output, opts.MaxThreads);
+            using var packer = new WorldPacker(opts.Input, opts.Output, opts.MaxThreads);
             var task = packer.Decode();
             ShowPackerProgress(packer, task);
         }
@@ -67,9 +67,13 @@ namespace AnvilPacker
                     }
                 }
             }
-            _logger.Info($"Done in {FormatTime(sw.Elapsed)}");
-
             BufferedConsoleLogTarget.EnableBuffer = false;
+
+            if (!completionTask.IsFaulted) {
+                _logger.Info($"Done in {FormatTime(sw.Elapsed)}");
+            } else {
+                _logger.Fatal(completionTask.Exception, "Failed to run packer task");
+            }
         }
 
         private static string FormatTime(TimeSpan time)
@@ -79,9 +83,9 @@ namespace AnvilPacker
                 sb.AppendFormat("{0:0}h ", time.TotalHours);
             }
             if (time.TotalMinutes >= 1) {
-                sb.AppendFormat("{0:0}m ", time.TotalMinutes);
+                sb.AppendFormat("{0:0}m ", time.Minutes);
             }
-            sb.AppendFormat("{0:0}s", time.TotalSeconds);
+            sb.AppendFormat("{0:0}s", time.Seconds);
 
             return sb.ToString();
         }

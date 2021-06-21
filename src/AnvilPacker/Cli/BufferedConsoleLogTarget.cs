@@ -26,7 +26,7 @@ namespace AnvilPacker.Cli
         {
             var sb = new StringBuilder();
             while (_queue.TryDequeue(out var evt)) {
-                sb.AppendFormat("[{0}] {1}\n", evt.Level.ToString().ToUpper(), evt.FormattedMessage);
+                sb.AppendFormat("[{0}] {1}{2}{3}\n", evt.Level.ToString().ToUpper(), evt.FormattedMessage, evt.Exception == null ? "" : "\n", evt.Exception);
             }
             Console.Write(sb);
         }
