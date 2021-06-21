@@ -1,7 +1,7 @@
 
 # Encoder
 - [ ] Block state attribute estimation
-  - [ ] Attribs for heightmap calculation
+  - [x] Heightmap opacity
   - [ ] Light emittance
   - [ ] Light opacity
 - [ ] Scheduled ticks
