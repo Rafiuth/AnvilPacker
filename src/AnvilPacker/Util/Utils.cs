@@ -1,5 +1,8 @@
 using System;
 using System.IO;
+using System.Linq;
+using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 
 namespace AnvilPacker.Util
@@ -43,6 +46,29 @@ namespace AnvilPacker.Util
                 }
             }
             return false;
+        }
+
+        /// <summary> Tests if <paramref name="subPath"/> is inside <paramref name="basePath"/></summary>
+        public static bool IsSubPath(string basePath, string subPath)
+        {
+            //https://stackoverflow.com/a/66877016
+            var rel = Path.GetRelativePath(basePath, subPath);
+            return !rel.StartsWith('.') && !Path.IsPathRooted(rel);
+        }
+
+        private static readonly Regex INVALID_FILE_CHARS_REGEX =
+            new Regex(
+                "[" +
+                string.Join('|',
+                    Path.GetInvalidFileNameChars()
+                        .Select(c => Regex.Escape(c.ToString()))
+                )
+                + "]"
+            );
+
+        public static string RemoveInvalidPathChars(string name)
+        {
+            return INVALID_FILE_CHARS_REGEX.Replace(name, "_");
         }
     }
 }

@@ -124,7 +124,7 @@ namespace AnvilPacker
 
         private static NbtTag ReadFileAsNbt(string path)
         {
-            var dr = new FileDataReader(path);
+            var dr = new DataReader(File.OpenRead(path));
 
             try {
                 if (dr.ReadUShortBE() == 0x1F8B) {

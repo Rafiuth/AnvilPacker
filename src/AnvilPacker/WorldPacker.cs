@@ -5,118 +5,181 @@ using System.Buffers;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
+using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
+using System.Threading.Tasks.Dataflow;
+using AnvilPacker.Data;
+using AnvilPacker.Data.Archives;
+using AnvilPacker.Encoder;
 using AnvilPacker.Encoder.Transforms;
 using AnvilPacker.Level;
 using AnvilPacker.Util;
+using Newtonsoft.Json;
 using NLog;
 
 namespace AnvilPacker
 {
-    //TODO: Should enc and dec be in separate classes?
     //https://docs.microsoft.com/en-us/dotnet/standard/parallel-programming/dataflow-task-parallel-library
-    public partial class WorldPacker : IDisposable
+    public class WorldPacker : WorldPackProcessor
     {
-        private static readonly ILogger _logger = LogManager.GetCurrentClassLogger();
+        private IArchiveWriter _archive;
 
-        private WorldInfo _world;
-        private ZipArchive _zip;
-        private TransformPipe _transforms = TransformPipe.Empty;
-        private int _maxThreads;
-        private string _zipPath;
-
-        private PackMetadata _meta = new() {
-            Version = "a0.1", //TODO: set this on build
-            DataVersion = 1,
-            Transforms = new List<ReversibleTransform>(),
-            Timestamp = DateTime.UtcNow
-        };
-
-        private PackerTaskProgress _regionProgress = new() { Name = "Regions" };
-        private PackerTaskProgress _opaqueProgress = new() { Name = "Passtrough" };
-
-        public PackerTaskProgress[] TaskProgresses => new[] {
-            _regionProgress, _opaqueProgress 
-        };
-
-        public WorldPacker(string worldPath, string zipPath, int maxThreads)
+        public WorldPacker(string worldPath, string packPath)
         {
             _world = new WorldInfo(worldPath);
-            _zipPath = zipPath;
-            _maxThreads = maxThreads;
+            _archive = DataArchive.Create(packPath);
+
+            _meta = new() {
+                Version = "a0.1", //TODO: set this on build
+                DataVersion = 1,
+                Transforms = new List<ReversibleTransform>(),
+                Timestamp = DateTime.UtcNow
+            };
         }
-        private void CopyStream(Stream src, Stream dst, long length, PackerTaskProgress? progress = null, object? readLock = null)
+        
+        public override async Task Run(int maxThreads)
         {
-            if (length == 0) {
-                progress.Inc(1.0); //don't corrupt the progress to NaN
+            var encodeOpts = new ExecutionDataflowBlockOptions() {
+                MaxDegreeOfParallelism = maxThreads,
+                EnsureOrdered = false,
+                BoundedCapacity = 65536
+            };
+            var writeOpts = new ExecutionDataflowBlockOptions() {
+                MaxDegreeOfParallelism = _archive.SupportsSimultaneousWrites ? 64 : 1,
+                EnsureOrdered = false,
+                BoundedCapacity = maxThreads
+            };
+            var linkOpts = new DataflowLinkOptions() {
+                PropagateCompletion = true
+            };
+            var encodeRegionBlock = new TransformBlock<string, WriteMessage>(EncodeRegion, encodeOpts);
+            var encodeOpaqueBlock = new TransformBlock<string, WriteMessage>(EncodeOpaque, encodeOpts);
+            var writeBlock = new ActionBlock<WriteMessage>(WriteEntry, writeOpts);
+
+            encodeRegionBlock.LinkTo(writeBlock, linkOpts);
+            encodeOpaqueBlock.LinkTo(writeBlock, linkOpts);
+
+            LogStatus("Discovering and encoding world files...");
+
+            await QueueFiles(_world.RootPath);
+            encodeRegionBlock.Complete();
+            //readOpaqueBlock.Complete();
+
+            LogStatus("File discovery done, waiting for encoder to finish...");
+
+            await writeBlock.Completion;
+
+            WriteMetadata();
+
+            async Task QueueFiles(string path)
+            {
+                foreach (var file in Directory.EnumerateFiles(path)) {
+                    if (Utils.FileHasExtension(file, ".mca")) {
+                        _regionProgress.AddItem();
+                        await encodeRegionBlock.SendAsync(file);
+                    } else {
+                        _opaqueProgress.AddItem();
+                        await encodeOpaqueBlock.SendAsync(file);
+                    }
+                }
+                foreach (var dir in Directory.EnumerateDirectories(path)) {
+                    await QueueFiles(dir);
+                }
+            }
+        }
+
+        private void WriteMetadata()
+        {
+            using var entry = _archive.CreateEntry("anvilpacker.json");
+            using var jw = new JsonTextWriter(new StreamWriter(entry, Encoding.UTF8));
+            jw.Formatting = Formatting.Indented;
+            TransformPipe.SettingSerializer.Serialize(jw, _meta);
+        }
+
+        private WriteMessage EncodeRegion(string path)
+        {
+            string relPath = Path.GetRelativePath(_world.RootPath, path);
+            LogStatus("Encoding '{0}'...", relPath);
+
+            //TODO: LoadRegion in a separate data flow block could improve perf with slow IO devices
+            var region = new RegionBuffer();
+            int chunksLoaded = 0;
+
+            try {
+                chunksLoaded = region.Load(_world, path);
+            } catch (Exception ex) {
+                _logger.Error(ex, "Failed to load region '{0}'. Copying to the output as is.", relPath);
+                return new WriteMessage() {
+                    Name = relPath,
+                    InputFileName = path,
+                    Progress = _regionProgress,
+                    Compress = true
+                };
+            }
+
+            if (chunksLoaded == 0) {
+                LogStatus("Discarding empty region '{0}'", path);
+                _regionProgress.Inc(1.0);
+                return default;
+            }
+            var encoder = new RegionEncoder(region);
+            var mem = new MemoryDataWriter(1024 * 1024 * 2);
+            encoder.Encode(mem, _regionProgress.CreateProgressListener());
+
+            return new WriteMessage() {
+                Name = Path.ChangeExtension(relPath, REGION_EXT),
+                Data = mem.BufferMem,
+                Compress = false
+            };
+        }
+
+        private static readonly string[] UNCOMPRESSABLE_FILE_EXTS = {
+            ".dat", ".nbt", ".schematic",   //gzipped
+            ".png", ".jpg",
+            ".zip", ".rar", ".7z"
+        };
+        private WriteMessage EncodeOpaque(string path)
+        {
+            return new WriteMessage() {
+                Name = Path.GetRelativePath(_world.RootPath, path),
+                InputFileName = path,
+                Compress = !Utils.FileHasExtension(path, UNCOMPRESSABLE_FILE_EXTS),
+                Progress = _opaqueProgress
+            };
+        }
+
+        private void WriteEntry(WriteMessage msg)
+        {
+            if (msg.Name == null) {
                 return;
             }
+            LogStatus("Writing '{0}'...", msg.Name);
 
-            var buf = ArrayPool<byte>.Shared.Rent(65536);
-            try {
-                int bytesRead = 1;
+            var compLevel = msg.Compress ? CompressionLevel.Optimal : CompressionLevel.NoCompression;
+            using var es = _archive.CreateEntry(msg.Name, compLevel);
 
-                while (bytesRead > 0) {
-
-                    if (readLock == null) {
-                        bytesRead = src.Read(buf);
-                    } else {
-                        lock (readLock) {
-                            bytesRead = src.Read(buf);
-                        }
-                    }
-
-                    dst.Write(buf, 0, bytesRead);
-                    progress?.Inc(bytesRead / (double)length);
-                }
-            } finally {
-                ArrayPool<byte>.Shared.Return(buf);
+            if (msg.InputFileName != null) {
+                using var fs = File.OpenRead(msg.InputFileName);
+                CopyStream(fs, es, fs.Length, msg.Progress);
+            } else {
+                es.Write(msg.Data.Span);
             }
         }
 
-        private void LogStatus(string msg, string? filename = null)
+        //Holds info on a pending entry to be written into the output archive
+        struct WriteMessage
         {
-            if (filename != null && Path.IsPathFullyQualified(filename)) {
-                filename = Path.GetRelativePath(_world.RootPath, filename);
-            }
-            _logger.Info(msg, filename);
+            public string Name;
+            public string? InputFileName;   //If null, Data will be written instead
+            public Memory<byte> Data;
+            public bool Compress;
+            public PackerTaskProgress? Progress;
         }
 
-        public void Dispose()
+        public override void Dispose()
         {
-            _zip?.Dispose();
-        }
-    }
-
-    /// <summary> Custom metadata for a packed world. </summary>
-    public class PackMetadata
-    {
-        public string Version = null!;  //version + commit of the encoder
-        public int DataVersion = 0;     //version number of this object
-        public DateTime Timestamp;      //time the file was encoded - probably useless
-        public List<ReversibleTransform> Transforms = null!; //transforms for the decoder to apply
-    }
-    public class PackerTaskProgress
-    {
-        public string Name = "";
-        public double ProcessedItems = 0;
-        public int TotalItems = 0;
-
-        internal void AddItem()
-        {
-            TotalItems++;
-        }
-        internal void Inc(double delta)
-        {
-            Utils.InterlockedAdd(ref ProcessedItems, delta);
-        }
-        internal Progress<double> CreateProgressListener()
-        {
-            double prevProgress = 0;
-            return new Progress<double>(currProgress => {
-                Inc(currProgress - prevProgress);
-                prevProgress = currProgress;
-            });
+            _archive?.Dispose();
         }
     }
 }

@@ -16,8 +16,8 @@ namespace AnvilPacker
         {
             ValidatePaths(opts, true, false);
 
-            using var packer = new WorldPacker(opts.Input, opts.Output, opts.MaxThreads);
-            var task = packer.Encode();
+            using var packer = new WorldPacker(opts.Input, opts.Output);
+            var task = packer.Run(opts.MaxThreads);
             ShowPackerProgress(packer, task);
         }
 
@@ -25,12 +25,12 @@ namespace AnvilPacker
         {
             ValidatePaths(opts, false, true);
 
-            using var packer = new WorldPacker(opts.Input, opts.Output, opts.MaxThreads);
-            var task = packer.Decode();
+            using var packer = new WorldUnpacker(opts.Input, opts.Output);
+            var task = packer.Run(opts.MaxThreads);
             ShowPackerProgress(packer, task);
         }
 
-        private static void ShowPackerProgress(WorldPacker packer, Task completionTask)
+        private static void ShowPackerProgress(WorldPackProcessor packer, Task completionTask)
         {
             var sw = Stopwatch.StartNew();
 
