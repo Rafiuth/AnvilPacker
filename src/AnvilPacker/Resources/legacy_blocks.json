@@ -1,3 +1,7 @@
+//TODO: fix LegacyDataGenerator
+//for [mob_spawner, slime, barrier]:
+//  flags are `Opaque|FullCube` (5) this is wrong, change to `FullCube` (4)
+//  barrier: 7 -> 6
 {
   "version": "1.12.2",
   "worldVersion": 1343,
@@ -945,7 +949,7 @@
       "material": "stone",
       "properties": [],
       "states": {
-        "flags": 5,
+        "flags": 4,
         "light": 0,
         "states": []
       }
@@ -3384,7 +3388,7 @@
       "material": "clay",
       "properties": [],
       "states": {
-        "flags": 5,
+        "flags": 4,
         "light": 0,
         "states": []
       }
@@ -3396,7 +3400,7 @@
       "material": "barrier",
       "properties": [],
       "states": {
-        "flags": 7,
+        "flags": 6,
         "light": 0,
         "states": []
       }
