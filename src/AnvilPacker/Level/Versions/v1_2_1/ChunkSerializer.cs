@@ -46,7 +46,7 @@ namespace AnvilPacker.Level.Versions.v1_2_1
         {
             int y = tag.GetSByte("Y");
 
-            var section = new ChunkSection(chunk, y);
+            var section = chunk.GetOrCreateSection(y);
 
             var blockId = tag.Pop<byte[]>("Blocks");
             var blockData = tag.Pop<byte[]>("Data");
@@ -79,9 +79,8 @@ namespace AnvilPacker.Level.Versions.v1_2_1
                 blocks[i + 1] = GetId((ushort)b);
             }
             if (localPalette.Count == 1 && globalPalette.GetState(localPalette.First().Value).Material == BlockMaterial.Air) {
-                return;
+                chunk.SetSection(y, null);
             }
-            chunk.SetSection(y, section);
 
             BlockId GetId(ushort stateId)
             {
