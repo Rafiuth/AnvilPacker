@@ -5,6 +5,8 @@ using System.Buffers;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -24,20 +26,23 @@ namespace AnvilPacker
     public class WorldPacker : WorldPackProcessor
     {
         private IArchiveWriter _archive;
+        private TransformPipe _transforms;
 
         public WorldPacker(string worldPath, string packPath)
         {
             _world = new WorldInfo(worldPath);
             _archive = DataArchive.Create(packPath);
 
+            _transforms = TransformPipe.Empty;
+
             _meta = new() {
-                Version = "a0.1", //TODO: set this on build
+                Version = GetVersion(),
                 DataVersion = 1,
-                Transforms = new List<ReversibleTransform>(),
+                Transforms = _transforms.OfType<ReversibleTransform>().Reverse().ToList(),
                 Timestamp = DateTime.UtcNow
             };
         }
-        
+
         public override async Task Run(int maxThreads)
         {
             var encodeOpts = new ExecutionDataflowBlockOptions() {
@@ -46,7 +51,7 @@ namespace AnvilPacker
                 BoundedCapacity = 65536
             };
             var writeOpts = new ExecutionDataflowBlockOptions() {
-                MaxDegreeOfParallelism = _archive.SupportsSimultaneousWrites ? 64 : 1,
+                MaxDegreeOfParallelism = _archive.SupportsSimultaneousWrites ? maxThreads : 1,
                 EnsureOrdered = false,
                 BoundedCapacity = maxThreads
             };
@@ -104,10 +109,10 @@ namespace AnvilPacker
 
             //TODO: LoadRegion in a separate data flow block could improve perf with slow IO devices
             var region = new RegionBuffer();
-            int chunksLoaded = 0;
+            int numChunks = 0;
 
             try {
-                chunksLoaded = region.Load(_world, path);
+                numChunks = region.Load(_world, path);
             } catch (Exception ex) {
                 _logger.Error(ex, "Failed to load region '{0}'. Copying to the output as is.", relPath);
                 return new WriteMessage() {
@@ -117,14 +122,18 @@ namespace AnvilPacker
                     Compress = true
                 };
             }
+            if (numChunks > 0) {
+                _transforms.Apply(region);
+                numChunks = region.Chunks.Count(c => c != null);
+            }
 
-            if (chunksLoaded == 0) {
+            if (numChunks == 0) {
                 LogStatus("Discarding empty region '{0}'", path);
                 _regionProgress.Inc(1.0);
                 return default;
             }
             var encoder = new RegionEncoder(region);
-            var mem = new MemoryDataWriter(1024 * 1024 * 2);
+            var mem = new MemoryDataWriter(1024 * 1024 * 4);
             encoder.Encode(mem, _regionProgress.CreateProgressListener());
 
             return new WriteMessage() {
@@ -165,6 +174,13 @@ namespace AnvilPacker
             } else {
                 es.Write(msg.Data.Span);
             }
+        }
+
+        private string GetVersion()
+        {
+            var asm = typeof(WorldPacker).Assembly;
+            var attrib = asm.GetCustomAttribute<AssemblyInformationalVersionAttribute>();
+            return attrib?.InformationalVersion ?? asm.GetName().Version!.ToString();
         }
 
         //Holds info on a pending entry to be written into the output archive

@@ -99,6 +99,10 @@ namespace AnvilPacker
             var decoder = new RegionDecoder(region);
             decoder.Decode(new DataReader(mem), _regionProgress.CreateProgressListener());
 
+            foreach (var transform in _meta.Transforms) {
+                transform.Apply(region);
+            }
+
             var path = Path.ChangeExtension(GetExtractionPath(entry), "mca");
             region.Save(_world, path);
         }

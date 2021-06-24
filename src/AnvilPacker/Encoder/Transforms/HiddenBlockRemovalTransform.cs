@@ -46,10 +46,13 @@ namespace AnvilPacker.Encoder.Transforms
                 "stone", "dirt", "sand", "sandstone"
             };
             int[] legacyIds = {
+                //note: Block.Equals() only check for names and properties
                 1,  //stone
                 3,  //dirt
                 12, //sand,
                 24, //sandstone
+                73, //redstone_ore
+                74, //lit_redstone_ore
             };
             Whitelist = new();
             foreach (var name in names) {
@@ -162,7 +165,7 @@ namespace AnvilPacker.Encoder.Transforms
             //TODO: ensure points are at least some distance appart each other (poisson sampling)
             return points.Except(ImmediateNeighbors.Append(new Vec3i(0, 0, 0)))
                          .Take(Samples)
-                         .OrderBy(v => (v.X + r) + (v.Y + r) * rs + (v.Z + r) * (rs * rs)) //improve cache coherency
+                         .OrderBy(v => ((v.Y + r) * rs + (v.Z + r)) * rs + (v.X + r)) //improve cache coherency
                          .ToArray();
         }
     }

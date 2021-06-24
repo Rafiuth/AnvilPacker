@@ -1,3 +1,5 @@
+#nullable enable
+
 using System;
 using System.Buffers;
 using System.Collections.Generic;
@@ -16,8 +18,8 @@ namespace AnvilPacker
 
         protected readonly ILogger _logger = LogManager.GetCurrentClassLogger();
 
-        protected WorldInfo _world;
-        protected PackMetadata _meta;
+        protected WorldInfo _world = null!;
+        protected PackMetadata _meta = null!;
 
         protected PackerTaskProgress _regionProgress = new() { Name = "Regions" };
         protected PackerTaskProgress _opaqueProgress = new() { Name = "Passtrough" };
