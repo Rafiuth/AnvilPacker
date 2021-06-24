@@ -33,7 +33,7 @@ namespace AnvilPacker
             _world = new WorldInfo(worldPath);
             _archive = DataArchive.Create(packPath);
 
-            _transforms = TransformPipe.Empty;
+            _transforms = TransformPipe.DefaultPreset;
 
             _meta = new() {
                 Version = GetVersion(),

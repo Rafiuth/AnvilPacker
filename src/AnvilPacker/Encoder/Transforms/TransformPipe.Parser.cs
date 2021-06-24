@@ -19,8 +19,12 @@ namespace AnvilPacker.Encoder.Transforms
     {
         public static Dictionary<string, Type> KnownTransforms { get; } = new() {
             { "hidden_block_removal",       typeof(HiddenBlockRemovalTransform) },
-            { "predict_upgrade_data",       typeof(UpgradeDataTransform)        },
+            { "simplify_upgrade_data",      typeof(UpgradeDataTransform)        },
+            { "remove_empty_chunks",        typeof(EmptyChunkRemovalTransform)  },
         };
+
+        public static TransformPipe DefaultPreset   => Parse("remove_empty_chunks,simplify_upgrade_data");
+        public static TransformPipe LossyPreset     => Parse("remove_empty_chunks,simplify_upgrade_data,hidden_block_removal");
 
         //Example: "hidden_block_removal{samples=64,radius=3,cum_freqs=false,whitelist=['stone',dirt,4]},predict_upgrade_data"
         //Syntax is similar to JSON5

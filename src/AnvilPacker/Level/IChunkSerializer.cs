@@ -30,5 +30,8 @@ namespace AnvilPacker.Level
 
         public const int v1_16_5    = 2586;
         public const int v1_17      = 2724;
+
+        public const int BeforeFlattening = v1_13_s5;
+        public const int AfterFlattening  = v1_13_s6;
     }
 }
