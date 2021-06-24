@@ -26,6 +26,14 @@ namespace AnvilPacker.Data
         {
             get => BaseStream.Position - _bufLen + _bufPos;
             set {
+                long currPos = BaseStream.Position;
+                long bufStart = currPos - _bufLen;
+                long bufEnd = currPos;
+                //keep the buffer if possible
+                if (value >= bufStart && value < bufEnd) {
+                    _bufPos = (int)(value - bufStart);
+                    return;
+                }
                 _bufPos = _bufLen = 0;
                 BaseStream.Position = value;
             }
@@ -36,8 +44,14 @@ namespace AnvilPacker.Data
         }
 
         /// <param name="leaveOpen">If true, <paramref name="stream"/> will be disposed when <see cref="Dispose"/> is called. </param>
-        /// <param name="bufferSize">Size of the internal buffer. Can be disabled by setting it to 0, but note that disabling buffering will increase overhead when working small primitives. </param>
-        public DataReader(Stream stream, bool leaveOpen = false, int bufferSize = 4096)
+        /// <param name="bufferSize">
+        /// Size of the internal buffer. Can be disabled by setting it to 0. <br/>
+        /// This value should be tuned depending on the usecase: <br/>
+        /// - For frequent random access, a lower value is better because the buffer won't be filled and discarded during seeks. The recomended size would be the amount of data read before each seek. <br/>
+        /// - For sequential reads, a higher value is better because less Read() calls will be made to the underlying stream. 1-4KB is recommended. <br/>
+        /// That the buffer is only filled after primitive reads - ReadBytes() won't.
+        /// </param>
+        public DataReader(Stream stream, bool leaveOpen = false, int bufferSize = 2048)
         {
             BaseStream = stream;
             _buf = new byte[bufferSize];

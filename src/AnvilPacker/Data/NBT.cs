@@ -357,7 +357,7 @@ namespace AnvilPacker.Data
             CheckType(tag);
             _tags.Add(tag);
         }
-        public void AddRange(IEnumerable<NbtTag> tags)
+        public void AddRange<T>(IEnumerable<T> tags)
         {
             foreach (var tag in tags) {
                 Add(tag);
@@ -552,13 +552,17 @@ namespace AnvilPacker.Data
             return mem.ToArray();
         }
 
+        public static CompoundTag Read(Stream stream, bool leaveOpen = true)
+        {
+            return Read(new DataReader(stream, leaveOpen));
+        }
         public static CompoundTag Read(DataReader dis)
         {
-            byte type = dis.ReadByte();
+            var type = (TagType)dis.ReadByte();
             string name = dis.ReadUTF();
             
-            if (NbtTag.Read((TagType)type, dis, 0) is CompoundTag tag) {
-                return tag;
+            if (type == TagType.Compound) {
+                return (CompoundTag)NbtTag.Read(type, dis, 0);
             }
             throw new IOException("Root tag must be a named compound tag");
         }

@@ -1,10 +1,12 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
-using System.Reflection;
+using System.Linq;
 using AnvilPacker.Data;
 using AnvilPacker.Util;
+using LibDeflate;
 
 namespace AnvilPacker.Level
 {
@@ -12,36 +14,38 @@ namespace AnvilPacker.Level
     //https://minecraft.gamepedia.com/Region_file_format
     public class RegionReader : IDisposable
     {
+        private const int MAX_COMPRESSED_CHUNK_SIZE = 256 * 4096; //1MB / .mca hard limit
+        private const int MAX_UNCOMPRESSED_CHUNK_SIZE = 1024 * 1024 * 16;
+
         private readonly DataReader _s;
+        private readonly int[] _locations = new int[1024];
+
+        private Decompressor[] _decompressors = new Decompressor[2];
+        private byte[] _inBuf = new byte[1024 * 32];
+        private byte[] _outBuf = new byte[1024 * 256];
 
         public RegionReader(string filename)
         {
-            _s = new DataReader(File.OpenRead(filename));
+            _s = new DataReader(File.OpenRead(filename), false);
+            if (_s.Length > 8192) {
+                _s.ReadBulkBE<int>(_locations);
+            }
         }
 
         public IEnumerable<(CompoundTag Tag, int X, int Z)> ReadAll()
         {
-            if (_s.Length < 8192) {
-                yield break; //file header is missing
-            }
-            var locations = new int[1024];
-            _s.Position = 0;
-            _s.ReadBulkBE<int>(locations);
-            
-            for (int z = 0; z < 32; z++) {
-                for (int x = 0; x < 32; x++) {
-                    var tag = Read(locations[GetIndex(x, z)]);
-                    if (tag != null) {
-                        yield return (tag, x, z);
-                    }
+            //Read chunks sequentially to improve perf on slow medias (HDDs/whatever)
+            //Don't really know how effective this is, hard to test because of caching.
+            foreach (var (loc, i) in _locations.Select((v, i) => (v, i)).OrderBy(e => e.v)) {
+                var tag = Read(loc);
+                if (tag != null) {
+                    yield return (tag, i & 31, i >> 5);
                 }
             }
         }
         public CompoundTag Read(int x, int z)
         {
-            _s.Position = GetIndex(x, z) * 4;
-            int loc = _s.ReadIntBE();
-            return Read(loc);
+            return Read(_locations[GetIndex(x, z)]);
         }
 
         private CompoundTag Read(int loc)
@@ -60,22 +64,47 @@ namespace AnvilPacker.Level
             }
             var rawStream = _s.AsStream(actualLen);
 
-            using var dataStream = compressionType switch {
-                1 => new GZipStream(rawStream, CompressionMode.Decompress),
-                2 => new_ZlibStream(rawStream, CompressionMode.Decompress),
-                3 => rawStream,
+            if (compressionType == 3) {
+                return NbtIO.Read(rawStream);
+            }
+            var decompressor = compressionType switch {
+                1 => _decompressors[0] ??= new GzipDecompressor(),
+                2 => _decompressors[1] ??= new ZlibDecompressor(),
                 _ => throw new NotSupportedException($"Chunk compression method {compressionType}")
             };
-            return NbtIO.Read(new DataReader(dataStream));
+            EnsureCapacity(ref _inBuf, actualLen, MAX_COMPRESSED_CHUNK_SIZE);
+            var inBuf = _inBuf.AsSpan(0, actualLen);
+            _s.ReadBytes(inBuf);
+
+            while (true) {
+                switch (decompressor.Decompress(inBuf, _outBuf, out int bytesWritten, out _)) {
+                    case OperationStatus.Done: {
+                        var mem = new MemoryStream(_outBuf, 0, bytesWritten);
+                        return NbtIO.Read(mem);
+                    }
+                    case OperationStatus.DestinationTooSmall: {
+                        EnsureCapacity(ref _outBuf, _outBuf.Length + 1, MAX_UNCOMPRESSED_CHUNK_SIZE);
+                        break; //try again
+                    }
+                    default: {
+                        throw new InvalidDataException("Failed to decompress chunk");
+                    }
+                }
+            }
         }
 
-        private static Stream new_ZlibStream(Stream stream, CompressionMode mode, bool leaveOpen = false)
+        private void EnsureCapacity(ref byte[] buf, int minLen, int limit)
         {
-            //adapted from here: https://github.com/dotnet/runtime/issues/38022#issuecomment-645612109
-            var argTypes = new[] { typeof(Stream), typeof(CompressionMode), typeof(bool), typeof(int), typeof(long) };
-            var ctor = typeof(DeflateStream).GetConstructor(BindingFlags.NonPublic | BindingFlags.Instance, null, argTypes, null);
-
-            return (DeflateStream)ctor.Invoke(new object[] { stream, mode, leaveOpen, 15, -1L });
+            if (buf.Length < minLen) {
+                int newLen = Math.Max(minLen + 1024, buf.Length * 2);
+                if (newLen > limit && minLen <= limit) {
+                    newLen = limit;
+                }
+                if (newLen > limit) {
+                    throw new NotSupportedException("Chunk data larger than allowed (trying to expand buffer too much)");
+                }
+                Array.Resize(ref buf, newLen);
+            }
         }
 
         private static int GetIndex(int x, int z)
@@ -87,6 +116,9 @@ namespace AnvilPacker.Level
         public void Dispose()
         {
             _s.Dispose();
+            foreach (var decompressor in _decompressors) {
+                decompressor?.Dispose();
+            }
         }
     }
 }

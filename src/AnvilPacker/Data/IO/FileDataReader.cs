@@ -9,7 +9,7 @@ namespace AnvilPacker.Data
 {
     public unsafe class FileDataReader : DataReader
     {
-        private const int BASE_BUF_SIZE = 128;
+        private const int BASE_BUF_SIZE = 32;
         private FileStream _fs;
         private MemoryMappedFile? _mappedFile;
 
