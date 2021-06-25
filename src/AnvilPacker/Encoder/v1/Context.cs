@@ -2,12 +2,13 @@ using System;
 using System.Runtime.CompilerServices;
 using AnvilPacker.Data.Entropy;
 using AnvilPacker.Level;
-using AnvilPacker.Util;
 
 namespace AnvilPacker.Encoder.v1
 {
     public sealed class Context
     {
+        const MethodImplOptions Inline = MethodImplOptions.AggressiveInlining;
+
         private BlockId[] _palette;
         private int[] _freq;
         private int _hits;
@@ -27,29 +28,29 @@ namespace AnvilPacker.Encoder.v1
         {
             int index = FindIndex(_palette, value);
             Update(_palette, index);
-            _nz.Write(ac, index, 0, _palette.Length - 1);
+            _nz.Write(ac, index, _palette.Length - 1);
         }
 
         public BlockId Read(ArithmDecoder ac)
         {
-            int delta = _nz.Read(ac, 0, _palette.Length - 1);
+            int delta = _nz.Read(ac, _palette.Length - 1);
             var id = _palette[delta];
             Update(_palette, delta);
             return id;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [MethodImpl(Inline)]
         private int FindIndex(BlockId[] palette, BlockId value)
         {
             //Try a simple loop first to avoid IndexOf() overhead.
-            for (int i = 0; i < palette.Length && i < 4; i++) {
+            for (int i = 0; i < palette.Length && i < 8; i++) {
                 if (palette[i] == value) return i;
             }
             //This call won't be inlined. JIT produces less asm when passing bounds explicitly.
             return Array.IndexOf(palette, value, 0, palette.Length);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [MethodImpl(Inline)]
         private void Update(BlockId[] palette, int index)
         {
             var curr = palette[index];
@@ -70,19 +71,19 @@ namespace AnvilPacker.Encoder.v1
                 palette[j] = curr;
             }
         }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [MethodImpl(Inline)]
         private int Weight(int id)
         {
             return _freq[id] / (1 + _hits / 32);
         }
 
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [MethodImpl(Inline)]
         public static int GetSlot(ulong key, int bits)
         {
             return (int)(Hash(key) >> (64 - bits));
         }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [MethodImpl(Inline)]
         private static ulong Hash(ulong x)
         {
             //https://lemire.me/blog/2018/08/15/fast-strongly-universal-64-bit-hashing-everywhere/
