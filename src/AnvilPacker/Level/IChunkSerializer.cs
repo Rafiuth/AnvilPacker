@@ -10,7 +10,7 @@ namespace AnvilPacker.Level
     public interface IChunkSerializer
     {
         public static readonly (int MinVersion, int MaxVersion, IChunkSerializer Serializer)[] KnownSerializers = {
-            (v1_13_s6,    v1_17,    new Versions.v1_13.ChunkSerializer()),
+            (v1_13_s6,      v1_17,  new Versions.v1_13.ChunkSerializer()),
             (0,          v1_13_s5,  new Versions.v1_2_1.ChunkSerializer())
         };
 
@@ -33,5 +33,8 @@ namespace AnvilPacker.Level
 
         public const int BeforeFlattening = v1_13_s5;
         public const int AfterFlattening  = v1_13_s6;
+
+        public static bool IsBeforeFlattening(int version) => version <= BeforeFlattening;
+        public static bool IsAfterFlattening(int version)  => version >= AfterFlattening;
     }
 }

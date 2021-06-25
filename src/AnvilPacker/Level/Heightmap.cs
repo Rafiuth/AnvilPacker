@@ -44,20 +44,15 @@ namespace AnvilPacker.Level
         {
             Ensure.That(chunk.Palette == _region.Palette, "Chunk not in region");
 
-            var (minSy, maxSy) = chunk.GetActualYExtents();
-
             var heights = heightmap.Values;
-
-            int defaultHeight = minSy * 16;
-            heights.Fill((short)defaultHeight);
+            heights.Fill((short)0);
 
             var populated = _populated;
             populated.Clear();
 
             int numPopulated = 0;
 
-            for (int sy = maxSy; sy >= minSy; sy--) {
-                var section = chunk.GetSection(sy);
+            foreach (var section in chunk.Sections) {
                 if (section == null) continue;
 
                 for (int y = 15; y >= 0; y--) {
@@ -66,7 +61,7 @@ namespace AnvilPacker.Level
                             var block = section.GetBlockId(x, y, z);
                             int index = x + z * 16;
                             if (_isOpaque[block] && !populated[index]) {
-                                heights[index] = (short)(sy * 16 + y + 1);
+                                heights[index] = (short)(section.Y * 16 + y + 1);
                                 populated[index] = true;
                                 numPopulated++;
                             }

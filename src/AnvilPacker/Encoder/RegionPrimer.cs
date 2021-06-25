@@ -31,7 +31,7 @@ namespace AnvilPacker.Encoder
         {
             var attribs = EstimatedBlockAttribs.HeightmapAttribs;
 
-            foreach (var (type, isOpaque) in attribs.BlockOpacityPerType) {
+            foreach (var (type, isOpaque) in attribs.OpacityMap) {
                 var computer = new HeightmapComputer(Region, type, isOpaque);
 
                 foreach (var chunk in Region.Chunks.ExceptNull()) {
@@ -43,10 +43,10 @@ namespace AnvilPacker.Encoder
         }
         private bool NeedsHeightmap(Chunk chunk, string type)
         {
-            if (chunk.DataVersion < DataVersions.v1_13_s5) {
+            if (DataVersions.IsBeforeFlattening(chunk.DataVersion)) {
                 return type == Heightmap.TYPE_LEGACY;
             }
-            var status = chunk.Opaque["Level"]["Status"]?.Value<string>();
+            var status = chunk.Opaque["Level"]?["Status"]?.Value<string>();
             bool statusComplete = status is "full" or "heightmaps" or "spawn" or "light";
             return statusComplete && !type.EndsWith("_WG");
         }

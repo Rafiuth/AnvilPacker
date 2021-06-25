@@ -99,7 +99,6 @@ namespace AnvilPacker
             var region = new RegionBuffer();
             region.Load(new WorldInfo(Path.GetDirectoryName(input)), input);
             bool extendedId = region.Palette.Count > 256;
-            var (minSy, maxSy) = region.GetChunkYExtents();
 
             using var fs = new DataWriter(File.Create(output));
             fs.WriteBool(extendedId);

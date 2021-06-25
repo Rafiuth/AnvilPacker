@@ -14,8 +14,6 @@ namespace AnvilPacker.Level
         public static Dictionary<ResourceName, Block> KnownBlocks { get; } = new(1024);
         public static DictionarySlim<int, Block> KnownLegacyBlocks { get; } = new(256);
         
-        public static IntProperty LegacyMetaProp { get; } = new IntProperty("meta", 0, 15);
-
         public static BlockState Air { get; internal set; }
 
         public static Block GetBlock(ResourceName name)
@@ -150,12 +148,11 @@ namespace AnvilPacker.Level
         {
             int blockId = id >> 4;
             int stateId = id & 15;
-            
-            var name = new ResourceName("anvilpacker", "legacy_" + blockId);
-            var props = new (string, string)[]{
-                (LegacyMetaProp.Name, stateId.ToString())
-            };
+
+            var name = new ResourceName("anvilpacker", "legacy_" + id);
+            var props = Array.Empty<(string, string)>();
             var state = CreateState(name, props);
+            state.Id = id;
             state.Attributes |= BlockAttributes.Legacy;
             return state;
         }

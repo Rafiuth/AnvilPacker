@@ -1,8 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using AnvilPacker.Data;
-using AnvilPacker.Data.Entropy;
 using AnvilPacker.Level;
 using AnvilPacker.Util;
 using NLog;
@@ -16,6 +16,7 @@ namespace AnvilPacker.Encoder
         private RegionBuffer _region;
         private int _blockCount; //updated by ReadChunkBitmap()
         private BlockCodec _blockCodec;
+        private EstimatedBlockAttribs _estimAttribs = new();
 
         public RegionDecoder(RegionBuffer region)
         {
@@ -25,8 +26,7 @@ namespace AnvilPacker.Encoder
 
         public void Decode(DataReader stream, IProgress<double> progress = null)
         {
-            int version = stream.ReadVarUInt();
-            Ensure.That(version == 1, "Unsupported version " + version);
+            int version = ReadSyncTag(stream, "main", 0);
 
             int headerLen = stream.ReadIntLE();
             var header = stream.ReadBytes(headerLen);
@@ -42,8 +42,9 @@ namespace AnvilPacker.Encoder
             _region.X = stream.ReadVarInt() << 5;
             _region.Z = stream.ReadVarInt() << 5;
 
-            ReadPalette(stream);
-            ReadChunkBitmap(stream);
+            ReadPalette(stream); //no deps
+            ReadHeightmapAttribs(stream); //depends on palette
+            ReadChunkBitmap(stream); //no deps
 
             int blockCodecId = stream.ReadVarUInt();
             _blockCodec = BlockCodec.CreateFromId(_region, blockCodecId);
@@ -52,6 +53,7 @@ namespace AnvilPacker.Encoder
 
         private void ReadChunkBitmap(DataReader stream)
         {
+            byte version = ReadSyncTag(stream, "cmap", 0);
             int minY = stream.ReadVarInt();
             int maxY = stream.ReadVarInt();
 
@@ -82,48 +84,70 @@ namespace AnvilPacker.Encoder
         }
         private void ReadPalette(DataReader stream)
         {
+            byte version = ReadSyncTag(stream, "plte", 0);
             int count = stream.ReadVarUInt();
             var palette = new BlockPalette(count);
 
             for (int i = 0; i < count; i++) {
-                int flags = stream.ReadByte();
-                
-                string name = stream.ReadNulString();
-                string material = stream.ReadNulString();
-
-                var attribs = (BlockAttributes)stream.ReadVarUInt();
-                byte light = stream.ReadByte();
-                int emittance = light >> 4;
-                int opacity = light & 15;
+                var flags = (BlockFlags)stream.ReadVarUInt();
 
                 BlockState block;
-                if ((flags & (1 << 0)) != 0) {
-                    int legacyId = stream.ReadVarUInt();
-                    block = BlockRegistry.GetLegacyState(legacyId);
+
+                if (flags.HasFlag(BlockFlags.Legacy)) {
+                    int id = stream.ReadVarUInt();
+                    block = BlockRegistry.GetLegacyState(id);
                 } else {
+                    string name = stream.ReadNulString();
                     block = BlockRegistry.ParseState(name);
                 }
-                Ensure.That(
-                    (block.Attributes & ~BlockAttributes.InternalMask) == attribs &&
-                    block.Material.Name == material &&
-                    block.LightEmission == emittance &&
-                    block.LightOpacity == opacity,
-                    "Dynamic block states not supported yet."
-                );
                 palette.Add(block);
             }
             _region.Palette = palette;
         }
+
+        private void ReadHeightmapAttribs(DataReader stream)
+        {
+            byte version = ReadSyncTag(stream, "hmap", 0);
+            int numTypes = stream.ReadVarUInt();
+
+            int numBlocks = _region.Palette.Count;
+            var types = new Dictionary<string, bool[]>();
+
+            for (int i = 0; i < numTypes; i++) {
+                string type = stream.ReadNulString();
+                var isOpaque = new bool[numBlocks];
+                for (int j = 0; j < numBlocks; j++) {
+                    isOpaque[j] = stream.ReadBool();
+                }
+                types.Add(type, isOpaque);
+            }
+
+            _estimAttribs.HeightmapAttribs = new EstimatedHeightmapAttribs() {
+                Palette = _region.Palette,
+                OpacityMap = types
+            };
+        }
+
         private void ReadMetadata(DataReader stream)
         {
-            int version = stream.ReadVarUInt();
-            Ensure.That(version == 0, "Unsupported version");
+            byte version = ReadSyncTag(stream, "meta", 0);
+            _region.ExtraData = NbtIO.Read(stream);
 
             foreach (var chunk in _region.Chunks.ExceptNull()) {
                 chunk.Flags = (ChunkFlags)stream.ReadVarUInt();
                 chunk.DataVersion = stream.ReadVarUInt();
                 chunk.Opaque = NbtIO.Read(stream);
             }
+        }
+
+        private byte ReadSyncTag(DataReader stream, string id, byte maxSupportedVersion)
+        {
+            for (int i = 0; i < 4; i++) {
+                Ensure.That(stream.ReadByte() == id[i], "Unmatched sync tag");
+            }
+            byte version = stream.ReadByte();
+            Ensure.That(version <= maxSupportedVersion, "Unsupported version");
+            return version;
         }
     }
 }

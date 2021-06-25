@@ -2,7 +2,6 @@
 using System.Diagnostics;
 using System.Linq;
 using AnvilPacker.Data;
-using AnvilPacker.Data.Entropy;
 using AnvilPacker.Level;
 using AnvilPacker.Util;
 using NLog;
@@ -16,13 +15,12 @@ namespace AnvilPacker.Encoder
         private RegionBuffer _region;
         private int _blockCount; //updated by WriteChunkBitmap()
         private BlockCodec _blockCodec;
-        private EstimatedBlockAttribs _estimAttribs;
+        private EstimatedBlockAttribs _estimAttribs = new();
 
         public RegionEncoder(RegionBuffer region)
         {
             _region = region;
             _blockCodec = new v1.BlockCodecV1(region);
-            _estimAttribs = new();
         }
 
         public void Encode(DataWriter stream, IProgress<double> progress = null)
@@ -41,7 +39,7 @@ namespace AnvilPacker.Encoder
             }
 
             var headerSpan = headerBuf.BufferSpan;
-            stream.WriteVarUInt(1); //data version
+            WriteSyncTag(stream, "main", 0);
             stream.WriteIntLE(headerSpan.Length);
             stream.WriteBytes(headerSpan);
 
@@ -81,7 +79,7 @@ namespace AnvilPacker.Encoder
         {
             var (minY, maxY) = _region.GetChunkYExtents();
 
-            stream.WriteVarUInt(0); //version
+            WriteSyncTag(stream, "cmap", 0);
             stream.WriteVarInt(minY);
             stream.WriteVarInt(maxY);
 
@@ -113,43 +111,32 @@ namespace AnvilPacker.Encoder
         {
             var palette = _region.Palette;
 
-            stream.WriteVarUInt(0); //version
+            WriteSyncTag(stream, "plte", 0);
             stream.WriteVarUInt(palette.Count);
-            bool hasDynamicBlocks = false;
 
             foreach (var state in palette) {
-                int flags = 0;
-                flags |= state.HasAttrib(BlockAttributes.Legacy) ? 1 << 0 : 0;
-                stream.WriteByte(flags);
-                
-                stream.WriteNulString(state.ToString());
-                stream.WriteNulString(state.Material.Name.ToString(false));
+                var flags = BlockFlagsEx.FromState(state);
+                stream.WriteVarUInt((int)flags);
 
-                stream.WriteVarUInt((int)(state.Attributes & ~BlockAttributes.InternalMask));
-                stream.WriteByte(state.LightEmission << 4 | state.LightOpacity);
-                
-                if (state.HasAttrib(BlockAttributes.Legacy)) {
+                if (flags.HasFlag(BlockFlags.Legacy)) {
                     stream.WriteVarUInt(state.Id);
+                } else {
+                    stream.WriteNulString(state.ToString());
                 }
-                hasDynamicBlocks |= state.Block.IsDynamic;
-            }
-
-            if (hasDynamicBlocks) {
-                _logger.Warn("Region {0} contains dynamic blocks, this is not fully supported yet. The decoder may not be able to reconstruct lighting/heightmaps correctly.", _region);
             }
         }
+
         private void WriteHeightmapAttribs(DataWriter stream)
         {
             var attribs = _estimAttribs.HeightmapAttribs;
 
-            stream.WriteVarUInt(0); //version
-            stream.WriteVarUInt(attribs.BlockOpacityPerType.Count);
+            WriteSyncTag(stream, "hmap", 0);
+            stream.WriteVarUInt(attribs.OpacityMap.Count);
 
-            foreach (var (type, isOpaque) in attribs.BlockOpacityPerType) {
+            foreach (var (type, isOpaque) in attribs.OpacityMap) {
                 Ensure.That(isOpaque.Length == _region.Palette.Count);
 
                 stream.WriteNulString(type);
-                stream.WriteByte(0);
 
                 for (int i = 0; i < isOpaque.Length; i++) {
                     stream.WriteBool(isOpaque[i]);
@@ -159,7 +146,8 @@ namespace AnvilPacker.Encoder
 
         private void WriteMetadata(DataWriter stream)
         {
-            stream.WriteVarUInt(0); //version
+            WriteSyncTag(stream, "meta", 0);
+            NbtIO.Write(_region.ExtraData ?? new(), stream);
 
             foreach (var chunk in _region.Chunks.ExceptNull()) {
                 stream.WriteVarUInt((int)chunk.Flags);
@@ -167,6 +155,14 @@ namespace AnvilPacker.Encoder
                 NbtIO.Write(chunk.Opaque, stream);
             }
             //pnbt: 39.156KB, nbt: 42.892KB
+        }
+
+        private void WriteSyncTag(DataWriter stream, string id, byte version)
+        {
+            for (int i = 0; i < 4; i++) {
+                stream.WriteByte(id[i]);
+            }
+            stream.WriteByte(version);
         }
     }
 }

@@ -31,16 +31,16 @@ namespace AnvilPacker.Encoder
     public class EstimatedHeightmapAttribs
     {
         public BlockPalette Palette;
-        public Dictionary<string, bool[]> BlockOpacityPerType;
+        public Dictionary<string, bool[]> OpacityMap;
 
         public void Estimate(RegionBuffer region)
         {
             Palette = region.Palette;
-            BlockOpacityPerType = new();
+            OpacityMap = new();
 
             foreach (var chunk in region.Chunks.ExceptNull()) {
                 foreach (var (type, heights) in chunk.Heightmaps) {
-                    var isOpaque = BlockOpacityPerType.GetOrAdd(type, () => new bool[Palette.Count]);
+                    var isOpaque = OpacityMap.GetOrAdd(type, () => new bool[Palette.Count]);
 
                     //TODO: handle and log invalid values
                     for (int z = 0; z < 16; z++) {
