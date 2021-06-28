@@ -170,6 +170,29 @@ namespace AnvilPacker.Data
             ReadBytes(buffer.AsSpan(offset, count));
         }
 
+        public void SkipBytes(int count)
+        {
+            if (BaseStream.CanSeek) {
+                Position += count;
+            } else {
+                int bufAvail = Math.Min(count, _bufLen - _bufPos);
+                if (bufAvail > 0) {
+                    _bufPos += bufAvail;
+                    count -= bufAvail;
+                }
+                if (count <= 0) return;
+
+                var buf = _buf.Length > 512 ? _buf : stackalloc byte[1024];
+                while (count > 0) {
+                    int bytesRead = BaseStream.Read(buf);
+                    if (bytesRead <= 0) {
+                        throw new EndOfStreamException();
+                    }
+                    count -= bytesRead;
+                }
+            }
+        }
+
         public void ReadBulkLE<T>(Span<T> buf) where T : unmanaged
         {
             ReadBulk(buf, !BitConverter.IsLittleEndian);
@@ -199,21 +222,53 @@ namespace AnvilPacker.Data
             ReadBytes(buf);
             return Encoding.UTF8.GetString(buf);
         }
+
+        /// <summary> Reads a null-terminated UTF8 string. </summary>
         public string ReadNulString()
         {
-            var buf = new byte[256];
+            Span<byte> buf = stackalloc byte[128];
             int pos = 0;
 
-            while (true) {
-                byte b = ReadByte();
-                if (b == 0) break;
-
-                if (pos >= buf.Length) {
-                    Array.Resize(ref buf, buf.Length * 2);
+            if (_buf.Length < 16) {
+                //buffer is too small to read in chunks
+                while (true) {
+                    byte b = ReadByte();
+                    if (b == 0) break;
+                    EnsureCapacity(ref buf, pos, 1);
+                    buf[pos++] = b;
                 }
-                buf[pos++] = b;
+            } else {
+                while (true) {
+                    FillBuffer();
+                    int bufRem = _bufLen - _bufPos;
+                    int endIndex = _buf.AsSpan(_bufPos, bufRem).IndexOf((byte)0);
+                    bool lastChunk = endIndex >= 0;
+                    int chunkLen = lastChunk ? endIndex : bufRem;
+                    var chunk = _buf.AsSpan(_bufPos, chunkLen);
+                    _bufPos += chunkLen + (lastChunk ? 1 : 0);
+
+                    if (lastChunk && pos == 0) {
+                        //whole string in buffer, no need of an extra copy
+                        buf = chunk;
+                        pos = chunkLen;
+                        break;
+                    }
+                    EnsureCapacity(ref buf, pos, chunkLen);
+                    chunk.CopyTo(buf[pos..]);
+                    pos += chunkLen;
+                    if (lastChunk) break;
+                }
             }
-            return Encoding.UTF8.GetString(buf, 0, pos);
+            return Encoding.UTF8.GetString(buf[0..pos]);
+
+            static void EnsureCapacity(ref Span<byte> buf, int pos, int minCount)
+            {
+                if (pos + minCount > buf.Length) {
+                    var newBuf = new byte[Math.Max(buf.Length + minCount + 64, buf.Length * 2)];
+                    buf.CopyTo(newBuf);
+                    buf = newBuf;
+                }
+            }
         }
     }
 }

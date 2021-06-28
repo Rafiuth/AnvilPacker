@@ -193,7 +193,7 @@ namespace AnvilPacker.Data
             writePrefixLen(this, len);
             WriteBytes(buf);
         }
-        /// <summary> Writes an UTF8 encoded string, postfixed '\0'. The string should not contain any NUL char. </summary>
+        /// <summary> Writes a null-terminated UTF8 string. </summary>
         public void WriteNulString(string str)
         {
             WriteString(str, (dw, len) => { });

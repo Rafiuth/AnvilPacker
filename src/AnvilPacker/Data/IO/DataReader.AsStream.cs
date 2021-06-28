@@ -10,7 +10,7 @@ namespace AnvilPacker.Data
     public partial class DataReader
     {
         /// <summary> Wraps this reader into a new <see cref="Stream"/>. </summary>
-        /// <param name="length">Maximum number of bytes that can be read from the returned stream.</param>
+        /// <param name="length">Maximum number of bytes that can be read from the returned stream. Any remaining bytes will be consumed when the stream is disposed. </param>
         /// <param name="leaveOpen">Whether to close this reader when the returned stream is closed/disposed.</param>
         public Stream AsStream(long length = long.MaxValue, bool leaveOpen = true)
         {
@@ -84,6 +84,17 @@ namespace AnvilPacker.Data
                 }
                 _dr.Position = offset;
                 return offset;
+            }
+
+            protected override void Dispose(bool disposing)
+            {
+                if (disposing && _remainingBytes > 0) {
+                    _dr.SkipBytes(checked((int)_remainingBytes));
+                }
+                if (disposing && !_leaveOpen) {
+                    _dr.Dispose();
+                }
+                base.Dispose(disposing);
             }
 
             public override void SetLength(long value)

@@ -23,7 +23,7 @@ namespace AnvilPacker.Tests
 
         private void TestPrim<T>(params T[] values) where T : unmanaged
         {
-            for (int bufSize = 0; bufSize < 64; bufSize += 64) {
+            for (int bufSize = 0; bufSize < 64; bufSize += 16) {
                 var mem = new MemoryStream();
                 var writer = new DataWriter(mem, true, bufSize);
 
@@ -52,7 +52,7 @@ namespace AnvilPacker.Tests
                 "Nobis pariatur voluptatem qui iusto.",
                 "Est explicabo error eos."
             };
-            for (int bufSize = 0; bufSize < 64; bufSize += 64) {
+            for (int bufSize = 0; bufSize < 64; bufSize += 16) {
                 var mem = new MemoryStream();
                 var writer = new DataWriter(mem, true, bufSize);
 
@@ -74,7 +74,7 @@ namespace AnvilPacker.Tests
         [Fact]
         public void TestSeeking()
         {
-            for (int bufSize = 0; bufSize < 64; bufSize += 64) {
+            for (int bufSize = 0; bufSize < 64; bufSize += 16) {
                 var mem = new MemoryStream();
                 var writer = new DataWriter(mem, true, bufSize);
 
@@ -93,33 +93,37 @@ namespace AnvilPacker.Tests
 
                 reader.Position = 8;
                 Assert.Equal("The quick brown fox jumped over the lazy dog", reader.ReadNulString());
+
+                reader.Position = 0;
+                reader.SkipBytes(8);
+                Assert.Equal("The quick brown fox jumped over the lazy dog", reader.ReadNulString());
             }
         }
-
 
         [Fact]
         public void TestAsStream()
         {
-            for (int bufSize = 0; bufSize < 64; bufSize += 64) {
+            for (int bufSize = 0; bufSize < 64; bufSize += 16) {
                 var mem = new MemoryStream();
                 var writer = new DataWriter(mem, true, bufSize);
 
                 writer.WriteIntLE(1234);
                 writer.WriteFloatLE(MathF.PI);
                 writer.WriteNulString("The quick brown fox jumped over the lazy dog");
+                writer.WriteIntLE(5678);
                 writer.Flush();
 
                 mem.Position = 0;
                 var reader = new DataReader(mem, true, bufSize);
-                var stream = reader.AsStream();
+                int dataLen = (int)mem.Length - 5;
+                using (var stream = reader.AsStream(dataLen + 1)) {
+                    var buf = new byte[dataLen];
+                    int read1 = stream.Read(buf);
 
-                var buf = new byte[mem.Length];
-                int read1 = stream.Read(buf);
-                int read2 = stream.Read(new byte[64]);
-
-                Assert.Equal(mem.Length, read1);
-                Assert.Equal(0, read2);
-                Assert.Equal(mem.ToArray(), buf);
+                    Assert.Equal(dataLen, read1);
+                    Assert.Equal(mem.ToArray()[0..dataLen], buf[0..dataLen]);
+                }
+                Assert.Equal(5678, reader.ReadIntLE());
             }
         }
     }
