@@ -10,7 +10,7 @@ namespace AnvilPacker.Encoder.v1
         const MethodImplOptions Inline = MethodImplOptions.AggressiveInlining;
 
         private BlockId[] _palette;
-        private int[] _freq;
+        private int[] _freqs;
         private int _hits;
 
         private NzCoder _nz = new();
@@ -21,62 +21,58 @@ namespace AnvilPacker.Encoder.v1
             for (int i = 0; i < _palette.Length; i++) {
                 _palette[i] = (BlockId)i;
             }
-            _freq = new int[palette.Count];
+            _freqs = new int[palette.Count];
         }
 
-        public void Write(ArithmEncoder ac, BlockId value)
+        public void Write(ArithmEncoder ac, BlockId id)
         {
-            int index = FindIndex(_palette, value);
-            Update(_palette, index);
-            _nz.Write(ac, index, _palette.Length - 1);
+            var palette = _palette;
+            int index = FindIndex(palette, id);
+            Update(palette, index);
+            _nz.Write(ac, index, palette.Length - 1);
         }
 
         public BlockId Read(ArithmDecoder ac)
         {
-            int delta = _nz.Read(ac, _palette.Length - 1);
-            var id = _palette[delta];
-            Update(_palette, delta);
+            var palette = _palette;
+            int index = _nz.Read(ac, palette.Length - 1);
+            var id = palette[index];
+            Update(palette, index);
             return id;
         }
 
         [MethodImpl(Inline)]
         private int FindIndex(BlockId[] palette, BlockId value)
         {
-            //Try a simple loop first to avoid IndexOf() overhead.
-            for (int i = 0; i < palette.Length && i < 8; i++) {
+            //Try a simple loop first to avoid the overhead of calling IndexOf().
+            for (int i = 0; i < palette.Length && i < 4; i++) {
                 if (palette[i] == value) return i;
             }
-            //This call won't be inlined. JIT produces less asm when passing bounds explicitly.
+            //JIT produces less asm when passing bounds explicitly.
             return Array.IndexOf(palette, value, 0, palette.Length);
         }
 
         [MethodImpl(Inline)]
         private void Update(BlockId[] palette, int index)
         {
+            int[] freqs = _freqs;
             var curr = palette[index];
-            _freq[curr]++;
+            freqs[curr]++;
             _hits++;
 
-            if (index != 0) {
-                //Move frequent symbols to front
-                int currWeight = Weight(curr) + 1;
-                int j = index;
+            if (index == 0) return;
 
-                while (j > 0) {
-                    var prev = palette[j - 1];
-                    if (Weight(prev) > currWeight) break;
-                    palette[j] = prev;
-                    j--;
-                }
-                palette[j] = curr;
+            //Move frequent symbols to front (sinking)
+            int currWeight = freqs[curr] + (1 + _hits / 32);
+
+            while (index > 0) {
+                var prev = palette[index - 1];
+                if (freqs[prev] > currWeight) break;
+                palette[index] = prev;
+                index--;
             }
+            palette[index] = curr;
         }
-        [MethodImpl(Inline)]
-        private int Weight(int id)
-        {
-            return _freq[id] / (1 + _hits / 32);
-        }
-
 
         [MethodImpl(Inline)]
         public static int GetSlot(ulong key, int bits)

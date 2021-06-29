@@ -12,6 +12,11 @@ namespace AnvilPacker.Encoder
     /// <summary> The base class for a block data codec. </summary>
     public abstract class BlockCodec
     {
+        public static readonly (int Id, string Name, Type Class)[] KnownCodecs = {
+            (1, "ap1",      typeof(v1.BlockCodecV1)),
+            (2, "brotli",   typeof(v2.BrotliBlockCodec)),
+        };
+
         public RegionBuffer Region { get; }
 
         public BlockCodec(RegionBuffer region)
@@ -30,21 +35,19 @@ namespace AnvilPacker.Encoder
 
         public static BlockCodec CreateFromId(RegionBuffer region, int id)
         {
-            var (_, klass) = KnownCodecs.FirstOrDefault(v => v.Id == id);
-            Ensure.That(klass != null, $"Unknown block codec id '{id}'");
+            var codec = KnownCodecs.FirstOrDefault(v => v.Id == id);
+            Ensure.That(codec.Class != null, $"Unknown block codec id '{id}'");
 
-            return (BlockCodec)Activator.CreateInstance(klass, region)!;
+            return (BlockCodec)Activator.CreateInstance(codec.Class, region)!;
         }
         public int GetId()
         {
-            var (id, klass) = KnownCodecs.FirstOrDefault(v => v.Class == GetType());
-            Ensure.That(klass != null, $"Unregistered block codec {GetType().Name}");
-            return id;
+            return KnownCodecs.First(v => v.Class == GetType()).Id;
         }
-        public static readonly (int Id, Type Class)[] KnownCodecs = {
-            (1, typeof(v1.BlockCodecV1)),
-            (2, typeof(v2.BrotliBlockCodec))
-        };
+        public string GetName()
+        {
+            return KnownCodecs.First(v => v.Class == GetType()).Name;
+        }
     }
     public class CodecProgressListener
     {

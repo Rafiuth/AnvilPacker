@@ -29,8 +29,7 @@ namespace AnvilPacker.Encoder
             int version = ReadSyncTag(stream, "main", 0);
 
             int headerLen = stream.ReadIntLE();
-            var header = stream.ReadBytes(headerLen);
-            using (var comp = Compressors.NewBrotliDecoder(new MemoryStream(header), true)) {
+            using (var comp = Compressors.NewBrotliDecoder(stream.AsStream(headerLen), false)) {
                 ReadHeader(comp);
                 ReadMetadata(comp);
             }
@@ -44,6 +43,7 @@ namespace AnvilPacker.Encoder
 
             ReadPalette(stream); //no deps
             ReadHeightmapAttribs(stream); //depends on palette
+            ReadLightAttribs(stream);
             ReadChunkBitmap(stream); //no deps
 
             int blockCodecId = stream.ReadVarUInt();
@@ -126,6 +126,10 @@ namespace AnvilPacker.Encoder
                 Palette = _region.Palette,
                 OpacityMap = types
             };
+        }
+        private void ReadLightAttribs(DataReader stream)
+        {
+            byte version = ReadSyncTag(stream, "lght", 0);
         }
 
         private void ReadMetadata(DataReader stream)

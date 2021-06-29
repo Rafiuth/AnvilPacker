@@ -69,6 +69,7 @@ namespace AnvilPacker.Encoder
 
             WritePalette(stream); //no deps
             WriteHeightmapAttribs(stream); //depends on palette
+            WriteLightAttribs(stream);
             WriteChunkBitmap(stream); //no deps
 
             stream.WriteVarUInt(_blockCodec.GetId());
@@ -77,9 +78,10 @@ namespace AnvilPacker.Encoder
 
         private void WriteChunkBitmap(DataWriter stream)
         {
+            WriteSyncTag(stream, "cmap", 0);
+            
             var (minY, maxY) = _region.GetChunkYExtents();
 
-            WriteSyncTag(stream, "cmap", 0);
             stream.WriteVarInt(minY);
             stream.WriteVarInt(maxY);
 
@@ -109,9 +111,9 @@ namespace AnvilPacker.Encoder
         }
         private void WritePalette(DataWriter stream)
         {
-            var palette = _region.Palette;
-
             WriteSyncTag(stream, "plte", 0);
+
+            var palette = _region.Palette;
             stream.WriteVarUInt(palette.Count);
 
             foreach (var state in palette) {
@@ -128,9 +130,9 @@ namespace AnvilPacker.Encoder
 
         private void WriteHeightmapAttribs(DataWriter stream)
         {
-            var attribs = _estimAttribs.HeightmapAttribs;
-
             WriteSyncTag(stream, "hmap", 0);
+
+            var attribs = _estimAttribs.HeightmapAttribs;
             stream.WriteVarUInt(attribs.OpacityMap.Count);
 
             foreach (var (type, isOpaque) in attribs.OpacityMap) {
@@ -142,6 +144,10 @@ namespace AnvilPacker.Encoder
                     stream.WriteBool(isOpaque[i]);
                 }
             }
+        }
+        private void WriteLightAttribs(DataWriter stream)
+        {
+            WriteSyncTag(stream, "lght", 0);
         }
 
         private void WriteMetadata(DataWriter stream)

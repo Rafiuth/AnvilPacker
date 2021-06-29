@@ -1,9 +1,4 @@
-using System;
-using System.Diagnostics;
-using System.Linq;
-using System.Runtime.CompilerServices;
 using AnvilPacker.Data;
-using AnvilPacker.Data.Entropy;
 using AnvilPacker.Level;
 using AnvilPacker.Util;
 
@@ -13,7 +8,23 @@ namespace AnvilPacker.Encoder.v2
     public class BrotliBlockCodec : BlockCodec
     {
         public int WindowSize = 22;     // Log2 window size in bytes. Range [10..24]
-        public int Quality = 8;         // Effort, 0 = no compression/fastest, 11 = best/slowest
+        public int Quality = 6;         // Effort, 0 = no compression/fastest, 11 = best/slowest
+
+        //brotli, win size=22
+        //Q=5   2235,548KB 1.4s
+        //Q=6   2225,885KB 1.8s
+        //Q=7   2211,789KB 3s
+        //Q=8   2193,927KB 4.6s
+        //Q=9   2171,781KB 7s
+        //Q=10  1829,650KB 55s
+        //Q=11  1713,651KB 149s
+
+        //zstd:
+        //L=12  2234,582KB  1.8s
+        //L=14  2153,230KB  4s
+        //L=16  1930,162KB  9s
+        //L=19  1809,353KB  16s
+        //L=22  1807,023KB  41s
 
         public BrotliBlockCodec(RegionBuffer region) : base(region)
         {

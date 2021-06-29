@@ -20,8 +20,8 @@ namespace AnvilPacker.Encoder.v1
         public readonly BitChance[] Mant = new BitChance[bits];
 
         private static readonly BitChance 
-            InitialZeroChance = new(0.5, 64, 21),
-            InitialExpChance  = new(0.5, 31, 4),
+            InitialZeroChance = new(0.5, 48, 21),
+            InitialExpChance  = new(0.5, 32, 4),
             InitialMantChance = new(0.5, 16, 4);
 
         /// <summary> Creates a new nz context and initializes all bit chances to 50%.</summary>
@@ -113,23 +113,18 @@ namespace AnvilPacker.Encoder.v1
 
         public ushort Limit, Delta;
 
-        public BitChance(int value)
+        public BitChance(int value, int limit = 29, int delta = 3)
         {
             Debug.Assert(value is >= 0 and < K);
             Value = (ushort)value;
             Count = 0;
 
-            Limit = 29;
-            Delta = 3;
-        }
-        public BitChance(double value, int limit = 29, int delta = 3)
-        {
-            Debug.Assert(value is >= 0 and <= 1.0);
-            Value = (ushort)(value * K);
-            Count = 0;
-
             Limit = (ushort)limit;
             Delta = (ushort)delta;
+        }
+        public BitChance(double value, int limit = 29, int delta = 3)
+            : this((int)(value * K), limit, delta)
+        {
         }
 
         public void Write(ArithmEncoder ac, bool bit)

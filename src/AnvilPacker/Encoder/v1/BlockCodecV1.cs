@@ -9,16 +9,21 @@ using AnvilPacker.Util;
 
 namespace AnvilPacker.Encoder.v1
 {
-    //Based on Fixed Order Model and Adaptive Arithmetic Coding
     //TODO: Pick a name for this codec
     public class BlockCodecV1 : BlockCodec
     {
         public int ContextBits = 13; //log2 number of contexts to use
-        public Vec3i[] ContextNeighbors = { //context of a block (relative coords to previously coded blocks)
+        public Vec3i[] Neighbors = _stdNeighbors.ToArray(); //context of a block (relative coords to previously coded blocks)
+
+        private static readonly Vec3i[] _stdNeighbors = {
             new(-1, 0, 0),
             new(0, -1, 0),
             new(0, 0, -1),
         };
+        //Are we using the standard neighbors?
+        //If so, GetContext() will use an optimized keyer and get a ~1.25x speedup
+        //False case doesn't seem to be much affected performance wise.
+        private bool _areStdNeighbors;
 
         public BlockCodecV1(RegionBuffer region) : base(region)
         {
@@ -81,14 +86,21 @@ namespace AnvilPacker.Encoder.v1
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private Context GetContext(ChunkIterator chunk, int x, int y, int z, Span<Context> contexts)
         {
-            ulong key = 0;
+            ulong key;
 
-            foreach (var pos in ContextNeighbors) {
-                int nx = x + pos.X;
-                int ny = y + pos.Y;
-                int nz = z + pos.Z;
+            if (_areStdNeighbors) {
+                key = (ulong)chunk.GetBlockId(x - 1, y, z) << 32 |
+                      (ulong)chunk.GetBlockId(x, y - 1, z) << 16 |
+                      (ulong)chunk.GetBlockId(x, y, z - 1) << 0;
+            } else {
+                key = 0;
+                foreach (var pos in Neighbors) {
+                    int nx = x + pos.X;
+                    int ny = y + pos.Y;
+                    int nz = z + pos.Z;
 
-                key = (key << 16) | chunk.GetBlockId(nx, ny, nz);
+                    key = (key << 16) | chunk.GetBlockId(nx, ny, nz);
+                }
             }
             int slot = Context.GetSlot(key, ContextBits);
             return contexts[slot] ??= new Context(Region.Palette);
@@ -99,30 +111,32 @@ namespace AnvilPacker.Encoder.v1
             stream.WriteByte(0); //version
 
             stream.WriteByte(ContextBits);
-            stream.WriteByte(ContextNeighbors.Length);
-            foreach (var (nx, ny, nz) in ContextNeighbors) {
-                Ensure.That(ny <= 0 && (nx <= 0 || nz <= 0)); //ensure neighbor was decoded before
+            stream.WriteByte(Neighbors.Length);
+            foreach (var (nx, ny, nz) in Neighbors) {
+                Ensure.That(ny <= 0 && (nx <= 0 || nz <= 0), "Neighbor coord must point to a block that was previously encoded."); //ensure neighbor was decoded before
                 
                 stream.WriteSByte(nx);
                 stream.WriteSByte(ny);
                 stream.WriteSByte(nz);
             }
+            _areStdNeighbors = Neighbors.SequenceEqual(_stdNeighbors);
         }
         public override void ReadSettings(DataReader stream)
         {
             Ensure.That(stream.ReadByte() == 0, "Unsupported codec version");
 
             ContextBits = stream.ReadByte();
-            ContextNeighbors = new Vec3i[stream.ReadByte()];
-            Ensure.That(ContextNeighbors.Length <= 4, "Can only have at most 4 context neighbors.");
+            Neighbors = new Vec3i[stream.ReadByte()];
+            Ensure.That(Neighbors.Length <= 4, "Can only have at most 4 context neighbors.");
 
-            for (int i = 0; i < ContextNeighbors.Length; i++) {
-                ContextNeighbors[i] = new Vec3i(
+            for (int i = 0; i < Neighbors.Length; i++) {
+                Neighbors[i] = new Vec3i(
                     stream.ReadSByte(),
                     stream.ReadSByte(),
                     stream.ReadSByte()
                 );
             }
+            _areStdNeighbors = Neighbors.SequenceEqual(_stdNeighbors);
         }
     }
 }
