@@ -34,6 +34,8 @@ namespace AnvilPacker.Encoder
                 ReadMetadata(comp);
             }
             _blockCodec.Decode(stream, CodecProgressListener.MaybeCreate(_blockCount, progress));
+
+            new RegionPrimer(_region, _estimAttribs).Prime();
         }
 
         private void ReadHeader(DataReader stream)
@@ -48,7 +50,7 @@ namespace AnvilPacker.Encoder
 
             int blockCodecId = stream.ReadVarUInt();
             _blockCodec = BlockCodec.CreateFromId(_region, blockCodecId);
-            _blockCodec.ReadSettings(stream);
+            _blockCodec.ReadHeader(stream);
         }
 
         private void ReadChunkBitmap(DataReader stream)

@@ -29,8 +29,10 @@ namespace AnvilPacker.Data.Archives
 
         public Stream OpenEntry(ArchiveEntry entry)
         {
-            var stream = ((Entry)entry)._handle.Open();
-            return new SynchedStream(stream, _zip);
+            lock (_zip) {
+                var stream = ((Entry)entry)._handle.Open();
+                return new SynchedStream(stream, _zip);
+            }
         }
 
         public void Dispose()

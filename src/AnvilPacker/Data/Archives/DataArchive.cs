@@ -29,7 +29,7 @@ namespace AnvilPacker.Data.Archives
 
         private static ArchiveType PickType(string path)
         {
-            if (path.EndsWithIgnoreCase(".zip")) {
+            if (Path.HasExtension(path)) {
                 return ArchiveType.Zip;
             }
             return ArchiveType.FileSystem;

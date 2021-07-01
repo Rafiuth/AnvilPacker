@@ -13,17 +13,17 @@ namespace AnvilPacker.Encoder.v1
     public class BlockCodecV1 : BlockCodec
     {
         public int ContextBits = 13; //log2 number of contexts to use
-        public Vec3i[] Neighbors = _stdNeighbors.ToArray(); //context of a block (relative coords to previously coded blocks)
+        public Vec3i[] Neighbors = DefaultNeighbors; //context of a block (relative coords to previously coded blocks)
 
-        private static readonly Vec3i[] _stdNeighbors = {
+        public static readonly Vec3i[] DefaultNeighbors = {
             new(-1, 0, 0),
             new(0, -1, 0),
             new(0, 0, -1),
         };
-        //Are we using the standard neighbors?
+        //Are we using the default neighbors?
         //If so, GetContext() will use an optimized keyer and get a ~1.25x speedup
         //False case doesn't seem to be much affected performance wise.
-        private bool _areStdNeighbors;
+        private bool _areDefaultNeighbors;
 
         public BlockCodecV1(RegionBuffer region) : base(region)
         {
@@ -88,7 +88,7 @@ namespace AnvilPacker.Encoder.v1
         {
             ulong key;
 
-            if (_areStdNeighbors) {
+            if (_areDefaultNeighbors) {
                 key = (ulong)chunk.GetBlockId(x - 1, y, z) << 32 |
                       (ulong)chunk.GetBlockId(x, y - 1, z) << 16 |
                       (ulong)chunk.GetBlockId(x, y, z - 1) << 0;
@@ -106,8 +106,10 @@ namespace AnvilPacker.Encoder.v1
             return contexts[slot] ??= new Context(Region.Palette);
         }
 
-        public override void WriteSettings(DataWriter stream)
+        public override void WriteHeader(DataWriter stream)
         {
+            ValidateSettings();
+            
             stream.WriteByte(0); //version
 
             stream.WriteByte(ContextBits);
@@ -119,15 +121,15 @@ namespace AnvilPacker.Encoder.v1
                 stream.WriteSByte(ny);
                 stream.WriteSByte(nz);
             }
-            _areStdNeighbors = Neighbors.SequenceEqual(_stdNeighbors);
+            _areDefaultNeighbors = Neighbors.SequenceEqual(DefaultNeighbors);
         }
-        public override void ReadSettings(DataReader stream)
+        public override void ReadHeader(DataReader stream)
         {
             Ensure.That(stream.ReadByte() == 0, "Unsupported codec version");
 
             ContextBits = stream.ReadByte();
             Neighbors = new Vec3i[stream.ReadByte()];
-            Ensure.That(Neighbors.Length <= 4, "Can only have at most 4 context neighbors.");
+            ValidateSettings();
 
             for (int i = 0; i < Neighbors.Length; i++) {
                 Neighbors[i] = new Vec3i(
@@ -136,7 +138,13 @@ namespace AnvilPacker.Encoder.v1
                     stream.ReadSByte()
                 );
             }
-            _areStdNeighbors = Neighbors.SequenceEqual(_stdNeighbors);
+            _areDefaultNeighbors = Neighbors.SequenceEqual(DefaultNeighbors);
+        }
+
+        private void ValidateSettings()
+        {
+            Ensure.That(ContextBits is > 0 and <= 16, "ContextBits must be between 1 and 16.");
+            Ensure.That(Neighbors.Length <= 4, "Neighbors must have at most 4 elements.");
         }
     }
 }

@@ -14,7 +14,7 @@ namespace AnvilPacker.Encoder
     {
         public static readonly (int Id, string Name, Type Class)[] KnownCodecs = {
             (1, "ap1",      typeof(v1.BlockCodecV1)),
-            (2, "brotli",   typeof(v2.BrotliBlockCodec)),
+            (2, "brotli",   typeof(v2.BlockCodecBrotli)),
         };
 
         public RegionBuffer Region { get; }
@@ -30,8 +30,8 @@ namespace AnvilPacker.Encoder
         public abstract void Decode(DataReader reader, CodecProgressListener? progress = null);
 
         /// <summary> Writes the codec header/settings to the specified stream. </summary>
-        public abstract void WriteSettings(DataWriter stream);
-        public abstract void ReadSettings(DataReader stream);
+        public abstract void WriteHeader(DataWriter stream);
+        public abstract void ReadHeader(DataReader stream);
 
         public static BlockCodec CreateFromId(RegionBuffer region, int id)
         {

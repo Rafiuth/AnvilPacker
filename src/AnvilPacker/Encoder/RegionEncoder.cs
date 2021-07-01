@@ -1,4 +1,6 @@
-﻿using System;
+﻿#nullable enable
+
+using System;
 using System.Diagnostics;
 using System.Linq;
 using AnvilPacker.Data;
@@ -14,16 +16,22 @@ namespace AnvilPacker.Encoder
         
         private RegionBuffer _region;
         private int _blockCount; //updated by WriteChunkBitmap()
-        private BlockCodec _blockCodec;
         private EstimatedBlockAttribs _estimAttribs = new();
 
-        public RegionEncoder(RegionBuffer region)
+        private int _metaBrotliQuality = 8;
+        private int _metaBrotliWindowSize = 22;
+        private BlockCodec _blockCodec;
+
+        public RegionEncoder(RegionBuffer region, RegionEncoderSettings settings)
         {
             _region = region;
-            _blockCodec = new v1.BlockCodecV1(region);
+
+            _metaBrotliQuality = settings.MetaBrotliQuality;
+            _metaBrotliWindowSize = settings.MetaBrotliWindowSize;
+            _blockCodec = settings.BlockCodec.Create(region);
         }
 
-        public void Encode(DataWriter stream, IProgress<double> progress = null)
+        public void Encode(DataWriter stream, IProgress<double>? progress = null)
         {
             var sw = Stopwatch.StartNew();
 
@@ -33,7 +41,7 @@ namespace AnvilPacker.Encoder
             sw.Restart();
 
             var headerBuf = new MemoryDataWriter(1024 * 256);
-            using (var comp = Compressors.NewBrotliEncoder(headerBuf, true, 9, 22)) {
+            using (var comp = Compressors.NewBrotliEncoder(headerBuf, true, _metaBrotliQuality, _metaBrotliWindowSize)) {
                 WriteHeader(comp);
                 WriteMetadata(comp);
             }
@@ -73,7 +81,7 @@ namespace AnvilPacker.Encoder
             WriteChunkBitmap(stream); //no deps
 
             stream.WriteVarUInt(_blockCodec.GetId());
-            _blockCodec.WriteSettings(stream);
+            _blockCodec.WriteHeader(stream);
         }
 
         private void WriteChunkBitmap(DataWriter stream)

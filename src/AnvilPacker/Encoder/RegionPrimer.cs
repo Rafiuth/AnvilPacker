@@ -10,21 +10,18 @@ namespace AnvilPacker.Encoder
     public class RegionPrimer
     {
         public RegionBuffer Region { get; }
-        public TransformPipe Transforms { get; }
         public EstimatedBlockAttribs EstimatedBlockAttribs { get; }
 
-        public RegionPrimer(RegionBuffer region, TransformPipe transforms, EstimatedBlockAttribs estimatedBlockAttribs)
+        public RegionPrimer(RegionBuffer region, EstimatedBlockAttribs estimatedBlockAttribs)
         {
             Region = region;
-            Transforms = transforms;
             EstimatedBlockAttribs = estimatedBlockAttribs;
         }
 
-        public void Prime(IProgress<double> progress = null)
+        public void Prime()
         {
-            Transforms.Reverse(Region);
-
             PrimeHeightmaps();
+            PrimeLights();
         }
 
         private void PrimeHeightmaps()
@@ -49,6 +46,13 @@ namespace AnvilPacker.Encoder
             var status = chunk.Opaque["Level"]?["Status"]?.Value<string>();
             bool statusComplete = status is "full" or "heightmaps" or "spawn" or "light";
             return statusComplete && !type.EndsWith("_WG");
+        }
+
+        private void PrimeLights()
+        {
+            foreach (var chunk in Region.Chunks.ExceptNull()) {
+                chunk.SetFlag(ChunkFlags.HasLightData, false);
+            }
         }
     }
 }

@@ -5,7 +5,7 @@ using AnvilPacker.Util;
 namespace AnvilPacker.Encoder.v2
 {
     //Based on Brotli
-    public class BrotliBlockCodec : BlockCodec
+    public class BlockCodecBrotli : BlockCodec
     {
         public int WindowSize = 22;     // Log2 window size in bytes. Range [10..24]
         public int Quality = 6;         // Effort, 0 = no compression/fastest, 11 = best/slowest
@@ -26,7 +26,7 @@ namespace AnvilPacker.Encoder.v2
         //L=19  1809,353KB  16s
         //L=22  1807,023KB  41s
 
-        public BrotliBlockCodec(RegionBuffer region) : base(region)
+        public BlockCodecBrotli(RegionBuffer region) : base(region)
         {
         }
 
@@ -73,11 +73,11 @@ namespace AnvilPacker.Encoder.v2
             progress?.Finish();
         }
 
-        public override void WriteSettings(DataWriter stream)
+        public override void WriteHeader(DataWriter stream)
         {
             stream.WriteByte(0); //version
         }
-        public override void ReadSettings(DataReader stream)
+        public override void ReadHeader(DataReader stream)
         {
             Ensure.That(stream.ReadByte() == 0, "Unsupported codec version");
         }
