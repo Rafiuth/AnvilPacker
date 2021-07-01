@@ -7,16 +7,48 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using AnvilPacker.Cli;
+using AnvilPacker.Encoder;
+using AnvilPacker.Encoder.Transforms;
 
 namespace AnvilPacker
 {
     public partial class Program
     {
+        private static readonly (string Name, string EncoderOpts, string TransformPipe)[] Presets = 
+        {
+            (
+                Name: "fast",
+                EncoderOpts: "",
+                TransformPipe: "remove_empty_chunks,simplify_upgrade_data"
+            ),
+            (
+                Name: "default",
+                EncoderOpts: "block_codec=ap1",
+                TransformPipe: "remove_empty_chunks,simplify_upgrade_data"
+            ),
+            (
+                Name: "lossy",
+                EncoderOpts: "block_codec=ap1",
+                TransformPipe: "remove_empty_chunks,simplify_upgrade_data,remove_hidden_blocks"
+            )
+        };
+
         private static void RunPacker(PackOptions opts)
         {
             ValidatePaths(opts, true, false);
 
-            using var packer = new WorldPacker(opts.Input, opts.Output);
+            var presetName = opts.Preset ?? "default";
+            var preset = Presets.FirstOrDefault(p => p.Name == presetName);
+            if (preset.Name == null) {
+                Error($"Unknown preset '{opts.Preset}'");
+            }
+            opts.EncoderOpts ??= preset.EncoderOpts;
+            opts.TransformPipe ??= preset.TransformPipe;
+
+            var transforms = TransformPipe.Parse(opts.TransformPipe);
+            var encoderSettings = RegionEncoderSettings.Parse(opts.EncoderOpts);
+
+            using var packer = new WorldPacker(opts.Input, opts.Output, transforms, encoderSettings);
             var task = packer.Run(opts.MaxThreads);
             ShowPackerProgress(packer, task);
         }
@@ -30,7 +62,7 @@ namespace AnvilPacker
             ShowPackerProgress(packer, task);
         }
 
-        private static void ShowPackerProgress(WorldPackProcessor packer, Task completionTask)
+        private static void ShowPackerProgress(PackProcessor packer, Task completionTask)
         {
             var sw = Stopwatch.StartNew();
 

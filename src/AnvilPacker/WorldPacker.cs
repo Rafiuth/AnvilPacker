@@ -1,14 +1,11 @@
 #nullable enable
 
 using System;
-using System.Buffers;
-using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Reflection;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
 using AnvilPacker.Data;
@@ -18,25 +15,26 @@ using AnvilPacker.Encoder.Transforms;
 using AnvilPacker.Level;
 using AnvilPacker.Util;
 using Newtonsoft.Json;
-using NLog;
 
 namespace AnvilPacker
 {
     //https://docs.microsoft.com/en-us/dotnet/standard/parallel-programming/dataflow-task-parallel-library
-    public class WorldPacker : WorldPackProcessor
+    public class WorldPacker : PackProcessor
     {
         private IArchiveWriter _archive;
         private TransformPipe _transforms;
+        private RegionEncoderSettings _encoderSettings;
 
-        public WorldPacker(string worldPath, string packPath)
+        public WorldPacker(string worldPath, string packPath, TransformPipe transforms, RegionEncoderSettings encoderSettings)
         {
             _world = new WorldInfo(worldPath);
             _archive = DataArchive.Create(packPath);
 
-            _transforms = TransformPipe.DefaultPreset;
+            _transforms = transforms;
+            _encoderSettings = encoderSettings;
 
             _meta = new() {
-                Version = GetVersion(),
+                Version = GetInfoVersion(),
                 DataVersion = 1,
                 Transforms = _transforms.OfType<ReversibleTransform>().Reverse().ToList(),
                 Timestamp = DateTime.UtcNow
@@ -99,7 +97,8 @@ namespace AnvilPacker
             using var entry = _archive.CreateEntry("anvilpacker.json");
             using var jw = new JsonTextWriter(new StreamWriter(entry, Encoding.UTF8));
             jw.Formatting = Formatting.Indented;
-            TransformPipe.SettingSerializer.Serialize(jw, _meta);
+
+            _metaJsonSerializer.Serialize(jw, _meta);
         }
 
         private WriteMessage EncodeRegion(string path)
@@ -132,7 +131,7 @@ namespace AnvilPacker
                 _regionProgress.Inc(1.0);
                 return default;
             }
-            var encoder = new RegionEncoder(region);
+            var encoder = new RegionEncoder(region, _encoderSettings);
             var mem = new MemoryDataWriter(1024 * 1024 * 4);
             encoder.Encode(mem, _regionProgress.CreateProgressListener());
 
@@ -176,7 +175,7 @@ namespace AnvilPacker
             }
         }
 
-        private string GetVersion()
+        public static string GetInfoVersion()
         {
             var asm = typeof(WorldPacker).Assembly;
             var attrib = asm.GetCustomAttribute<AssemblyInformationalVersionAttribute>();

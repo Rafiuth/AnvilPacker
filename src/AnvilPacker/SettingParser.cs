@@ -11,8 +11,6 @@ using static Pidgin.Parser<char>;
 
 namespace AnvilPacker
 {
-    //Parses settings with a JSON-like syntax.
-    //Strings are optionaly delimited by either " or '
     //TODO: Allow whitespace
     public class SettingParser
     {
@@ -21,11 +19,16 @@ namespace AnvilPacker
         private readonly JsonSerializer _serializer;
         private readonly Parser<char, JToken> _parser;
 
-        public SettingParser(Type rootType, IEnumerable<KeyValuePair<string, Type>> types, JsonConverter[] converters = null)
+        public SettingParser(Type rootType, IEnumerable<(string Name, Type Type)> types, IEnumerable<JsonConverter> converters = null)
+            : this(rootType, types.Select(v => new KeyValuePair<string, Type>(v.Name, v.Type)), converters)
+        {
+
+        }
+        public SettingParser(Type rootType, IEnumerable<KeyValuePair<string, Type>> types, IEnumerable<JsonConverter> converters = null)
         {
             _types = new Dictionary<string, Type>(types);
             _rootType = rootType;
-            _parser = CreateParser(rootType);
+            _parser = GetParser(rootType);
 
             var ss = new JsonSerializerSettings();
             //TypeNameHandling.Auto doesn't fucking work
@@ -40,7 +43,9 @@ namespace AnvilPacker
             _serializer = JsonSerializer.CreateDefault(ss);
         }
 
-        private Parser<char, JToken> CreateParser(Type rootType)
+        private static readonly Parser<char, JToken> ValueParser, RootedObjParser, ArrayParser;
+
+        static SettingParser()
         {
             var Comma = Char(',');
 
@@ -131,13 +136,19 @@ namespace AnvilPacker
                 )
                 .Labelled("value");
 
+            RootedObjParser = Property.Separated(Comma).Select(CreateObject);
+            ArrayParser = Value.Separated(Comma).Select(CreateArray);
+            ValueParser = Value;
+        }
+        private Parser<char, JToken> GetParser(Type rootType)
+        {
             if (typeof(IEnumerable).IsAssignableFrom(rootType)) {
-                return Value.Separated(Comma).Select(CreateArray);
+                return ArrayParser;
             }
             if (rootType != null) {
-                return Property.Separated(Comma).Select(CreateObject);
+                return RootedObjParser;
             }
-            return Value;
+            return ValueParser;
         }
 
         public T Parse<T>(string str)
@@ -205,6 +216,7 @@ namespace AnvilPacker
                 char ch = str[i];
                 if (ch == '\n') {
                     line++;
+                    col = 1;
                 } else {
                     col += (ch == '\t' ? 4 : 1);
                 }

@@ -8,15 +8,28 @@ using System.Threading.Tasks;
 using AnvilPacker.Encoder.Transforms;
 using AnvilPacker.Level;
 using AnvilPacker.Util;
+using Newtonsoft.Json;
 using NLog;
 
 namespace AnvilPacker
 {
-    public abstract class WorldPackProcessor : IDisposable
+    public abstract class PackProcessor : IDisposable
     {
         public const string REGION_EXT = "apr"; //Anvil Pack Region
 
         protected readonly ILogger _logger = LogManager.GetCurrentClassLogger();
+        protected static readonly JsonSerializer _metaJsonSerializer = CreateMetaJsonSerializer();
+
+        private static JsonSerializer CreateMetaJsonSerializer()
+        {
+            var ss = new JsonSerializerSettings();
+            ss.Converters.Add(BlockJsonConverter.Instance);
+            ss.TypeNameHandling = TypeNameHandling.Auto;
+            ss.TypeNameAssemblyFormatHandling = TypeNameAssemblyFormatHandling.Simple;
+            ss.SerializationBinder = new TypeNameSerializationBinder()
+                .Map(TransformPipe.KnownTransforms);
+            return JsonSerializer.CreateDefault(ss);
+        }
 
         protected WorldInfo _world = null!;
         protected PackMetadata _meta = null!;

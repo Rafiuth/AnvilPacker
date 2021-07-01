@@ -3,12 +3,8 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using AnvilPacker.Level;
-using AnvilPacker.Util;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 
 namespace AnvilPacker.Encoder.Transforms
 {

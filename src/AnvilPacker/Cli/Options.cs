@@ -10,23 +10,32 @@ namespace AnvilPacker.Cli
         [Option('i', "input", Required = true, HelpText = "Path of the input file/directory.")]
         public string Input { get; set; }
 
-        [Option('o', "output", HelpText = "Path of the resulting file.")]
+        [Option('o', "output", Required = true, HelpText = "Path of the resulting file.")]
         public string Output { get; set; }
 
         [Option('y', "overwrite", HelpText = "Overwrite the output file if it already exists.")]
         public bool Overwrite { get; set; } = false;
 
-        [Option('T', "threads", HelpText = "Number of threads to use during the process.")]
+        [Option('T', "threads", HelpText = "Number of threads to use during processing. Higher values demands more memory, as one region is processed per thread.")]
         public int MaxThreads { get; set; } = Environment.ProcessorCount;
 
         [Option("log-level", HelpText = "Sets the log level. trace/debug/info/warn/error/fatal")]
         public LogLevel LogLevel { get; set; } = LogLevel.Info;
+
+        [Option("log-file", HelpText = "Sets the path of the log file.")]
+        public string LogFile { get; set; }
     }
     [Verb("pack", HelpText = "Compresses a given world.")]
     public class PackOptions : CliOptions
     {
-        [Option("verify", HelpText = "Verifies that the compressed world was correctly encoded, by decoding it and comparing with the original.")]
-        public bool Verify { get; set; } = false;
+        [Option("preset", HelpText = "Use predefined settings.")]
+        public string Preset { get; set; }
+
+        [Option("transform-pipe", HelpText = "A list of transforms to apply in regions.")]
+        public string TransformPipe { get; set; }
+
+        [Option("encoder-opts", HelpText = "Sets the region encoder options.")]
+        public string EncoderOpts { get; set; }
     }
 
     [Verb("unpack", HelpText = "Decompresses a given world.")]
@@ -37,7 +46,7 @@ namespace AnvilPacker.Cli
     [Verb("dump", HelpText = "Generates debug files for a given world.")]
     public class DumpOptions : CliOptions
     {
-        [Option('t', "type", Required = true, HelpText = "Specifies what data to generate.")]
+        [Option('t', "type", Required = true, HelpText = "Sets the output data type.")]
         public DumpType Type { get; set; }
     }
     public enum DumpType

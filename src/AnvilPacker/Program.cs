@@ -1,14 +1,11 @@
 ﻿using System;
-using System.ComponentModel;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using AnvilPacker.Cli;
-using AnvilPacker.Data;
-using AnvilPacker.Encoder;
 using AnvilPacker.Level;
 using AnvilPacker.Util;
+using CommandLine;
+using CommandLine.Text;
 using NLog;
 
 namespace AnvilPacker
@@ -19,16 +16,38 @@ namespace AnvilPacker
 
         static void Main(string[] args)
         {
-            var opts = new PackOptions() {
-                Input = @"E:\Projects\AnvilPacker\test_data\mcpworld",
-                Output = "test.zip",
-                MaxThreads = 1,
-                LogLevel = LogLevel.Debug,
-                Overwrite = false
+            var programs = new (Type OptsType, Action<CliOptions> Run)[] {
+                (typeof(PackOptions),       opts => RunPacker((PackOptions)opts)),
+                (typeof(UnpackOptions),     opts => RunUnpacker((UnpackOptions)opts)),
+                (typeof(DumpOptions),       opts => RunDumper((DumpOptions)opts)),
             };
-            Init(opts);
 
-            RunPacker(opts);
+            var parser = new Parser(s => {
+                s.CaseInsensitiveEnumValues = true;
+                s.HelpWriter = null;
+            });
+            var result = parser.ParseArguments(
+                args, 
+                programs.Select(p => p.OptsType).ToArray()
+            );
+            if (result is Parsed<object> parsed) {
+                var opts = (CliOptions)parsed.Value;
+                var program = programs.First(v => v.OptsType == opts.GetType());
+
+                Init(opts);
+                program.Run(opts);
+            } else {
+                var text = HelpText.AutoBuild(
+                    result,
+                    err => {
+                        err.Heading = "AnvilPacker v" + WorldPacker.GetInfoVersion();
+                        err.AdditionalNewLineAfterOption = false;
+                        err.Copyright = "";
+                        return err;
+                    }
+                );
+                Console.WriteLine(text);
+            }
         }
 
         private static void Init(CliOptions? opts)
@@ -39,9 +58,14 @@ namespace AnvilPacker
 #else
             var minLogLevel = opts?.LogLevel ?? LogLevel.Info; 
 #endif
-            //var consoleTarget = new NLog.Targets.ConsoleTarget("console");
-            //consoleTarget.Layout = "[${level:uppercase=true} ${logger:shortName=true}] ${replace-newlines:replacement=\n:${message}} ${exception:format=toString}";
             config.AddRule(minLogLevel, LogLevel.Fatal, BufferedConsoleLogTarget.Instance);
+            if (opts.LogFile != null) {
+                var fileTarget = new NLog.Targets.FileTarget();
+                fileTarget.ArchiveOldFileOnStartup = false;
+                fileTarget.FileName = opts.LogFile;
+                fileTarget.Layout = "[${level:uppercase=true} ${logger:shortName=true}] ${replace-newlines:replacement=\n:${message}} ${exception:format=toString}";
+                config.AddRule(minLogLevel, LogLevel.Fatal, fileTarget);
+            }
             NLog.LogManager.Configuration = config;
 
             RegistryLoader.Load();

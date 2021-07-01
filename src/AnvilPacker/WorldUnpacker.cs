@@ -1,27 +1,19 @@
 #nullable enable
 
-using System;
-using System.Collections.Generic;
 using System.IO;
-using System.IO.Compression;
-using System.Linq;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
 using AnvilPacker.Data;
 using AnvilPacker.Data.Archives;
 using AnvilPacker.Encoder;
-using AnvilPacker.Encoder.Transforms;
 using AnvilPacker.Level;
 using AnvilPacker.Util;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using NLog;
 
 namespace AnvilPacker
 {
-    public class WorldUnpacker : WorldPackProcessor
+    public class WorldUnpacker : PackProcessor
     {
         private IArchiveReader _archive;
 
@@ -49,15 +41,9 @@ namespace AnvilPacker
             foreach (var entry in _archive.ReadEntries()) {
                 if (Utils.FileHasExtension(entry.Name, REGION_EXT)) {
                     _regionProgress.AddItem();
-                } else {
-                    _opaqueProgress.AddItem();
-                }
-            }
-
-            foreach (var entry in _archive.ReadEntries()) {
-                if (Utils.FileHasExtension(entry.Name, REGION_EXT)) {
                     await decodeRegionBlock.SendAsync(entry);
                 } else {
+                    _opaqueProgress.AddItem();
                     await decodeOpaqueBlock.SendAsync(entry);
                 }
             }
@@ -77,7 +63,7 @@ namespace AnvilPacker
                 return;
             }
             using var jr = new JsonTextReader(new StreamReader(_archive.OpenEntry(entry), Encoding.UTF8));
-            _meta = TransformPipe.SettingSerializer.Deserialize<PackMetadata>(jr)!;
+            _meta = _metaJsonSerializer.Deserialize<PackMetadata>(jr)!;
 
             LogStatus($"Pack metadata:");
             LogStatus($"  Encoder version: {_meta.Version}");
@@ -122,8 +108,9 @@ namespace AnvilPacker
         {
             string path = Path.Combine(_world.RootPath, entry.Name);
             if (!Utils.IsSubPath(_world.RootPath, path)) {
-                path = Path.Combine(_world.RootPath, Utils.RemoveInvalidPathChars(entry.Name));
-                _logger.Warn($"Malicious entry trying to extract outside world directory: '{entry.Name}' - renaming to '{path}'.");
+                var newName = Utils.RemoveInvalidPathChars(entry.Name);
+                _logger.Warn($"Malicious entry trying to extract outside world directory: '{entry.Name}' - renaming to '{newName}'.");
+                path = Path.Combine(_world.RootPath, newName);
             }
             Directory.CreateDirectory(Path.GetDirectoryName(path)!);
             return path;

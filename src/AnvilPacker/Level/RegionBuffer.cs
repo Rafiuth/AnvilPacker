@@ -32,13 +32,14 @@ namespace AnvilPacker.Level
 
         /// <summary> Loads the specified region file. </summary>
         /// <param name="path">Full path of the .mca file</param>
+        /// <param name="pos">The position of the region. Will be derived from <paramref name="path"/> if null.</param>
         /// <returns>Number of non empty chunks loaded.</returns>
-        public int Load(WorldInfo world, string path)
+        public int Load(WorldInfo world, string path, (int X, int Z)? pos = null)
         {
             Ensure.That(Size == 32);
 
             Clear();
-            SetPosFromRegionFile(path);
+            (X, Z) = pos ?? GetRegionFilePos(path);
             int chunksLoaded = 0;
 
             using var reader = new RegionReader(path);
@@ -83,14 +84,15 @@ namespace AnvilPacker.Level
             }
         }
 
-        private void SetPosFromRegionFile(string path)
+        private (int X, int Z) GetRegionFilePos(string path)
         {
             var m = Regex.Match(Path.GetFileName(path), @"^r\.(-?\d+)\.(-?\d+)\.mca$");
             if (!m.Success) {
                 throw new FormatException("Region file name must have the form of 'r.0.0.mca'.");
             }
-            X = int.Parse(m.Groups[1].Value) * 32;
-            Z = int.Parse(m.Groups[2].Value) * 32;
+            int x = int.Parse(m.Groups[1].Value) * 32;
+            int z = int.Parse(m.Groups[2].Value) * 32;
+            return (x, z);
         }
 
         public void Clear()
@@ -102,7 +104,7 @@ namespace AnvilPacker.Level
             _lastLoadedRegionFilename = null;
         }
 
-        /// <summary> Calculate the min and max Y section coord in all chunks. </summary>
+        /// <summary> Calculates the min and max section Y coord in this region. </summary>
         public (int Min, int Max) GetChunkYExtents()
         {
             int min = int.MaxValue, max = int.MinValue;
