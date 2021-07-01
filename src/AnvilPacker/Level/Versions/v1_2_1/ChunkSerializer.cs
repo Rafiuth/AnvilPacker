@@ -139,6 +139,8 @@ namespace AnvilPacker.Level.Versions.v1_2_1
             return dst;
         }
 
+        const ushort INVALID_STATE_ID = 65535;
+        
         private CompoundTag SerializeSection(ChunkSection section, ushort[] stateIds)
         {
             var blockId = new byte[4096];
@@ -147,6 +149,7 @@ namespace AnvilPacker.Level.Versions.v1_2_1
 
             var blocks = section.Blocks;
             int hasAdd = 0;
+            bool hasModernStateRefs = false;
 
             for (int i = 0; i < 4096; i += 2) {
                 int j = i >> 1;
@@ -161,7 +164,9 @@ namespace AnvilPacker.Level.Versions.v1_2_1
                 int add = (a >> 12) | (b >> 12) << 4;
                 blockAdd[j] = (byte)add;
                 hasAdd |= add;
+                hasModernStateRefs |= a == INVALID_STATE_ID || b == INVALID_STATE_ID;
             }
+            Ensure.That(!hasModernStateRefs, "Legacy chunk contains references to modern block states.");
 
             var tag = new CompoundTag();
             tag.SetSByte("Y", (sbyte)section.Y);
@@ -180,7 +185,9 @@ namespace AnvilPacker.Level.Versions.v1_2_1
                 if (b == BlockRegistry.Air) {
                     return (ushort)0;
                 }
-                Ensure.That(b.HasAttrib(BlockAttributes.Legacy));
+                if (!b.HasAttrib(BlockAttributes.Legacy)) {
+                    return INVALID_STATE_ID;
+                }
                 return (ushort)b.Id;
             });
         }

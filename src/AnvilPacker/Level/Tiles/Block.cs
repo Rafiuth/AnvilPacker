@@ -18,6 +18,7 @@ namespace AnvilPacker.Level
 
         public bool Equals(Block other)
         {
+            //TODO: Distinguish modern and legacy blocks?
             return other.Name == Name && 
                    Properties.SequenceEqual(other.Properties);
         }

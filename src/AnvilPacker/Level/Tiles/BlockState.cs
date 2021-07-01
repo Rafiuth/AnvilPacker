@@ -10,7 +10,10 @@ namespace AnvilPacker.Level
 {
     public class BlockState : IEquatable<BlockState>
     {
-        /// <summary> Unique ID for this block state. -1 if the block is dynamic. </summary>
+        /// <summary> 
+        /// Unique ID for this block state, or -1 if the block is dynamic. <br/>
+        /// When <c>HasAttrib(BlockAttributes.Legacy) == true</c>, this value represents the numeric block ID.
+        /// </summary>
         public int Id { get; set; }
         public Block Block { get; set; }
         public (string Key, string Value)[] Properties { get; set; } = Array.Empty<(string, string)>();
@@ -30,7 +33,8 @@ namespace AnvilPacker.Level
 
         public bool Equals(BlockState other)
         {
-            return Id >= 0 ? Id == other.Id : SlowEquals(other);
+            return (Id >= 0 ? Id == other.Id : SlowEquals(other)) &&
+                   (Attributes & BlockAttributes.InternalMask) == (other.Attributes & BlockAttributes.InternalMask);
         }
         private bool SlowEquals(BlockState other)
         {
