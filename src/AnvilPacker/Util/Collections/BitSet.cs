@@ -148,6 +148,18 @@ namespace AnvilPacker.Util
             }
         }
 
+        /// <summary> Sets the bit at the specified position to true, and returns whether it was previously clear. </summary>
+        public bool Add(int index)
+        {
+            EnsureCapacity(index);
+
+            ulong mask = 1ul << index;
+            ref ulong w = ref GetWord(index);
+            bool wasClear = (w & mask) == 0;
+            w |= mask;
+            return wasClear;
+        }
+
         /// <summary> Sets all bits to false, and the length to 0. </summary>
         public void Clear()
         {

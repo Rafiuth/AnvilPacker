@@ -67,9 +67,8 @@ namespace AnvilPacker.Level
                         for (int x = 0; x < 16; x++) {
                             var block = section.GetBlockId(x, y, z);
                             int index = x + z * 16;
-                            if (_isOpaque[block] && !populated[index]) {
+                            if (_isOpaque[block] && populated.Add(index)) {
                                 heights[index] = (short)(section.Y * 16 + y + 1);
-                                populated[index] = true;
                                 numPopulated++;
                             }
                         }

@@ -97,7 +97,7 @@ namespace AnvilPacker.Level
 
         public void Clear()
         {
-            Chunks.Fill(null);
+            Chunks.Clear();
             Palette = new BlockPalette() { BlockRegistry.Air };
             ExtraData = null;
 

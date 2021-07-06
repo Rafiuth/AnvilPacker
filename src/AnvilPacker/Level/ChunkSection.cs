@@ -17,14 +17,12 @@ namespace AnvilPacker.Level
         public NibbleArray? BlockLight;
 
         public readonly Chunk Chunk;
-        public readonly int Y;
-        public int X => Chunk.X;
-        public int Z => Chunk.Z;
+        public readonly int X, Y, Z;
 
         public ChunkSection(Chunk chunk, int y)
         {
             Chunk = chunk;
-            Y = y;
+            (X, Y, Z) = (chunk.X, y, chunk.Z);
             Blocks = new BlockId[16 * 16 * 16];
             Palette = chunk.Palette;
         }
