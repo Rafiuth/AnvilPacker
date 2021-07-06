@@ -12,12 +12,17 @@ namespace AnvilPacker.Level
         public const string TYPE_LEGACY = "_LEGACY";
 
         public readonly short[] Values = new short[16 * 16];
-        public short YOffset;
+        public readonly short MinY;
+
+        public Heightmap(int minY = 0)
+        {
+            MinY = (short)minY;
+        }
 
         public int this[int x, int z]
         {
-            get => Values[x + z * 16] + YOffset;
-            set => Values[x + z * 16] = (short)(value - YOffset);
+            get => Values[x + z * 16];
+            set => Values[x + z * 16] = (short)value;
         }
     }
     /// <summary> Provides methods for computing heightmaps for chunks in a region. </summary>
@@ -45,14 +50,16 @@ namespace AnvilPacker.Level
             Ensure.That(chunk.Palette == _region.Palette, "Chunk not in region");
 
             var heights = heightmap.Values;
-            heights.Fill((short)0);
+            heights.Fill(heightmap.MinY);
 
             var populated = _populated;
             populated.Clear();
 
             int numPopulated = 0;
+            var sections = chunk.Sections;
 
-            foreach (var section in chunk.Sections) {
+            for (int i = sections.Length - 1; i >= 0; i--) {
+                var section = sections[i];
                 if (section == null) continue;
 
                 for (int y = 15; y >= 0; y--) {
