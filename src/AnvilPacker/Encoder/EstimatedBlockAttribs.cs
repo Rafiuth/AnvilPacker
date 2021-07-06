@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using AnvilPacker.Level;
 using AnvilPacker.Util;
 using NLog;
+using System.Diagnostics;
 
 namespace AnvilPacker.Encoder
 {
@@ -24,7 +25,7 @@ namespace AnvilPacker.Encoder
             HeightmapAttribs.Estimate(region);
 
             LightAttribs = new();
-            //LightAttribs.Estimate(region);
+            LightAttribs.Estimate(region);
         }
     }
 
@@ -59,18 +60,30 @@ namespace AnvilPacker.Encoder
     }
     public class EstimatedLightAttribs
     {
+        private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
+
         public BlockPalette Palette;
-        public byte[] BlockEmission;
-        public byte[] BlockOpacity;
-        public DictionarySlim<BlockId, BitSet> TransparentSides;
+        public BlockLightInfo[] LightAttribs;
 
         public void Estimate(RegionBuffer region)
         {
             Palette = region.Palette;
-            BlockEmission = new byte[Palette.Count];
-            BlockOpacity  = new byte[Palette.Count];
+            LightAttribs = new BlockLightInfo[Palette.Count];
 
-            EstimateEmission(region);
+            bool hasDynamicBlocks = false;
+
+            foreach (var (state, id) in Palette.BlocksAndIds()) {
+                if (!state.Block.IsDynamic) {
+                    LightAttribs[id] = new BlockLightInfo(state);
+                } else {
+                    hasDynamicBlocks = true;
+                }
+            }
+            
+            if (hasDynamicBlocks) {
+                _logger.Info($"Found dynamic blocks in {region}, estimating missing light attributes...");
+                EstimateEmission(region);
+            }
         }
         private void EstimateEmission(RegionBuffer region)
         {
@@ -127,5 +140,29 @@ namespace AnvilPacker.Encoder
         private void EstimateOpacity(Chunk chunk)
         {
         }
+    }
+    public struct BlockLightInfo
+    {
+        /// <summary> Values packed as <c>Opacity | Emission << 4</c> </summary>
+        public readonly byte Data;
+
+        public int Opacity => Data & 15;
+        public int Emission => Data >> 4;
+
+        public BlockLightInfo(byte data)
+        {
+            Data = data;
+        }
+        public BlockLightInfo(int opacity, int emission)
+        {
+            Debug.Assert(opacity is >= 0 and <= 15 && emission is >= 0 and <= 15);
+            Data = (byte)(opacity | emission << 4);
+        }
+        public BlockLightInfo(BlockState block)
+            : this(block.LightOpacity, block.LightEmission)
+        {
+        }
+
+        public override string ToString() => $"Opacity={Opacity} Emission={Emission}";
     }
 }

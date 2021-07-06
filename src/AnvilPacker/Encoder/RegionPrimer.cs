@@ -6,16 +6,16 @@ using AnvilPacker.Util;
 
 namespace AnvilPacker.Encoder
 {
-    /// <summary> Responsible of reconstruction of non critical data in decoded regions. </summary>
+    /// <summary> Computes reproducible data for decoded regions. </summary>
     public class RegionPrimer
     {
-        public RegionBuffer Region { get; }
-        public EstimatedBlockAttribs EstimatedBlockAttribs { get; }
+        private readonly RegionBuffer _region;
+        private readonly EstimatedBlockAttribs _estimAttribs;
 
-        public RegionPrimer(RegionBuffer region, EstimatedBlockAttribs estimatedBlockAttribs)
+        public RegionPrimer(RegionBuffer region, EstimatedBlockAttribs estimAttribs)
         {
-            Region = region;
-            EstimatedBlockAttribs = estimatedBlockAttribs;
+            _region = region;
+            _estimAttribs = estimAttribs;
         }
 
         public void Prime()
@@ -26,12 +26,12 @@ namespace AnvilPacker.Encoder
 
         private void PrimeHeightmaps()
         {
-            var attribs = EstimatedBlockAttribs.HeightmapAttribs;
+            var attribs = _estimAttribs.HeightmapAttribs;
 
             foreach (var (type, isOpaque) in attribs.OpacityMap) {
-                var computer = new HeightmapComputer(Region, type, isOpaque);
+                var computer = new HeightmapComputer(_region, type, isOpaque);
 
-                foreach (var chunk in Region.Chunks.ExceptNull()) {
+                foreach (var chunk in _region.Chunks.ExceptNull()) {
                     if (NeedsHeightmap(chunk, type)) {
                         computer.Compute(chunk);
                     }
@@ -50,9 +50,8 @@ namespace AnvilPacker.Encoder
 
         private void PrimeLights()
         {
-            foreach (var chunk in Region.Chunks.ExceptNull()) {
-                chunk.SetFlag(ChunkFlags.HasLightData, false);
-            }
+            var lighter = new Lighter();
+            lighter.Compute(_region, _estimAttribs.LightAttribs);
         }
     }
 }
