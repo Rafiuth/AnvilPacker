@@ -35,7 +35,7 @@ namespace AnvilPacker.Level
             ComputeHeightmaps();
 
             foreach (var chunk in region.Chunks.ExceptNull()) {
-                if (chunk.HasFlag(ChunkFlags.HasLightData)) {
+                if (chunk.HasFlag(ChunkFlags.LightDirty)) {
                     ComputeBlockLight(chunk);
                     ComputeSkyLight(chunk);
                 }

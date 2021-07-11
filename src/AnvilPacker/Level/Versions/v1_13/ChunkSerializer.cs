@@ -17,9 +17,10 @@ namespace AnvilPacker.Level.Versions.v1_13
             
             int x = tag.Pop<int>("xPos");
             int z = tag.Pop<int>("zPos");
+            int version = rootTag.Pop<int>("DataVersion");
             var chunk = new Chunk(x, z, palette);
             chunk.Opaque = rootTag;
-            chunk.DataVersion = rootTag.Pop<int>("DataVersion");
+            chunk.DataVersion = version;
 
             if (tag.TryGet("Sections", out ListTag sectList)) {
                 for (int i = 0; i < sectList.Count; i++) {
@@ -34,7 +35,7 @@ namespace AnvilPacker.Level.Versions.v1_13
                 }
             }
             DeserializeHeightmaps(chunk, tag.PopMaybe<CompoundTag>("Heightmaps"));
-            chunk.SetFlag(ChunkFlags.HasLightData, tag.PopMaybe<bool>("isLightOn"));
+            chunk.SetFlag(ChunkFlags.LightDirty, version >= DataVersions.v1_14_2_pre4 && !tag.PopMaybe<bool>("isLightOn"));
 
             //Remove legacy data from upgrated worlds
             tag.Remove("HeightMap");
@@ -108,7 +109,13 @@ namespace AnvilPacker.Level.Versions.v1_13
             }
             tag.SetList("Sections", sections);
             tag.SetCompound("Heightmaps", SerializeHeightmaps(chunk));
-            tag.SetBool("isLightOn", chunk.HasFlag(ChunkFlags.HasLightData));
+
+            bool lightDirty = chunk.HasFlag(ChunkFlags.LightDirty);
+            if (chunk.DataVersion >= DataVersions.v1_14_2_pre4) {
+                tag.SetBool("isLightOn", !lightDirty);
+            } else if (lightDirty) {
+                throw new NotSupportedException($"Light can't be maked as dirty in this chunk version (v1.13+{chunk.DataVersion})");
+            }
 
             var rootTag = new CompoundTag();
             rootTag.SetCompound("Level", tag);

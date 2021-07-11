@@ -26,6 +26,11 @@ namespace AnvilPacker.Level
 
         public const int v1_13_s5   = 1449; //17w46a: Last version to use numeric block IDs
         public const int v1_13_s6   = 1451; //17w47a: Blocks are now bit packed and paletted
+
+        public const int v1_14_2_pre4 = 1962; //isLightOn added / forced light recomputation
+        
+        public const int v1_14_4    = 1976;
+
         public const int v1_16_s13  = 2529; //20w17a: Bit storage is now sparse
 
         public const int v1_16_5    = 2586;

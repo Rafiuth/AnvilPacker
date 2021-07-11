@@ -132,7 +132,12 @@ namespace AnvilPacker.Level
     {
         //Warn: don't change values, they are transmitted by the codec.
         None            = 0,
-        HasLightData    = 1 << 0,
-        OpaqueOnly      = 1 << 1
+        /// <summary> Only <see cref="Chunk.Opaque" /> should be serialized. </summary>
+        OpaqueOnly      = 1 << 0,
+        /// <summary> 
+        /// Indicates that light data should be recomputed. 
+        /// When this flag is present, the serializer will set, depending on the version, `isLightOn` or `LightPopulated` to 0.
+        /// </summary>
+        LightDirty      = 1 << 1,
     }
 }
