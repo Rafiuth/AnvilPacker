@@ -1,10 +1,9 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
-using System.IO.Compression;
-using System.Reflection;
 using AnvilPacker.Data;
 using AnvilPacker.Util;
+using LibDeflate;
 
 namespace AnvilPacker.Level
 {
@@ -18,10 +17,16 @@ namespace AnvilPacker.Level
     /// </remarks>
     public class RegionWriter : IDisposable
     {
+        private const int MAX_COMPRESSED_CHUNK_SIZE = 256 * 4096; //1MB / .mca hard limit
+
         private readonly DataWriter _s;
         // Chunk index table. each entry is encoded as: `sectorId << 8 | sectorCount`
         private int[] _locations = new int[1024];
         private bool _headerDirty = true;
+
+        private MemoryDataWriter _chunkBuf = new(1024 * 256);
+        private byte[] _compBuf = new byte[1024 * 64];
+        private ZlibCompressor _zlibEnc = new(6);
 
         public RegionWriter(string path, int rx, int rz)
             : this(Path.Combine(path, $"r.{rx}.{rz}.mca"))
@@ -49,7 +54,7 @@ namespace AnvilPacker.Level
             }
             //Older versions will corrupt the location table if the file size isn't a multiple of 4096 bytes.
             //Setting _s.Position isn't enough to change the file size.
-            _s.Length = Align(_s.Length);
+            _s.Length = SectorAlign(_s.Length);
             _s.Position = _s.Length;
         }
 
@@ -61,33 +66,40 @@ namespace AnvilPacker.Level
         public void Write(int x, int z, CompoundTag tag)
         {
             ref int loc = ref _locations[GetIndex(x, z)];
-            Ensure.That(loc == 0, "Chunk can only be written once.");
-
             long startPos = _s.Position;
+
+            Ensure.That(loc == 0, "Chunk can only be written once.");
             Debug.Assert(startPos % 4096 == 0, "File position should always be aligned to 4096 bytes.");
 
-            const int HDR_LEN = 5;
-            _s.Position = startPos + HDR_LEN;
+            _chunkBuf.Clear();
+            NbtIO.Write(tag, _chunkBuf);
+            var data = Compress(_chunkBuf.BufferSpan);
 
-            using (var stream = new DataWriter(new_ZlibStream(_s.BaseStream, CompressionLevel.Optimal, true))) {
-                NbtIO.Write(tag, stream);
-            }
-            long endPos = _s.Position;
-            int totalLen = (int)(endPos - startPos);
-            
-            loc = PackLocation(startPos, totalLen);
+            const int HDR_LEN = 5; //LEN:4 + CM:1
+            loc = PackLocation(startPos, data.Length + HDR_LEN);
 
-            //go back and write header
-            _s.Position = startPos;
-            _s.WriteIntBE(totalLen - HDR_LEN + 1); //length
+            _s.WriteIntBE(data.Length + 1); //length
             _s.WriteByte(2); //compressionMethod: zlib
+            _s.WriteBytes(data);
 
-            _s.Position = Align(endPos);
-
+            _s.Position = SectorAlign(_s.Position);
             _headerDirty = true;
         }
 
-        private int PackLocation(long offset, int length)
+        private Span<byte> Compress(ReadOnlySpan<byte> data)
+        {
+            while (true) {
+                int len = _zlibEnc.Compress(data, _compBuf);
+                if (len > 0) {
+                    return _compBuf.AsSpan(0, len);
+                }
+                int newBufLen = _compBuf.Length * 2;
+                Ensure.That(newBufLen <= MAX_COMPRESSED_CHUNK_SIZE, "Chunk data larger than allowed (trying to expand buffer too much)");
+                Array.Resize(ref _compBuf, newBufLen);
+            }
+        }
+
+        private static int PackLocation(long offset, int length)
         {
             int startSector = (int)(offset / 4096);
             int numSectors = Maths.CeilDiv(length, 4096);
@@ -95,33 +107,22 @@ namespace AnvilPacker.Level
             Ensure.That(startSector <= 0xFFFFFF && numSectors <= 255, "Can't fit chunk in region");
             return startSector << 8 | numSectors;
         }
-
-        private static long Align(long pos)
+        private static long SectorAlign(long pos)
         {
             return (pos + 4095) & ~4095;
         }
-
         private static int GetIndex(int x, int z)
         {
             Ensure.InRange(x, z, 0, 31, "Invalid region chunk coords");
             return x + z * 32;
         }
 
-        private static Stream new_ZlibStream(Stream stream, CompressionLevel level, bool leaveOpen = false)
-        {
-            //adapted from here: https://github.com/dotnet/runtime/issues/38022#issuecomment-645612109
-            //https://github.com/dotnet/runtime/blob/master/src/libraries/System.IO.Compression/src/System/IO/Compression/DeflateZLib/DeflateStream.cs#L81
-            //internal DeflateStream(Stream stream, CompressionLevel compressionLevel, bool leaveOpen, int windowBits)
-            var argTypes = new[] { typeof(Stream), typeof(CompressionLevel), typeof(bool), typeof(int) };
-            var ctor = typeof(DeflateStream).GetConstructor(BindingFlags.NonPublic | BindingFlags.Instance, null, argTypes, null);
-
-            return (DeflateStream)ctor.Invoke(new object[] { stream, level, leaveOpen, 15 });
-        }
-
         public void Dispose()
         {
             WriteHeader();
             _s.Dispose();
+            _chunkBuf.Dispose();
+            _zlibEnc.Dispose();
         }
     }
 }

@@ -2,7 +2,6 @@
 using System.Buffers;
 using System.Collections.Generic;
 using System.IO;
-using System.IO.Compression;
 using System.Linq;
 using AnvilPacker.Data;
 using AnvilPacker.Util;
@@ -20,14 +19,14 @@ namespace AnvilPacker.Level
         private readonly DataReader _s;
         private readonly int[] _locations = new int[1024];
 
-        private Decompressor[] _decompressors = new Decompressor[2];
+        private Decompressor _gzipDec, _zlibDec;
         private byte[] _inBuf = new byte[1024 * 32];
         private byte[] _outBuf = new byte[1024 * 256];
 
         public RegionReader(string filename)
         {
             _s = new DataReader(File.OpenRead(filename), false);
-            if (_s.Length > 8192) {
+            if (_s.Length >= 8192) {
                 _s.ReadBulkBE<int>(_locations);
             }
         }
@@ -62,25 +61,34 @@ namespace AnvilPacker.Level
             if (actualLen > length) {
                 throw new InvalidDataException($"Corrupted chunk: declared length larger than sector count.");
             }
-            var rawStream = _s.AsStream(actualLen);
-
             if (compressionType == 3) {
+                var rawStream = _s.AsStream(actualLen);
                 return NbtIO.Read(rawStream);
             }
+            var comprData = GetInBuffer(actualLen);
+            _s.ReadBytes(comprData);
+            var data = Decompress(compressionType, comprData);
+            var mem = new MemoryStream(data.Array, data.Offset, data.Count);
+            return NbtIO.Read(mem);
+        }
+
+        private Span<byte> GetInBuffer(int length)
+        {
+            EnsureCapacity(ref _inBuf, length, MAX_COMPRESSED_CHUNK_SIZE);
+            return _inBuf.AsSpan(0, length);
+        }
+        private ArraySegment<byte> Decompress(byte compressionType, Span<byte> data)
+        {
             var decompressor = compressionType switch {
-                1 => _decompressors[0] ??= new GzipDecompressor(),
-                2 => _decompressors[1] ??= new ZlibDecompressor(),
+                1 => _gzipDec ??= new GzipDecompressor(),
+                2 => _zlibDec ??= new ZlibDecompressor(),
                 _ => throw new NotSupportedException($"Chunk compression method {compressionType}")
             };
-            EnsureCapacity(ref _inBuf, actualLen, MAX_COMPRESSED_CHUNK_SIZE);
-            var inBuf = _inBuf.AsSpan(0, actualLen);
-            _s.ReadBytes(inBuf);
 
             while (true) {
-                switch (decompressor.Decompress(inBuf, _outBuf, out int bytesWritten, out _)) {
+                switch (decompressor.Decompress(data, _outBuf, out int bytesWritten, out _)) {
                     case OperationStatus.Done: {
-                        var mem = new MemoryStream(_outBuf, 0, bytesWritten);
-                        return NbtIO.Read(mem);
+                        return new ArraySegment<byte>(_outBuf, 0, bytesWritten);
                     }
                     case OperationStatus.DestinationTooSmall: {
                         EnsureCapacity(ref _outBuf, _outBuf.Length + 1, MAX_UNCOMPRESSED_CHUNK_SIZE);
@@ -92,7 +100,6 @@ namespace AnvilPacker.Level
                 }
             }
         }
-
         private void EnsureCapacity(ref byte[] buf, int minLen, int limit)
         {
             if (buf.Length < minLen) {
@@ -116,9 +123,8 @@ namespace AnvilPacker.Level
         public void Dispose()
         {
             _s.Dispose();
-            foreach (var decompressor in _decompressors) {
-                decompressor?.Dispose();
-            }
+            _gzipDec?.Dispose();
+            _zlibDec?.Dispose();
         }
     }
 }
