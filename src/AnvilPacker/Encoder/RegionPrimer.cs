@@ -31,7 +31,7 @@ namespace AnvilPacker.Encoder
             foreach (var (type, isOpaque) in attribs.OpacityMap) {
                 var computer = new HeightmapComputer(_region, type, isOpaque);
 
-                foreach (var chunk in _region.Chunks.ExceptNull()) {
+                foreach (var chunk in _region.ExistingChunks) {
                     if (NeedsHeightmap(chunk, type)) {
                         computer.Compute(chunk);
                     }

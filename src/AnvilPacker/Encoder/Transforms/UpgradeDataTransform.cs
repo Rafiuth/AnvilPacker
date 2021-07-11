@@ -45,7 +45,7 @@ namespace AnvilPacker.Encoder.Transforms
             string inputTagName = forward ? "Indices" : "_WrongIndices";
             string resultTagName = forward ? "_WrongIndices" : "Indices";
 
-            foreach (var chunk in region.Chunks.ExceptNull()) {
+            foreach (var chunk in region.ExistingChunks) {
                 var tag = (CompoundTag)chunk.Opaque?["Level"]?["UpgradeData"];
 
                 if (tag?[inputTagName] is CompoundTag sections) {

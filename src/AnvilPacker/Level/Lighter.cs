@@ -34,7 +34,7 @@ namespace AnvilPacker.Level
 
             ComputeHeightmaps();
 
-            foreach (var chunk in region.Chunks.ExceptNull()) {
+            foreach (var chunk in region.ExistingChunks) {
                 if (chunk.HasFlag(ChunkFlags.LightDirty)) {
                     ComputeBlockLight(chunk);
                     ComputeSkyLight(chunk);
@@ -45,7 +45,7 @@ namespace AnvilPacker.Level
         {
             var opacityMap = _lightAttribs.Select(a => a.Opacity > 0).ToArray();
             var computer = new HeightmapComputer(_region, "LIGHT_OPAQUE", opacityMap);
-            foreach (var chunk in _region.Chunks.ExceptNull()) {
+            foreach (var chunk in _region.ExistingChunks) {
                 computer.Compute(chunk, GetHeightmap(chunk));
             }
         }

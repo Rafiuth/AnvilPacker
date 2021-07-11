@@ -1,6 +1,7 @@
 ﻿#nullable enable
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text.RegularExpressions;
 using AnvilPacker.Data;
@@ -21,6 +22,9 @@ namespace AnvilPacker.Level
         public CompoundTag? ExtraData = null;
 
         private string? _lastLoadedRegionFilename = null;
+
+        /// <summary> All non-null chunks. </summary>
+        public IEnumerable<Chunk> ExistingChunks => Chunks.ExceptNull();
 
         /// <param name="count">Capacity of the buffer, in regions of 32x32 chunks.</param>
         public RegionBuffer()
