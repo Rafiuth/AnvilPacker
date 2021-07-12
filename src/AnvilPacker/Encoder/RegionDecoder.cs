@@ -1,3 +1,5 @@
+#nullable enable
+
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -15,8 +17,10 @@ namespace AnvilPacker.Encoder
 
         private RegionBuffer _region;
         private int _blockCount; //updated by ReadChunkBitmap()
-        private BlockCodec _blockCodec;
-        private EstimatedBlockAttribs _estimAttribs = new();
+        private BlockCodec _blockCodec = null!;
+        private EstimatedHeightmapAttribs _estimHeightmapAttribs = null!;
+        private EstimatedLightAttribs _estimLightAttribs = null!;
+        private RepDataEncMode _heightmapMode, _lightingMode;
 
         public RegionDecoder(RegionBuffer region)
         {
@@ -24,30 +28,74 @@ namespace AnvilPacker.Encoder
             region.Clear();
         }
 
-        public void Decode(DataReader stream, IProgress<double> progress = null)
+        public void Decode(DataReader stream, IProgress<double>? progress = null)
         {
-            int version = ReadSyncTag(stream, "main", 0);
+            ReadPart(stream, "Header", true, dw => {
+                ReadHeader(dw);
+                ReadMetadata(dw);
+            });
+            ReadPart(stream, "Blocks", false, dw => {
+                _blockCodec.Decode(stream, CodecProgressListener.MaybeCreate(_blockCount, progress));
+            });
 
-            int headerLen = stream.ReadIntLE();
-            using (var comp = Compressors.NewBrotliDecoder(stream.AsStream(headerLen), false)) {
-                ReadHeader(comp);
-                ReadMetadata(comp);
+            if (_heightmapMode == RepDataEncMode.Strip) {
+                CalcHeightmaps();
+            } else {
+                ReadPart(stream, "Heightmaps", true, ReadHeightmaps);
             }
-            _blockCodec.Decode(stream, CodecProgressListener.MaybeCreate(_blockCount, progress));
+            if (_lightingMode == RepDataEncMode.Strip) {
+                CalcLights();
+            } else {
+                ReadPart(stream, "Lighting", true, ReadLightData);
+            }
+        }
 
-            new RegionPrimer(_region, _estimAttribs).Prime();
+        private void CalcHeightmaps()
+        {
+            var attribs = _estimHeightmapAttribs;
+
+            foreach (var (type, isOpaque) in attribs.OpacityMap) {
+                var computer = new HeightmapComputer(_region, type, isOpaque);
+
+                foreach (var chunk in _region.ExistingChunks) {
+                    if (NeedsHeightmap(chunk, type)) {
+                        computer.Compute(chunk);
+                    }
+                }
+            }
+            bool NeedsHeightmap(Chunk chunk, string type)
+            {
+                if (DataVersions.IsBeforeFlattening(chunk.DataVersion)) {
+                    return type == Heightmap.TYPE_LEGACY;
+                }
+                var status = chunk.Opaque?["Level"]?["Status"]?.Value<string>();
+                bool statusComplete = status is "full" or "heightmaps" or "spawn" or "light";
+                return statusComplete && !type.EndsWith("_WG");
+            }
+        }
+        private void CalcLights()
+        {
+            new Lighter().Compute(_region, _estimLightAttribs.LightAttribs);
         }
 
         private void ReadHeader(DataReader stream)
         {
             _region.X = stream.ReadVarInt() << 5;
             _region.Z = stream.ReadVarInt() << 5;
+            _heightmapMode = (RepDataEncMode)stream.ReadByte();
+            _lightingMode = (RepDataEncMode)stream.ReadByte();
 
-            ReadPalette(stream); //no deps
-            ReadHeightmapAttribs(stream); //depends on palette
-            ReadLightAttribs(stream);
-            ReadChunkBitmap(stream); //no deps
+            //no deps
+            ReadPalette(stream);
+            ReadChunkBitmap(stream);
 
+            //depends on palette & header fields above
+            if (_heightmapMode != RepDataEncMode.Normal) {
+                ReadHeightmapAttribs(stream);
+            }
+            if (_lightingMode != RepDataEncMode.Normal) {
+                ReadLightAttribs(stream);
+            }
             int blockCodecId = stream.ReadVarUInt();
             _blockCodec = BlockCodec.CreateFromId(_region, blockCodecId);
             _blockCodec.ReadHeader(stream);
@@ -55,7 +103,7 @@ namespace AnvilPacker.Encoder
 
         private void ReadChunkBitmap(DataReader stream)
         {
-            byte version = ReadSyncTag(stream, "cmap", 0);
+            int version = ReadSyncTag(stream, "ChunkBMP", 0);
             int minY = stream.ReadVarInt();
             int maxY = stream.ReadVarInt();
 
@@ -86,7 +134,7 @@ namespace AnvilPacker.Encoder
         }
         private void ReadPalette(DataReader stream)
         {
-            byte version = ReadSyncTag(stream, "plte", 0);
+            int version = ReadSyncTag(stream, "Palette", 0);
             int count = stream.ReadVarUInt();
             var palette = new BlockPalette(count);
 
@@ -107,9 +155,21 @@ namespace AnvilPacker.Encoder
             _region.Palette = palette;
         }
 
+        private void ReadMetadata(DataReader stream)
+        {
+            int version = ReadSyncTag(stream, "Meta", 0);
+            _region.ExtraData = NbtIO.Read(stream);
+
+            foreach (var chunk in _region.ExistingChunks) {
+                chunk.Flags = (ChunkFlags)stream.ReadVarUInt();
+                chunk.DataVersion = stream.ReadVarUInt();
+                chunk.Opaque = NbtIO.Read(stream);
+            }
+        }
+
         private void ReadHeightmapAttribs(DataReader stream)
         {
-            byte version = ReadSyncTag(stream, "hmap", 0);
+            int version = ReadSyncTag(stream, "HeightAttribs", 0);
             int numTypes = stream.ReadVarUInt();
 
             int numBlocks = _region.Palette.Count;
@@ -123,37 +183,136 @@ namespace AnvilPacker.Encoder
                 }
                 types.Add(type, isOpaque);
             }
-
-            _estimAttribs.HeightmapAttribs = new EstimatedHeightmapAttribs() {
+            _estimHeightmapAttribs = new EstimatedHeightmapAttribs() {
                 Palette = _region.Palette,
                 OpacityMap = types
             };
         }
         private void ReadLightAttribs(DataReader stream)
         {
-            byte version = ReadSyncTag(stream, "lght", 0);
+            int version = ReadSyncTag(stream, "LightAttribs", 0);
+
+            var blockAttribs = new BlockLightInfo[_region.Palette.Count];
+            for (int i = 0; i < blockAttribs.Length; i++) {
+                blockAttribs[i] = new BlockLightInfo(stream.ReadByte());
+            }
+
+            _estimLightAttribs = new EstimatedLightAttribs() {
+                Palette = _region.Palette,
+                LightAttribs = blockAttribs
+            };
         }
 
-        private void ReadMetadata(DataReader stream)
+        private void ReadHeightmaps(DataReader stream)
         {
-            byte version = ReadSyncTag(stream, "meta", 0);
-            _region.ExtraData = NbtIO.Read(stream);
+            int version = ReadSyncTag(stream, "Heightmaps", 0);
+        
+            int numTypes = stream.ReadVarUInt();
 
-            foreach (var chunk in _region.Chunks.ExceptNull()) {
-                chunk.Flags = (ChunkFlags)stream.ReadVarUInt();
-                chunk.DataVersion = stream.ReadVarUInt();
-                chunk.Opaque = NbtIO.Read(stream);
+            var types = new (string Name, HeightmapComputer? Computer)[numTypes];
+            var predHeightmap = new Heightmap();
+            bool deltaEnc = _heightmapMode == RepDataEncMode.Delta;
+
+            for (int i = 0; i < numTypes; i++) {
+                string name = stream.ReadNulString();
+                HeightmapComputer? computer = null;
+
+                if (deltaEnc) {
+                    var opacityMap = _estimHeightmapAttribs.OpacityMap[name];
+                    computer = new HeightmapComputer(_region, name, opacityMap);
+                }
+                types[i] = (name, computer);
+            }
+
+            //Bitmap
+            foreach (var chunk in _region.ExistingChunks) {
+                int minY = chunk.MinSectionY * 16;
+                int mask = stream.ReadVarUInt();
+
+                for (int i = 0; i < types.Length; i++) {
+                    if ((mask & (1 << i)) != 0) {
+                        chunk.Heightmaps.Add(types[i].Name, new Heightmap(minY));
+                    }
+                }
+            }
+
+            //Payload
+            foreach (var chunk in _region.ExistingChunks) {
+                foreach (var (type, computer) in types) {
+                    if (!chunk.Heightmaps.TryGetValue(type, out var heightmap)) continue;
+
+                    if (deltaEnc) {
+                        computer!.Compute(chunk, predHeightmap);
+                    }
+                    var heights = heightmap.Values;
+                    var preds = predHeightmap.Values;
+                    Debug.Assert(heights.Length == 16 * 16);
+
+                    for (int i = 0; i < heights.Length; i++) {
+                        heights[i] = (short)(stream.ReadShortLE() + preds[i]);
+                    }
+                }
+            }
+        }
+        private void ReadLightData(DataReader stream)
+        {
+            int version = ReadSyncTag(stream, "Lighting", 0);
+
+            if (_lightingMode == RepDataEncMode.Delta) {
+                throw new NotImplementedException("Delta encoded lighting not implemented.");
+            }
+            //Bitmap
+            foreach (var chunk in _region.ExistingChunks) {
+                foreach (var section in chunk.Sections.ExceptNull()) {
+                    int flags = stream.ReadByte();
+
+                    if ((flags & 1) != 0) {
+                        section.BlockLight = new NibbleArray(4096);
+                    }
+                    if ((flags & 2) != 0) {
+                        section.SkyLight = new NibbleArray(4096);
+                    }
+                }
+            }
+
+            //Payload
+            foreach (var chunk in _region.ExistingChunks) {
+                foreach (var section in chunk.Sections.ExceptNull()) {
+                    if (section.BlockLight != null) {
+                        stream.ReadBytes(section.BlockLight.Data);;
+                    }
+                    if (section.SkyLight != null) {
+                        stream.ReadBytes(section.SkyLight.Data);
+                    }
+                }
             }
         }
 
-        private byte ReadSyncTag(DataReader stream, string id, byte maxSupportedVersion)
+        private int ReadSyncTag(DataReader stream, string id, int maxSupportedVersion)
         {
-            for (int i = 0; i < 4; i++) {
+            for (int i = 0; i < id.Length; i++) {
                 Ensure.That(stream.ReadByte() == id[i], "Unmatched sync tag");
             }
-            byte version = stream.ReadByte();
+            int version = stream.ReadVarUInt();
             Ensure.That(version <= maxSupportedVersion, "Unsupported version");
             return version;
+        }
+        private void ReadPart(DataReader stream, string id, bool compressed, Action<DataReader> readContents)
+        {
+            string dataId = stream.ReadNulString();
+            int length = stream.ReadIntLE();
+
+            if (dataId != id) {
+                throw new InvalidOperationException($"Unmatched part id: expecting '{id}', got '{dataId}'");
+            }
+
+            if (compressed) {
+                using var comp = Compressors.NewBrotliDecoder(stream.AsStream(length), true);
+                readContents(comp);
+            } else {
+                //TODO: limit by length
+                readContents(stream);
+            }
         }
     }
 }

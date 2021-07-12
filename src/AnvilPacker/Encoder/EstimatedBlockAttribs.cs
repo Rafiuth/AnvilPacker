@@ -11,27 +11,6 @@ using System.Runtime.CompilerServices;
 
 namespace AnvilPacker.Encoder
 {
-    public class EstimatedBlockAttribs
-    {
-        private static readonly ILogger _logger = LogManager.GetCurrentClassLogger();
-
-        public BlockPalette Palette;
-
-        public EstimatedHeightmapAttribs HeightmapAttribs;
-        public EstimatedLightAttribs LightAttribs;
-
-        public void Estimate(RegionBuffer region)
-        {
-            Palette = region.Palette;
-            
-            HeightmapAttribs = new();
-            HeightmapAttribs.Estimate(region);
-
-            LightAttribs = new();
-            LightAttribs.Estimate(region);
-        }
-    }
-
     public class EstimatedHeightmapAttribs
     {
         public BlockPalette Palette;
