@@ -24,6 +24,7 @@ namespace AnvilPacker.Encoder.Transforms
             }
         }
 
+        //unchanged since (maybe older)1.14.4-1.17
         private static readonly string[] ChunkStatuses = {
             "empty", 
             "structure_starts", "structure_references", 
@@ -37,7 +38,7 @@ namespace AnvilPacker.Encoder.Transforms
 
         private bool IsEmpty(Chunk chunk)
         {
-            if (chunk.DataVersion < DataVersions.AfterFlattening) {
+            if (chunk.DataVersion < DataVersions.v1_14_4) {
                 return false; //TODO: handle legacy chunks
             }
             var level = chunk.Opaque["Level"] as CompoundTag;
