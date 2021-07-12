@@ -23,7 +23,8 @@ public class Main
 {
     public static void main(String[] args) throws Throwable
     {
-        GameVersion version = MinecraftVersion.create();
+        SharedConstants.createGameVersion();
+        GameVersion version = SharedConstants.getGameVersion();
         System.out.println("Initializing Minecraft " + version.getName() + " registries...");
         Bootstrap.initialize();
 
@@ -33,7 +34,7 @@ public class Main
         data.version = version.getName();
         data.worldVersion = version.getWorldVersion();
         data.numBlockStates = 0;
-
+        
         for (Block block : Registry.BLOCK) {
             Identifier key = Registry.BLOCK.getId(block);
             data.blocks.add(new XBlock(key, block));
@@ -137,8 +138,8 @@ public class Main
             if (bs.isFullCube(emptyView, zeroPos))
                 flags |= 1 << 2;
 
-            if (bs.isOpaqueFullCube(emptyView, zeroPos))
-                flags |= 1 << 3; //Opaque && FullCube
+            //if (bs.isOpaqueFullCube(emptyView, zeroPos))
+            //    flags |= 1 << 3; //Opaque && FullCube
 
             if (bs.hasRandomTicks())
                 flags |= 1 << 4;
@@ -148,9 +149,6 @@ public class Main
 
             if (!bs.getFluidState().isEmpty())
                 flags |= 1 << 6; //IsImmerse
-
-            if (bs.isAir())
-                flags |= 1 << 7;
 
             return flags;
         }
@@ -194,7 +192,7 @@ public class Main
             reg(Material.LAVA               , "lava");
             reg(Material.SNOW_LAYER         , "snow_layer");
             reg(Material.FIRE               , "fire");
-            reg(Material.SUPPORTED          , "decoration");
+            reg(Material.DECORATION         , "decoration");
             reg(Material.COBWEB             , "cobweb");
             reg(Material.REDSTONE_LAMP      , "redstone_lamp");
             reg(Material.ORGANIC_PRODUCT    , "clay");
@@ -220,10 +218,13 @@ public class Main
             reg(Material.REPAIR_STATION     , "repair_station");
             reg(Material.BARRIER            , "barrier");
             reg(Material.PISTON             , "piston");
-            reg(Material.UNUSED_PLANT       , "coral");
+            reg(Material.MOSS_BLOCK         , "coral");
             reg(Material.GOURD              , "vegetable");
             reg(Material.EGG                , "egg");
             reg(Material.CAKE               , "cake");
+            reg(Material.AMETHYST           , "amethyst");
+            reg(Material.POWDER_SNOW        , "powder_snow");
+            reg(Material.SCULK              , "sculk");
         }
     }
 

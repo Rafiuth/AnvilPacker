@@ -11,6 +11,7 @@ namespace AnvilPacker.Level
         const MaterialAttributes S = MaterialAttributes.Solid;
 
         //TODO: update DataExtractor to generate this
+        //TODO: load materials dynamically
         public static BlockMaterial Air              { get; } = Reg("air", MapColor.Air, R);
         public static BlockMaterial StructuralAir    { get; } = Reg("structural_air", MapColor.Air, R);
         public static BlockMaterial Portal           { get; } = Reg("portal", MapColor.Air, 0);
@@ -55,5 +56,8 @@ namespace AnvilPacker.Level
         public static BlockMaterial Vegetable        { get; } = Reg("vegetable", MapColor.Plant, BM | SB | S);
         public static BlockMaterial Egg              { get; } = Reg("egg", MapColor.Plant, BM | SB | S);
         public static BlockMaterial Cake             { get; } = Reg("cake", MapColor.Air, BM | SB | S);
+        public static BlockMaterial Amethyst         { get; } = Reg("amethyst", MapColor.ColorPurple, BM | SB | S);
+        public static BlockMaterial PowderSnow       { get; } = Reg("powder_snow", MapColor.Snow, SB);
+        public static BlockMaterial Sculk            { get; } = Reg("sculk", MapColor.ColorBlack, BM | SB | S);
     }
 }

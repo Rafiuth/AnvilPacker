@@ -67,6 +67,9 @@ namespace AnvilPacker.Level
         WarpedStem = 56,
         WarpedHyphae = 57,
         WarpedWartBlock = 58,
+        Deepslate = 59,
+        RawIron = 60,
+        GlowLichen = 61
     }
     public static class MapColors
     {
@@ -78,9 +81,9 @@ namespace AnvilPacker.Level
             0x4A80FF, 0x00D93A, 0x815631, 0x700200, 0xD1B1A1, 0x9F5224, 0x95576C, 0x706C8A,
             0xBA8524, 0x677535, 0xA04D4E, 0x392923, 0x876B62, 0x575C5C, 0x7A4958, 0x4C3E5C,
             0x4C3223, 0x4C522A, 0x8E3C2E, 0x251610, 0xBD3031, 0x943F61, 0x5C191D, 0x167E86,
-            0x3A8E8C, 0x562C3E, 0x14B485,
+            0x3A8E8C, 0x562C3E, 0x14B485, 0x646464, 0xD8AF93, 0x7FA796
         };
-        private static readonly int[] ShadeBrightness = { 180, 220, 255, 135 }; //why tf isn't this sorted?
+        private static readonly int[] ShadeBrightness = { 180, 220, 255, 135 };
 
         public static int ToRgb(this MapColor color, int shade = 2)
         {
