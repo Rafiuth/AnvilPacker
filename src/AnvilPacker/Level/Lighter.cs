@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using AnvilPacker.Data;
-using AnvilPacker.Encoder;
 using AnvilPacker.Util;
 
 namespace AnvilPacker.Level
@@ -27,18 +26,16 @@ namespace AnvilPacker.Level
             }
         }
 
-        public void Compute(RegionBuffer region, EstimatedLightAttribs estimAttribs)
+        public void Compute(RegionBuffer region, BlockLightInfo[] blockAttribs)
         {
             _region = region;
-            _lightAttribs = estimAttribs.LightAttribs;
+            _lightAttribs = blockAttribs;
 
             ComputeHeightmaps();
 
             foreach (var chunk in region.ExistingChunks) {
-                if (chunk.HasFlag(ChunkFlags.LightDirty)) {
-                    ComputeBlockLight(chunk);
-                    ComputeSkyLight(chunk);
-                }
+                ComputeBlockLight(chunk);
+                ComputeSkyLight(chunk);
             }
         }
         private void ComputeHeightmaps()
@@ -233,5 +230,30 @@ namespace AnvilPacker.Level
         {
             Block, Sky
         }
+    }
+
+    public struct BlockLightInfo
+    {
+        /// <summary> Values packed as <c>Opacity | Emission &lt;&lt; 4</c> </summary>
+        public readonly byte Data;
+
+        public int Opacity => Data & 15;
+        public int Emission => Data >> 4;
+
+        public BlockLightInfo(byte data)
+        {
+            Data = data;
+        }
+        public BlockLightInfo(int opacity, int emission)
+        {
+            Debug.Assert(opacity is >= 0 and <= 15 && emission is >= 0 and <= 15);
+            Data = (byte)(opacity | emission << 4);
+        }
+        public BlockLightInfo(BlockState block)
+            : this(block.LightOpacity, block.LightEmission)
+        {
+        }
+
+        public override string ToString() => $"Opacity={Opacity} Emission={Emission}";
     }
 }

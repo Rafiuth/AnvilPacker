@@ -76,7 +76,7 @@ namespace AnvilPacker.Level
 
             var block = new Block() {
                 Name = blockName,
-                IsDynamic = true,
+                IsKnown = false,
                 Material = BlockMaterial.Unknown,
                 Properties = new List<BlockProperty>(0),
                 States = new BlockState[1]

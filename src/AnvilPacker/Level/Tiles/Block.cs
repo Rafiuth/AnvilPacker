@@ -13,8 +13,8 @@ namespace AnvilPacker.Level
         public List<BlockProperty> Properties { get; init; }
         public BlockState[] States { get; init; }
 
-        /// <summary> Whether this block was created on the fly, i.e. it is not known in any registry. </summary>
-        public bool IsDynamic { get; init; }
+        /// <summary> Whether this block is known and has valid attributes. </summary>
+        public bool IsKnown { get; init; }
 
         public bool Equals(Block other)
         {

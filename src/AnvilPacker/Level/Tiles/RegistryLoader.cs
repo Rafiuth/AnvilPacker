@@ -50,7 +50,8 @@ namespace AnvilPacker.Level
                     Name = name,
                     States = states,
                     Properties = props,
-                    Material = BlockMaterial.Registry[materialName]
+                    Material = BlockMaterial.Registry[materialName],
+                    IsKnown = true
                 };
 
                 var stateFlags = jb["states"]["flags"];
@@ -108,7 +109,8 @@ namespace AnvilPacker.Level
                     Name = name,
                     States = states,
                     Properties = props,
-                    Material = BlockMaterial.Registry[materialName]
+                    Material = BlockMaterial.Registry[materialName],
+                    IsKnown = true
                 };
 
                 var stateFlags = jb["states"]["flags"];
