@@ -110,7 +110,7 @@ namespace AnvilPacker.Encoder.Transforms
                 }
                 totalBlocks += 256;
             }
-            _logger.Debug($"Simplified {changedBlocks}/{totalBlocks} ({changedBlocks * 100 / totalBlocks}%) hidden blocks in {region}");
+            _logger.Debug($"Simplified {changedBlocks}/{totalBlocks} ({changedBlocks * 100 / Math.Max(1, totalBlocks)}%) hidden blocks in {region}");
 
             //Check if the block is surrounded by opaque blocks
             bool IsHidden(ChunkIterator chunk, int x, int y, int z)
