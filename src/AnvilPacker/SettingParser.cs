@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Newtonsoft.Json.Serialization;
 using Pidgin;
 using static Pidgin.Parser;
 using static Pidgin.Parser<char>;
@@ -30,16 +31,19 @@ namespace AnvilPacker
             _rootType = rootType;
             _parser = GetParser(rootType);
 
-            var ss = new JsonSerializerSettings();
-            //TypeNameHandling.Auto doesn't fucking work
+            var ss = new JsonSerializerSettings() {
+                ObjectCreationHandling = ObjectCreationHandling.Replace,
+                MissingMemberHandling = MissingMemberHandling.Error,
+                ContractResolver = new DefaultContractResolver() {
+                    NamingStrategy = new SnakeCaseNamingStrategy()
+                }
+            };
             ss.Converters.Add(new TypeBinderConverter(_types));
             if (converters != null) {
                 foreach (var converter in converters) {
                     ss.Converters.Add(converter);
                 }
             }
-            ss.ObjectCreationHandling = ObjectCreationHandling.Replace;
-
             _serializer = JsonSerializer.CreateDefault(ss);
         }
 

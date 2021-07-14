@@ -53,10 +53,11 @@ namespace AnvilPacker
         private static void Init(CliOptions? opts)
         {
             var config = new NLog.Config.LoggingConfiguration();
+            var minLogLevel = opts.LogLevel != null ? LogLevel.FromString(opts.LogLevel) :
 #if DEBUG
-            var minLogLevel = LogLevel.Debug;
+            LogLevel.Debug;
 #else
-            var minLogLevel = opts?.LogLevel ?? LogLevel.Info; 
+            LogLevel.Info; 
 #endif
             config.AddRule(minLogLevel, LogLevel.Fatal, BufferedConsoleLogTarget.Instance);
             if (opts.LogFile != null) {

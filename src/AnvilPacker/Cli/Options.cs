@@ -20,7 +20,7 @@ namespace AnvilPacker.Cli
         public int MaxThreads { get; set; } = Environment.ProcessorCount;
 
         [Option("log-level", HelpText = "Sets the log level. trace/debug/info/warn/error/fatal")]
-        public LogLevel LogLevel { get; set; } = LogLevel.Info;
+        public string LogLevel { get; set; } = "info";
 
         [Option("log-file", HelpText = "Sets the path of the log file.")]
         public string LogFile { get; set; }
