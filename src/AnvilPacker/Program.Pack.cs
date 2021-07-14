@@ -18,12 +18,12 @@ namespace AnvilPacker
         {
             (
                 Name: "fast",
-                EncoderOpts: "",
+                EncoderOpts: "block_codec=brotli{quality=6,window_size=22},meta_brotli_quality=6,meta_brotli_window_size=22",
                 TransformPipe: "remove_empty_chunks,simplify_upgrade_data"
             ),
             (
                 Name: "default",
-                EncoderOpts: "block_codec=ap1",
+                EncoderOpts: "block_codec=ap1,meta_brotli_quality=8,meta_brotli_window_size=22",
                 TransformPipe: "remove_empty_chunks,simplify_upgrade_data"
             ),
             (
