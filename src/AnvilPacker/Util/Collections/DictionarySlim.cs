@@ -13,13 +13,13 @@ using AnvilPacker.Util.Collections;
 namespace AnvilPacker.Util
 {
     /// <summary>
-    /// A lightweight Dictionary with three principal differences compared to <see cref="Dictionary{TKey, TValue}"/>
+    /// A lightweight Dictionary with four principal differences compared to <see cref="Dictionary{TKey, TValue}"/>
     ///
     /// 1) It is possible to do "get or add" in a single lookup using <see cref="GetOrAdd(TKey)"/>. For
     /// values that are value types, this also saves a copy of the value.
     /// 2) It assumes it is cheap to equate values.
     /// 3) It assumes the keys implement <see cref="IEquatable{TKey}"/> or else Equals() and they are cheap and sufficient.
-    /// 4) Concurrent accesses are not safe; such attempts may cause an infinite loop.
+    /// 4) Concurrent accesses are not safe; they may cause an infinite loop.
     /// </summary>
     /// <remarks>
     /// 1) This avoids having to do separate lookups (<see cref="Dictionary{TKey, TValue}.TryGetValue(TKey, out TValue)"/>

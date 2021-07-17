@@ -62,12 +62,13 @@ namespace AnvilPacker.Encoder.v1
 
             if (index == 0) return;
 
-            //Move frequent symbols to front (sinking)
-            int currWeight = freqs[curr] + (1 + _hits / 32);
+            //Move frequent symbols to front using a slightly modified of the count method:
+            //https://en.wikipedia.org/wiki/Self-organizing_list#Count_method
+            int currFreq = freqs[curr] + (1 + _hits / 32);
 
             while (index > 0) {
                 var prev = palette[index - 1];
-                if (freqs[prev] > currWeight) break;
+                if (freqs[prev] > currFreq) break;
                 palette[index] = prev;
                 index--;
             }

@@ -38,6 +38,7 @@ namespace AnvilPacker.Data
         {
         }
 
+        /// <summary> Resets the stream position and length to 0, without reclaiming memory. </summary>
         public void Clear()
         {
             Position = 0;

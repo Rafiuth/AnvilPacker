@@ -6,12 +6,17 @@ using AnvilPacker.Util;
 namespace AnvilPacker.Level
 {
     /// <summary> Represents a 16x16x16 block region. </summary>
+    /// <remarks>
+    /// Notes: <br/>
+    /// - No Get() or Set() method check coordinates, unless documented otherwise.
+    /// </remarks>
     public class ChunkSection
     {
-        //We don't use a bit array here because it just makes everything simpler and faster.
-        //1.8 and older versions used 8+4/16 bit array and were just fine.
         public readonly BlockId[] Blocks;
-        /// <summary> A reference copy of the region palette. </summary>
+        /// <summary> 
+        /// A reference copy of the chunk palette. 
+        /// It should always be the same as <see cref="Chunk.Palette" />.
+        /// </summary>
         public BlockPalette Palette;
         public NibbleArray? SkyLight;
         public NibbleArray? BlockLight;
@@ -74,7 +79,9 @@ namespace AnvilPacker.Level
             }
         }
 
+        /// <summary> Checks if the specified coords are inside [0..15]. </summary>
         public static bool IsCoordInside(int x, int y, int z) => (uint)(x | y | z) < 16;
+        /// <summary> Returns the block index for the specified coord, i.e.: <c>y*256 + z*16 + x</c> </summary>
         public static int GetIndex(int x, int y, int z) => y << 8 | z << 4 | x;
     }
 }

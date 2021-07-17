@@ -59,7 +59,9 @@ namespace AnvilPacker.Encoder
                     if (sect == null) continue;
 
                     var blockId = sect.GetBlockId(x, y & 15, z);
-                    isOpaque[blockId] = true;
+                    if (filter[blockId]) {
+                        isOpaque[blockId] = true;
+                    }
                 }
             }
         }
@@ -186,7 +188,7 @@ namespace AnvilPacker.Encoder
 
                                 int br = GetLight(x, y, z);
                                 if (br == 15) {
-                                    //if br == 15, the sky is visible, and so is y+1, maxNeighborBr will endup being 15;
+                                    //if br == 15, the sky should be visible in all blocks above. maxNeighborBr will endup being 15;
                                     //don't waste time fetching other neighbors in that case.
                                     //increment bin[0]
                                     opacityHist[id].UpdateOpacity(15, 15, true);
@@ -301,14 +303,14 @@ namespace AnvilPacker.Encoder
                 if (LightSamples == 0 || LightSamples / (double)TotalBlocks < 0.80) {
                     return 0;
                 }
-                int bestIdx = 0;
+                int best = 0;
                 int threshold = LightSamples / 12;
                 for (int i = 0; i < BIN_COUNT; i++) {
-                    if (_bins[i] > _bins[bestIdx] && _bins[i] > threshold) {
-                        bestIdx = i;
+                    if (_bins[i] > _bins[best] && _bins[i] > threshold) {
+                        best = i;
                     }
                 }
-                return bestIdx;
+                return best;
             }
             public int CalcEstimatedOpacity()
             {

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using AnvilPacker.Data;
 using AnvilPacker.Util;
 using NLog;
@@ -105,6 +106,7 @@ namespace AnvilPacker.Level.Versions.v1_13
             var reindexTable = new BlockId[chunk.Palette.Count];
 
             foreach (var section in chunk.Sections.ExceptNull()) {
+                Debug.Assert(section.Palette == chunk.Palette);
                 sections.Add(SerializeSection(section, reindexTable));
             }
             tag.SetList("Sections", sections);
