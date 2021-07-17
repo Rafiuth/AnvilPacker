@@ -54,12 +54,11 @@ namespace AnvilPacker.Encoder
         {
             var attribs = _estimHeightmapAttribs;
 
-            foreach (var (type, isOpaque) in attribs.OpacityMap) {
-                var computer = new HeightmapComputer(_region, type, isOpaque);
-
+            foreach (var (type, isBlockOpaque) in attribs.OpacityMap) {
                 foreach (var chunk in _region.ExistingChunks) {
                     if (NeedsHeightmap(chunk, type)) {
-                        computer.Compute(chunk);
+                        var heightmap = chunk.GetOrCreateHeightmap(type);
+                        heightmap.Compute(chunk, isBlockOpaque);
                     }
                 }
             }
@@ -209,19 +208,15 @@ namespace AnvilPacker.Encoder
         
             int numTypes = stream.ReadVarUInt();
 
-            var types = new (string Name, HeightmapComputer? Computer)[numTypes];
+            var types = new (string Name, bool[]? IsBlockOpaque)[numTypes];
             var predHeightmap = new Heightmap();
             bool deltaEnc = _heightmapMode == RepDataEncMode.Delta;
 
             for (int i = 0; i < numTypes; i++) {
                 string name = stream.ReadNulString();
-                HeightmapComputer? computer = null;
-
-                if (deltaEnc) {
-                    var opacityMap = _estimHeightmapAttribs.OpacityMap[name];
-                    computer = new HeightmapComputer(_region, name, opacityMap);
-                }
-                types[i] = (name, computer);
+                var isBlockOpaque = deltaEnc ? _estimHeightmapAttribs.OpacityMap[name] : null;
+                
+                types[i] = (name, isBlockOpaque);
             }
 
             //Bitmap
@@ -238,11 +233,11 @@ namespace AnvilPacker.Encoder
 
             //Payload
             foreach (var chunk in _region.ExistingChunks) {
-                foreach (var (type, computer) in types) {
+                foreach (var (type, isBlockOpaque) in types) {
                     if (!chunk.Heightmaps.TryGetValue(type, out var heightmap)) continue;
 
                     if (deltaEnc) {
-                        computer!.Compute(chunk, predHeightmap);
+                        predHeightmap.Compute(chunk, isBlockOpaque!);
                     }
                     var heights = heightmap.Values;
                     var preds = predHeightmap.Values;

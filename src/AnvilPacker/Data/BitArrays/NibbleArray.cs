@@ -2,6 +2,7 @@
 
 using System.Collections;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 
 namespace AnvilPacker.Data
 {
@@ -12,6 +13,7 @@ namespace AnvilPacker.Data
 
         public int this[int index]
         {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get {
                 //byte b = arr[idx / 2];
                 //return i % 2 == 0 ? b & 15 : b >> 4;
@@ -19,6 +21,7 @@ namespace AnvilPacker.Data
                 int s = (index & 1) * 4;
                 return (b >> s) & 15;
             }
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             set {
                 ref byte b = ref Data[index >> 1];
                 int s = (index & 1) * 4;

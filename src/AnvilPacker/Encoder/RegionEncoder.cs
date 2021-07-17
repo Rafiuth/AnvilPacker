@@ -186,7 +186,7 @@ namespace AnvilPacker.Encoder
         {
             WriteSyncTag(stream, "Heightmaps", 0);
 
-            var types = new Dictionary<string, (int Mask, HeightmapComputer? Computer)>();
+            var types = new Dictionary<string, (int Mask, bool[]? IsBlockOpaque)>();
             var predHeightmap = new Heightmap();
             bool deltaEnc = _settings.HeightmapEncMode == RepDataEncMode.Delta;
 
@@ -196,13 +196,9 @@ namespace AnvilPacker.Encoder
                     if (types.ContainsKey(type)) continue;
                     Ensure.That(types.Count <= 32, "Can't have more than 32 heightmap types.");
 
-                    HeightmapComputer? computer = null;
-
-                    if (deltaEnc) {
-                        var opacityMap = _estimHeightmapAttribs.OpacityMap[type];
-                        computer = new HeightmapComputer(_region, type, opacityMap);
-                    }
-                    types[type] = (1 << types.Count, computer);
+                    var isBlockOpaque = deltaEnc ? _estimHeightmapAttribs.OpacityMap[type] : null;
+                    
+                    types[type] = (1 << types.Count, isBlockOpaque);
                 }
             }
 
@@ -227,7 +223,7 @@ namespace AnvilPacker.Encoder
                     if (!chunk.Heightmaps.TryGetValue(type, out var heightmap)) continue;
 
                     if (deltaEnc) {
-                        data.Computer!.Compute(chunk, predHeightmap);
+                        predHeightmap.Compute(chunk, data.IsBlockOpaque!);
                     }
                     var heights = heightmap.Values;
                     var preds = predHeightmap.Values;

@@ -9,7 +9,7 @@ namespace AnvilPacker.Level
 {
     public class Chunk
     {
-        public const int MIN_ALLOWED_SECTION_Y = -32, MAX_ALLOWED_SECTION_Y = 31;
+        public const int MIN_SUPPORTED_SECTION_Y = -32, MAX_SUPPORTED_SECTION_Y = 31;
 
         public readonly int X, Z;
         /// <summary> Section Y extents, in chunk coordinates (blockPos / 16). Values are inclusive. </summary>
@@ -55,6 +55,7 @@ namespace AnvilPacker.Level
             }
             return null;
         }
+
         /// <param name="y">Section Y coord (blockY >> 4)</param>
         /// <remarks><see cref="IndexOutOfRangeException"/> is thrown if y is outside the chunk height.</remarks>
         public void SetSection(int y, ChunkSection? section)
@@ -76,15 +77,15 @@ namespace AnvilPacker.Level
 
         private void EnsureSectionFits(int sy)
         {
-            Ensure.That(sy >= MIN_ALLOWED_SECTION_Y && sy <= MAX_ALLOWED_SECTION_Y, "Section outside allowed Y bounds.");
+            Ensure.That(sy >= MIN_SUPPORTED_SECTION_Y && sy <= MAX_SUPPORTED_SECTION_Y, "Section outside supported Y bounds.");
 
             const int GROW_STEP = 4;
 
             if (sy < MinSectionY) {
-                MinSectionY = Math.Max(MIN_ALLOWED_SECTION_Y, sy - GROW_STEP);
+                MinSectionY = Math.Max(MIN_SUPPORTED_SECTION_Y, sy - GROW_STEP);
             }
             if (sy > MaxSectionY) {
-                MaxSectionY = Math.Min(MAX_ALLOWED_SECTION_Y, sy + GROW_STEP);
+                MaxSectionY = Math.Min(MAX_SUPPORTED_SECTION_Y, sy + GROW_STEP);
             }
             int newHeight = MaxSectionY - MinSectionY + 1;
             
@@ -97,6 +98,11 @@ namespace AnvilPacker.Level
                 }
                 Sections = newSections;
             }
+        }
+
+        public Heightmap GetOrCreateHeightmap(string type)
+        {
+            return Heightmaps.GetOrAdd(type) ??= new();
         }
 
         /// <summary> Computes the min and max non-empty section Y coords. </summary>
