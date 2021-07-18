@@ -30,7 +30,7 @@ namespace AnvilPacker.Level
 
         private static void LoadBlocks()
         {
-            using var reader = new JsonTextReader(new StreamReader("Resources/blocks.json", Encoding.UTF8));
+            using var reader = new JsonTextReader(new StreamReader(GetResourcePath("blocks.json"), Encoding.UTF8));
             JObject json = JObject.Load(reader);
 
             var arr = (JArray)json["blocks"];
@@ -91,7 +91,7 @@ namespace AnvilPacker.Level
 
         private static void LoadLegacyBlocks()
         {
-            using var reader = new JsonTextReader(new StreamReader("Resources/legacy_blocks.json", Encoding.UTF8));
+            using var reader = new JsonTextReader(new StreamReader(GetResourcePath("legacy_blocks.json"), Encoding.UTF8));
             JObject json = JObject.Load(reader);
             var arr = (JArray)json["blocks"];
 
@@ -139,7 +139,7 @@ namespace AnvilPacker.Level
                     }
                 }
                 block.DefaultState = states[defaultStateId & 15];
-                //fill the states we skipped to avoid dupes
+                //fill the states we skipped
                 for (int m = 0; m < 16; m++) {
                     states[m] ??= block.DefaultState;
                 }
@@ -180,6 +180,11 @@ namespace AnvilPacker.Level
                 }
                 default: throw new NotSupportedException($"Unknown property type '{type}'");
             }
+        }
+
+        private static string GetResourcePath(string filename)
+        {
+            return Path.Combine(AppContext.BaseDirectory, "Resources", filename);
         }
     }
 }
