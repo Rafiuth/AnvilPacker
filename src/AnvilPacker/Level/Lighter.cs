@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Numerics;
@@ -15,12 +14,12 @@ namespace AnvilPacker.Level
         //https://www.seedofandromeda.com/blogs/29-fast-flood-fill-lighting-in-a-blocky-voxel-game-pt-1
         //https://www.seedofandromeda.com/blogs/30-fast-flood-fill-lighting-in-a-blocky-voxel-game-pt-2
 
-        //https://github.com/coderbot16/flashcube/tree/trunk/lumis
         //https://github.com/Tuinity/Starlight/blob/fabric/TECHNICAL_DETAILS.md
+        //https://github.com/coderbot16/flashcube/tree/trunk/lumis
 
-        private LightNode[] _queue = new LightNode[16384];
         private RegionBuffer _region;
         private BlockLightInfo[] _lightAttribs;
+        private LightNode[] _queue = new LightNode[32768];
         private Heightmap[] _heightmaps = new Heightmap[32 * 32];
         private short[] _emptyHeights = new short[16 * 16]; //all values set to lowest
 
@@ -39,7 +38,7 @@ namespace AnvilPacker.Level
             ComputeHeightmaps();
 
             foreach (var chunk in region.ExistingChunks) {
-                //ComputeBlockLight(chunk);
+                ComputeBlockLight(chunk);
                 ComputeSkyLight(chunk);
             }
         }
@@ -69,8 +68,8 @@ namespace AnvilPacker.Level
             foreach (var section in chunk.Sections.ExceptNull()) {
                 var blocks = section.Blocks;
                 var levels = GetLightData(section, LightLayer.Block);
-                int queueTail = 0;
                 int sy = section.Y * 16;
+                int queueTail = 0;
 
                 for (int i = 0; i < blocks.Length; i++) {
                     int emission = attrs[blocks[i]].Emission;
@@ -85,7 +84,7 @@ namespace AnvilPacker.Level
                     }
                 }
                 if (queueTail > 0) {
-                    cache.SetOrigin(_region, LightLayer.Block, section);
+                    cache.SetOrigin(_region, section, LightLayer.Block);
                     PropagateLight(cache, queue, queueTail);
                 }
             }
@@ -93,12 +92,13 @@ namespace AnvilPacker.Level
 
         private void ComputeSkyLight(Chunk chunk)
         {
+            //heightmaps point to the last transparent block
             var heights = GetHeights(chunk.X, chunk.Z);
             var heightsXN = GetHeights(chunk.X - 1, chunk.Z);
             var heightsXP = GetHeights(chunk.X + 1, chunk.Z);
             var heightsZN = GetHeights(chunk.X, chunk.Z - 1);
             var heightsZP = GetHeights(chunk.X, chunk.Z + 1);
-
+            
             int maxHeight = chunk.MaxSectionY * 16 + 15;
 
             var queue = _queue;
@@ -107,31 +107,46 @@ namespace AnvilPacker.Level
 
             for (int z = 0; z < 16; z++) {
                 for (int x = 0; x < 16; x++) {
-                    int h = heights[x + z * 16]; //last transparent block
+                    int h = heights[x + z * 16];
+                    
+                    //Propagate light trough column gaps, so they flow inwards like b:
+                    // a)                 b)      *--- hXN or whatever
+                    // FF#######FF        FF#######FF
+                    // FFCBA#ABCFF  ---\  FFEDC#CDEFF
+                    // FFDCB#BCDFF  ---/  FFEDC#CDEFF
+                    // FFEDC#CDEFF        FFEDC#CDEFF
+                    // ###########        ###########
+                    //                             ^--- h (minus one)
+                    // # = opaque block, hex char = light level
+                    // a: queued only `h`.
+                    // b: queued from `h..hMax-1`
 
                     int hXN = x !=  0 ? heights[(x - 1) + (z + 0) * 16] : heightsXN[15 + z * 16];
                     int hXP = x != 15 ? heights[(x + 1) + (z + 0) * 16] : heightsXP[ 0 + z * 16];
                     int hZN = z !=  0 ? heights[(x + 0) + (z - 1) * 16] : heightsZN[x + 15 * 16];
                     int hZP = z != 15 ? heights[(x + 0) + (z + 1) * 16] : heightsZP[x +  0 * 16];
 
-                    int hMax = Max(h, hXN, hXP, hZN, hZP);
+                    int hMax = Max(h + 1, hXN, hXP, hZN, hZP);
 
-                    for (int y = h; y <= hMax; y++) {
+                    for (int y = h; y < hMax; y++) {
                         var sides =
                             (y == h ? SideFlags.YNeg : 0) |
-                            (y <= hXN ? SideFlags.XNeg : 0) |
-                            (y <= hXP ? SideFlags.XPos : 0) |
-                            (y <= hZN ? SideFlags.ZNeg : 0) |
-                            (y <= hZP ? SideFlags.ZPos : 0);
+                            (y < hXN ? SideFlags.XNeg : 0) |
+                            (y < hXP ? SideFlags.XPos : 0) |
+                            (y < hZN ? SideFlags.ZNeg : 0) |
+                            (y < hZP ? SideFlags.ZPos : 0);
+                        //TODO: do we need to enqueue up to (inclusive) the neighbor block?
+                        //It causes a significant performance drop, and results were the same in my tests.
 
+                        Debug.Assert(sides != 0); //we are wasting time if sides == 0
                         queue[queueTail++] = new LightNode(x, y, z, 15, sides);
                     }
-                    sectionMask |= CreateMask((h >> 4) - 1, (hMax >> 4) + 1);
+                    sectionMask |= CreateSectionMask((h >> 4) - chunk.MinSectionY, (hMax >> 4)  - chunk.MinSectionY);
                     FillVisibleSkyColumn(chunk, x, z, h, maxHeight);
                 }
             }
             if (queueTail > 0) {
-                _cache.SetOrigin(_region, LightLayer.Sky, chunk, sectionMask);
+                _cache.SetOrigin(_region, chunk, LightLayer.Sky, sectionMask);
                 PropagateLight(_cache, queue, queueTail);
             }
 
@@ -171,55 +186,43 @@ namespace AnvilPacker.Level
                 if (e > a) a = e;
                 return a;
             }
-            static ulong CreateMask(int start, int end)
+            static ulong CreateSectionMask(int start, int end)
             {
+                Debug.Assert(start >= 0 && start <= 63 && end >= 0 && end <= 63);
+
+                //expand by 1 to include neighbors
+                if (start > 0) start--;
+                if (end < 64) end--;
+
                 int count = end - start + 1;
                 ulong mask = (1ul << count) - 1;
                 return count >= 64 ? ~0ul : mask << start;
             }
         }
 
-        /// <summary> Propagates the light in the specified section. </summary>
-        /// <remarks>
-        /// This method assumes that all nodes in the queue are not farther than 16 blocks from the origin section.
-        /// </remarks>
         private void PropagateLight(SectionCache cache, LightNode[] queue, int queueTail)
         {
             var attrs = _lightAttribs;
-
-            int originCacheIndex = SectionCache.Index(0, 0, 0);
-            var originSection = cache.Sections[originCacheIndex];
-            var originLevels = cache.Light[originCacheIndex];
+            var sides = BLOCK_SIDES;
 
             int queueHead = 0;
 
             while (queueHead < queueTail) {
                 var node = queue[queueHead++];
-                int sideIndex = 0;
 
-                foreach (var dir in BLOCK_SIDES) {
-                    if ((node.Dirs & (SideFlags)(1 << sideIndex++)) == 0) continue;
+                for (int i = 0; i < sides.Length; i++) {
+                    if ((node.Dirs & (SideFlags)(1 << i)) == 0) continue;
 
-                    int sx = node.X + dir.X;
-                    int sy = node.Y + dir.Y;
-                    int sz = node.Z + dir.Z;
+                    int sx = node.X + sides[i].X;
+                    int sy = node.Y + sides[i].Y;
+                    int sz = node.Z + sides[i].Z;
 
-                    ChunkSection chunk;
-                    NibbleArray levels;
-                    int index;
+                    int index = ChunkSection.GetIndex(sx & 15, sy & 15, sz & 15);
+                    int ci = SectionCache.Index(sx, sy, sz);
 
-                    if (ChunkSection.IsCoordInside(sx, sy, sz)) {
-                        index = ChunkSection.GetIndex(sx, sy, sz);
-                        chunk = originSection;
-                        levels = originLevels;
-                    } else {
-                        index = ChunkSection.GetIndex(sx & 15, sy & 15, sz & 15);
-                        int ci = SectionCache.Index(sx, sy, sz);
+                    var (chunk, levels) = cache.Entries[ci];
+                    if (chunk == null) continue;
 
-                        chunk = cache.Sections[ci];
-                        if (chunk == null) continue;
-                        levels = cache.Light[ci];
-                    }
                     int currLevel = levels[index];
                     if (currLevel >= node.Level - 1) continue;
 
@@ -246,48 +249,46 @@ namespace AnvilPacker.Level
         private struct SectionCache
         {
             private const int COLUMN_SIZE = 64 + 2; //pad with 1 null on each endpoint
-            private const int SECTION_Y_OFFSET = 32 + 2;
+            private const int SECTION_Y_OFFSET = 32 + 1;
 
-            //Array containing 3x3x3 neighbor chunks from the origin
-            public ChunkSection[] Sections;
-            public NibbleArray[] Light;
+            //Array containing 3xNx3 neighbor chunks from the origin
+            public (ChunkSection Section, NibbleArray Light)[] Entries;
 
             public SectionCache(int dummy) //can't define param-less ctor for struct
             {
-                Sections = new ChunkSection[3 * 3 * COLUMN_SIZE];
-                Light = new NibbleArray[3 * 3 * COLUMN_SIZE];
+                Entries = new (ChunkSection, NibbleArray)[3 * 3 * COLUMN_SIZE];
             }
 
-            public void SetOrigin(RegionBuffer region, LightLayer layer, ChunkSection origin)
+            public void SetOrigin(RegionBuffer region, ChunkSection origin, LightLayer layer)
             {
-                for (int z = -1; z <= 1; z++) {
-                    for (int x = -1; x <= 1; x++) {
-                        for (int y = -1; y <= 1; y++) {
+                for (int y = -1; y <= 1; y++) {
+                    for (int z = -1; z <= 1; z++) {
+                        for (int x = -1; x <= 1; x++) {
                             var section = GetSection(region, origin.X + x, origin.Y + y, origin.Z + z);
+                            var light = section == null ? null : GetLightData(section, layer);
 
-                            int ci = Index(x << 4, y << 4, z << 4);
-                            Sections[ci] = section;
-                            Light[ci] = section == null ? null : GetLightData(section, layer);
+                            int ci = Index(x << 4, (origin.Y + y) << 4, z << 4);
+                            Entries[ci] = (section, light);
                         }
                     }
                 }
             }
-            public void SetOrigin(RegionBuffer region, LightLayer layer, Chunk chunk, ulong maskY)
+            public void SetOrigin(RegionBuffer region, Chunk chunk, LightLayer layer, ulong maskY)
             {
                 Debug.Assert(chunk.MinSectionY >= -32 && chunk.MaxSectionY <= 31);
 
                 //https://lemire.me/blog/2018/02/21/iterating-over-set-bits-quickly/
                 while (maskY != 0) {
-                    int y = BitOperations.TrailingZeroCount(maskY);
+                    int y = chunk.MinSectionY + BitOperations.TrailingZeroCount(maskY);
                     maskY &= (maskY - 1); //clear lowest bit
 
                     for (int z = -1; z <= 1; z++) {
                         for (int x = -1; x <= 1; x++) {
-                            var section = GetSection(region, chunk.X + x, chunk.MinSectionY + y, chunk.Z + z);
+                            var section = GetSection(region, chunk.X + x, y, chunk.Z + z);
+                            var light = section == null ? null : GetLightData(section, layer);
 
                             int ci = Index(x << 4, y << 4, z << 4);
-                            Sections[ci] = section;
-                            Light[ci] = section == null ? null : GetLightData(section, layer);
+                            Entries[ci] = (section, light);
                         }
                     }
                 }
@@ -316,12 +317,8 @@ namespace AnvilPacker.Level
 
         private struct LightNode
         {
-            //int X, Z      :  6 bits, [-32..31]
-            //int Y         : 10 bits, [-512..511]
-            //uint Dirs     :  6 bits
-            //uint Light    :  4 bits, [0..15]
-            public sbyte X, Z;
-            public short Y;
+            public sbyte X, Z;  //Relative to the origin chunk
+            public short Y;     //Absolute
             public byte Level;
             public SideFlags Dirs;
 
