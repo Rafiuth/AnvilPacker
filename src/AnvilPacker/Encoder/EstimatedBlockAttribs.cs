@@ -114,12 +114,10 @@ namespace AnvilPacker.Encoder
         {
             var emissionHist = new LightHist[Palette.Count];
             var opacityHist = new LightHist[Palette.Count];
-            var isDynamic = Palette.ToArray(b => true||!b.Block.IsKnown);
+            var isDynamic = Palette.ToArray(b => !b.Block.IsKnown);
 
             EstimateFromBlockLight(region, isDynamic, emissionHist, opacityHist);
             EstimateFromSkyLight(region, isDynamic, opacityHist);
-
-            PrintHists(Palette, emissionHist, opacityHist);
 
             for (int i = 0; i < Palette.Count; i++) {
                 if (isDynamic[i]) {
@@ -127,6 +125,11 @@ namespace AnvilPacker.Encoder
                     int opacity = opacityHist[i].CalcEstimatedOpacity();
                     int emission = emissionHist[i].CalcEstimatedEmission();
                     LightAttribs[i] = new BlockLightInfo(opacity, emission);
+
+                    if (_logger.IsTraceEnabled) {
+                        _logger.Trace("Estimated opacity  for {0}: {1} hist={{{2}}}", block, opacity, opacityHist[i]);
+                        _logger.Trace("Estimated emission for {0}: {1} hist={{{2}}}", block, emission, emissionHist[i]);
+                    }
                 }
             }
         }
@@ -234,25 +237,6 @@ namespace AnvilPacker.Encoder
             return a;
         }
 
-        //For debugging purposes
-        private void PrintHists(BlockPalette palette, LightHist[] emission, LightHist[] opacity)
-        {
-            Print("Emission", emission);
-            Print("Opacity", opacity);
-
-            void Print(string header, LightHist[] hist)
-            {
-                Console.WriteLine(header);
-
-                foreach (var (block, id) in palette.BlocksAndIds()) {
-                    if (hist[id].LightSamples > 0) {
-                        Console.WriteLine(block + " " + hist[id] + " E=" + hist[id].CalcEstimatedEmission());
-                    }
-                }
-                Console.WriteLine("\n\n");
-            }
-        }
-
         unsafe struct LightHist
         {
             public const int BIN_COUNT = 16;
@@ -261,11 +245,6 @@ namespace AnvilPacker.Encoder
             private fixed int _bins[BIN_COUNT];
 
             public Span<int> Bins => MemoryMarshal.CreateSpan(ref _bins[0], BIN_COUNT);
-
-            public override string ToString()
-            {
-                return $"samples={LightSamples}/{TotalBlocks} bins=[{string.Join(' ', Bins.ToArray())}]";
-            }
 
             public void UpdateEmission(int br, int maxNeighborBr)
             {
@@ -286,8 +265,10 @@ namespace AnvilPacker.Encoder
                 if (maxNeighborBr > 0 && (br < maxNeighborBr || (forSkyLight && br == 15))) {
                     int estimatedOpacity = maxNeighborBr - br;
 
-                    LightSamples++;
-                    _bins[estimatedOpacity]++;
+                    //TODO: better sky light weighting
+                    int w = forSkyLight ? 16 : 1;
+                    LightSamples += w;
+                    _bins[estimatedOpacity] += w;
                 }
                 TotalBlocks++;
             }
@@ -314,7 +295,28 @@ namespace AnvilPacker.Encoder
             }
             public int CalcEstimatedOpacity()
             {
+                //air         samples=3664830/7609577 bins=[3445028 215762 745 587 513 465 349 379 250 208 109 121 105 101 68 40]
+                //stone       samples=116733/12549445 bins=[0 2734 2763 2985 3058 3250 3555 3567 3757 3807 4157 4517 6804 8581 6792 56406]
+                //iron_ore    samples=982/114747      bins=[0 19 18 20 25 24 30 22 36 30 36 36 57 55 57 517]
+                //coal_ore    samples=1964/202912     bins=[0 49 37 44 51 52 50 60 66 67 71 56 130 155 106 970]
+                //gold_ore    samples=141/10663       bins=[0 4 2 2 8 5 3 2 3 4 5 9 9 6 7 72]
+                //water       samples=300/1198        bins=[0 245 4 48 0 0 0 1 0 1 0 0 0 0 0 1]
+                if (LightSamples == 0) {
+                    return 0;
+                }
+                //Not sure how to improve this tbh
+                int threshold = LightSamples / 12;
+                for (int i = BIN_COUNT - 1; i >= 0; i--) {
+                    if (_bins[i] > threshold) {
+                        return i;
+                    }
+                }
                 return 0;
+            }
+            
+            public override string ToString()
+            {
+                return $"samples={LightSamples}/{TotalBlocks} bins=[{string.Join(' ', Bins.ToArray())}]";
             }
         }
     }
