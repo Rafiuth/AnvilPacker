@@ -14,6 +14,7 @@ namespace AnvilPacker.Encoder.Transforms
             { "remove_hidden_blocks",       typeof(HiddenBlockRemovalTransform) },
             { "simplify_upgrade_data",      typeof(UpgradeDataTransform)        },
             { "remove_empty_chunks",        typeof(EmptyChunkRemovalTransform)  },
+            { "sort_palette",               typeof(SortPaletteTransform)        },
         };
 
         public static TransformPipe Empty { get; } = new(Enumerable.Empty<TransformBase>());
