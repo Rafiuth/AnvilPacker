@@ -2,19 +2,15 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using AnvilPacker.Data;
 using AnvilPacker.Level;
 using AnvilPacker.Util;
-using NLog;
 
 namespace AnvilPacker.Encoder.Transforms
 {
     /// <summary> Removes incomplete/empty chunks. </summary>
     public class EmptyChunkRemovalTransform : TransformBase
     {
-        private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
-
         public override void Apply(RegionBuffer region)
         {
             foreach (ref var chunk in region.Chunks.AsSpan()) {

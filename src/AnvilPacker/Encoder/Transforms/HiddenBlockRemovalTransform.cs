@@ -15,8 +15,6 @@ namespace AnvilPacker.Encoder.Transforms
     //XXXX    XXXX
     public class HiddenBlockRemovalTransform : TransformBase
     {
-        private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
-
         /// <summary> Specifies how many blocks to search for the replacement. </summary>
         public int Samples = 8;
         /// <summary> Specifies the maximum replacement search distance. </summary>

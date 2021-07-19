@@ -1,16 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using AnvilPacker.Data;
-using AnvilPacker.Level;
-using AnvilPacker.Util;
+﻿using AnvilPacker.Level;
+using NLog;
 
 namespace AnvilPacker.Encoder.Transforms
 {
     public abstract class TransformBase
     {
+        protected readonly Logger _logger = LogManager.GetCurrentClassLogger();
+
         public abstract void Apply(RegionBuffer region);
     }
 }

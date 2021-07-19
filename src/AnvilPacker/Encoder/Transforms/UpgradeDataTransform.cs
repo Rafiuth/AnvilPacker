@@ -1,19 +1,13 @@
-using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
 using AnvilPacker.Data;
 using AnvilPacker.Level;
 using AnvilPacker.Util;
-using NLog;
 
 namespace AnvilPacker.Encoder.Transforms
 {
     /// <summary> Reduces the size of the UpgradeData tag. </summary>
     public class UpgradeDataTransform : ReversibleTransform
     {
-        private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
-
         private static readonly HashSet<string> UpgradeableBlockNames = new(new[] {
             "chest", "trapped_chest", "note_block", "red_bed", "fire", "oak_stairs", "stone_stairs", "cobblestone_stairs", "brick_stairs", 
             "stone_brick_stairs", "nether_brick_stairs", "sandstone_stairs", "spruce_stairs", "birch_stairs", "jungle_stairs", "quartz_stairs", 
