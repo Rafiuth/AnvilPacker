@@ -13,21 +13,8 @@ namespace AnvilPacker.Data
 
         public int this[int index]
         {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get {
-                //byte b = arr[idx / 2];
-                //return i % 2 == 0 ? b & 15 : b >> 4;
-                byte b = Data[index >> 1];
-                int s = (index & 1) * 4;
-                return (b >> s) & 15;
-            }
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            set {
-                ref byte b = ref Data[index >> 1];
-                int s = (index & 1) * 4;
-                int m = 0xF0 >> s;
-                b = (byte)((b & m) | (value & 15) << s);
-            }
+            get => Get(Data, index);
+            set => Set(Data, index, value);
         }
 
         public NibbleArray(byte[] data)
@@ -39,6 +26,26 @@ namespace AnvilPacker.Data
         {
             Data = new byte[(length + 1) / 2];
             Length = length;
+        }
+
+        /// <summary> Reads a nibble from the array at the specified position. </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int Get(byte[] data, int index)
+        {
+            //byte b = arr[idx / 2];
+            //return i % 2 == 0 ? b & 15 : b >> 4;
+            byte b = data[index >> 1];
+            int s = (index & 1) * 4;
+            return (b >> s) & 15;
+        }
+        /// <summary> Writes a nibble to the array at the specified position. </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void Set(byte[] data, int index, int value)
+        {
+            ref byte b = ref data[index >> 1];
+            int s = (index & 1) * 4;
+            int m = 0xF0 >> s;
+            b = (byte)((b & m) | (value & 15) << s);
         }
 
         public IEnumerator<int> GetEnumerator()
