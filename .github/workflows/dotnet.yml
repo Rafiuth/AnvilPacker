@@ -1,0 +1,47 @@
+name: .NET
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: 5.0.x
+        
+    - name: Restore dependencies
+      run: dotnet restore
+      
+    - name: Build
+      run: dotnet build --no-restore
+
+    - name: Test
+      run: dotnet test --no-build --verbosity normal
+    
+    #TODO: find a better way to do this
+    - name: Publish Win64
+      run: dotnet publish -c Release -r win-x64 -o dist/win-x64 -p:PublishSingleFile=true -p:PublishTrimmed=true -p:PublishReadyToRun=false -p:CommitHash=${GITHUB_SHA::8}
+      
+    - name: Publish Linux64
+      run: dotnet publish -c Release -r linux-x64 -o dist/linux-x64 -p:PublishSingleFile=true -p:PublishTrimmed=true -p:PublishReadyToRun=false -p:CommitHash=${GITHUB_SHA::8}
+      
+    - name: Upload Win64 Artifacts
+      uses: actions/upload-artifact@v2.2.4
+      with:
+        name: dist-win-x64
+        path: dist/win-x64
+        
+    - name: Upload Linux64 Artifacts
+      uses: actions/upload-artifact@v2.2.4
+      with:
+        name: dist-linux-x64
+        path: dist/linux-x64
+        
