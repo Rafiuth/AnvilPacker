@@ -14,7 +14,22 @@ namespace AnvilPacker.Tests
         [Fact]
         public void TestDataSerialization()
         {
-            var tag = NbtIO.ReadCompressed("../../../../test_data/nbt/chunks_1.nbt.gz");
+            //TODO: expand this tag
+            var tag = new CompoundTag();
+            var list = new ListTag();
+            for (int i = 0; i < 4; i++) {
+                var subTag = new CompoundTag();
+                subTag.SetInt("id", i);
+                subTag.SetString("name", new[] { "lorem", "ipsum", "dolor", "sit", "amet" }[i]);
+                subTag.SetLong("seed", HashCode.Combine(i) * 0x4df39c2ab5529ead);
+                list.Add(subTag);
+            }
+            tag.SetString("stringTest", "Hello World! áéíóú");
+            tag.SetInt("intTest", 1234);
+            tag.SetDouble("doubleTest", Math.PI);
+            tag.SetList("listTest", list);
+            tag.SetIntArray("intArrayTest", new int[8] { 1, 2, 3, 4, 5, 6, 7, 8 });
+
             var dw = new MemoryDataWriter();
 
             var packer = new NbtPacker();
