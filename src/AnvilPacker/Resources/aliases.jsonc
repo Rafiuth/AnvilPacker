@@ -1,0 +1,206 @@
+//so, this is how mojang employes spend their time...
+//Last update: 1.17
+[
+    {
+        "version": 1480,
+        "renames": {
+            //coral blocks
+            "minecraft:blue_coral": "minecraft:tube_coral_block",
+            "minecraft:pink_coral": "minecraft:brain_coral_block",
+            "minecraft:purple_coral": "minecraft:bubble_coral_block",
+            "minecraft:red_coral": "minecraft:fire_coral_block",
+            "minecraft:yellow_coral": "minecraft:horn_coral_block",
+            "minecraft:blue_coral_plant": "minecraft:tube_coral",
+            "minecraft:pink_coral_plant": "minecraft:brain_coral",
+            "minecraft:purple_coral_plant": "minecraft:bubble_coral",
+            "minecraft:red_coral_plant": "minecraft:fire_coral",
+            "minecraft:yellow_coral_plant": "minecraft:horn_coral",
+            "minecraft:blue_coral_fan": "minecraft:tube_coral_fan",
+            "minecraft:pink_coral_fan": "minecraft:brain_coral_fan",
+            "minecraft:purple_coral_fan": "minecraft:bubble_coral_fan",
+            "minecraft:red_coral_fan": "minecraft:fire_coral_fan",
+            "minecraft:yellow_coral_fan": "minecraft:horn_coral_fan",
+            "minecraft:blue_dead_coral": "minecraft:dead_tube_coral",
+            "minecraft:pink_dead_coral": "minecraft:dead_brain_coral",
+            "minecraft:purple_dead_coral": "minecraft:dead_bubble_coral",
+            "minecraft:red_dead_coral": "minecraft:dead_fire_coral",
+            "minecraft:yellow_dead_coral": "minecraft:dead_horn_coral"
+        }
+    },
+    {
+        "version": 1484,
+        "renames": {
+            //seagrass blocks
+            "minecraft:sea_grass": "minecraft:seagrass",
+            "minecraft:tall_sea_grass": "minecraft:tall_seagrass"
+        }
+    },
+    {
+        "version": 1487,
+        "renames": {
+            //prismarine bricks
+            "minecraft:prismarine_bricks_slab": "minecraft:prismarine_brick_slab", 
+            "minecraft:prismarine_bricks_stairs": "minecraft:prismarine_brick_stairs"
+        }
+    },
+    {
+        "version": 1488,
+        "renames": {
+            //kelp/kelptop
+            "minecraft:kelp_top": "minecraft:kelp", 
+            "minecraft:kelp": "minecraft:kelp_plant"
+        }
+    },
+    {
+        "version": 1490,
+        "renames": {
+            //melon
+            "minecraft:melon_block": "minecraft:melon"
+        }
+    },
+    {
+        "version": 1510,
+        "renames": {
+            //EntityTheRenameningFix
+            "minecraft:portal": "minecraft:nether_portal",
+            "minecraft:oak_bark": "minecraft:oak_wood",
+            "minecraft:spruce_bark": "minecraft:spruce_wood",
+            "minecraft:birch_bark": "minecraft:birch_wood",
+            "minecraft:jungle_bark": "minecraft:jungle_wood",
+            "minecraft:acacia_bark": "minecraft:acacia_wood",
+            "minecraft:dark_oak_bark": "minecraft:dark_oak_wood",
+            "minecraft:stripped_oak_bark": "minecraft:stripped_oak_wood",
+            "minecraft:stripped_spruce_bark": "minecraft:stripped_spruce_wood",
+            "minecraft:stripped_birch_bark": "minecraft:stripped_birch_wood",
+            "minecraft:stripped_jungle_bark": "minecraft:stripped_jungle_wood",
+            "minecraft:stripped_acacia_bark": "minecraft:stripped_acacia_wood",
+            "minecraft:stripped_dark_oak_bark": "minecraft:stripped_dark_oak_wood",
+            "minecraft:mob_spawner": "minecraft:spawner"
+        }
+    },
+    {
+        "version": 1515,
+        "renames": {
+            //coral fan blocks
+            "minecraft:tube_coral_fan": "minecraft:tube_coral_wall_fan",
+            "minecraft:brain_coral_fan": "minecraft:brain_coral_wall_fan",
+            "minecraft:bubble_coral_fan": "minecraft:bubble_coral_wall_fan",
+            "minecraft:fire_coral_fan": "minecraft:fire_coral_wall_fan",
+            "minecraft:horn_coral_fan": "minecraft:horn_coral_wall_fan"
+        }
+    },
+    {
+        "version": 1802,
+        "renames": {
+            //sign blocks & stone slabs
+            "minecraft:stone_slab": "minecraft:smooth_stone_slab", 
+            "minecraft:sign": "minecraft:oak_sign", 
+            "minecraft:wall_sign": "minecraft:oak_wall_sign"
+        }
+    },
+    {
+        "version": 2209,
+        "renames": {
+            //bee_hive
+            "minecraft:bee_hive": "minecraft:beehive"
+        }
+    },
+    {
+        "version": 2508,
+        "renames": {
+            //rename fungi blocks to fungus
+            "minecraft:warped_fungi": "minecraft:warped_fungus", 
+            "minecraft:crimson_fungi": "minecraft:crimson_fungus"
+        }
+    },
+    {
+        "version": 2528,
+        "renames": {
+            //soul fire torch and soul fire lantern
+            "minecraft:soul_fire_torch": "minecraft:soul_torch", 
+            "minecraft:soul_fire_wall_torch": "minecraft:soul_wall_torch", 
+            "minecraft:soul_fire_lantern": "minecraft:soul_lantern"
+        }
+    },
+    {
+        "version": 2680,
+        "renames": {
+            //grass_path
+            "minecraft:grass_path": "minecraft:dirt_path"
+        }
+    },
+    {
+        "version": 2690,
+        "renames": {
+            //Rename copper blocks to new oxidized terms
+            "minecraft:weathered_copper_block": "minecraft:oxidized_copper_block",
+            "minecraft:semi_weathered_copper_block": "minecraft:weathered_copper_block",
+            "minecraft:lightly_weathered_copper_block": "minecraft:exposed_copper_block",
+            "minecraft:weathered_cut_copper": "minecraft:oxidized_cut_copper",
+            "minecraft:semi_weathered_cut_copper": "minecraft:weathered_cut_copper",
+            "minecraft:lightly_weathered_cut_copper": "minecraft:exposed_cut_copper",
+            "minecraft:weathered_cut_copper_stairs": "minecraft:oxidized_cut_copper_stairs",
+            "minecraft:semi_weathered_cut_copper_stairs": "minecraft:weathered_cut_copper_stairs",
+            "minecraft:lightly_weathered_cut_copper_stairs": "minecraft:exposed_cut_copper_stairs",
+            "minecraft:weathered_cut_copper_slab": "minecraft:oxidized_cut_copper_slab",
+            "minecraft:semi_weathered_cut_copper_slab": "minecraft:weathered_cut_copper_slab",
+            "minecraft:lightly_weathered_cut_copper_slab": "minecraft:exposed_cut_copper_slab",
+            "minecraft:waxed_semi_weathered_copper": "minecraft:waxed_weathered_copper",
+            "minecraft:waxed_lightly_weathered_copper": "minecraft:waxed_exposed_copper",
+            "minecraft:waxed_semi_weathered_cut_copper": "minecraft:waxed_weathered_cut_copper",
+            "minecraft:waxed_lightly_weathered_cut_copper": "minecraft:waxed_exposed_cut_copper",
+            "minecraft:waxed_semi_weathered_cut_copper_stairs": "minecraft:waxed_weathered_cut_copper_stairs",
+            "minecraft:waxed_lightly_weathered_cut_copper_stairs": "minecraft:waxed_exposed_cut_copper_stairs",
+            "minecraft:waxed_semi_weathered_cut_copper_slab": "minecraft:waxed_weathered_cut_copper_slab",
+            "minecraft:waxed_lightly_weathered_cut_copper_slab": "minecraft:waxed_exposed_cut_copper_slab"
+        }
+    },
+    {
+        "version": 2691,
+        "renames": {
+            //Rename copper blocks suffixes
+            "minecraft:waxed_copper": "minecraft:waxed_copper_block",
+            "minecraft:oxidized_copper_block": "minecraft:oxidized_copper",
+            "minecraft:weathered_copper_block": "minecraft:weathered_copper",
+            "minecraft:exposed_copper_block": "minecraft:exposed_copper"
+        }
+    },
+    {
+        "version": 2696,
+        "renames": {
+            //Rename grimstone block items to deepslate
+            "minecraft:grimstone": "minecraft:deepslate",
+            "minecraft:grimstone_slab": "minecraft:cobbled_deepslate_slab",
+            "minecraft:grimstone_stairs": "minecraft:cobbled_deepslate_stairs",
+            "minecraft:grimstone_wall": "minecraft:cobbled_deepslate_wall",
+            "minecraft:polished_grimstone": "minecraft:polished_deepslate",
+            "minecraft:polished_grimstone_slab": "minecraft:polished_deepslate_slab",
+            "minecraft:polished_grimstone_stairs": "minecraft:polished_deepslate_stairs",
+            "minecraft:polished_grimstone_wall": "minecraft:polished_deepslate_wall",
+            "minecraft:grimstone_tiles": "minecraft:deepslate_tiles",
+            "minecraft:grimstone_tile_slab": "minecraft:deepslate_tile_slab",
+            "minecraft:grimstone_tile_stairs": "minecraft:deepslate_tile_stairs",
+            "minecraft:grimstone_tile_wall": "minecraft:deepslate_tile_wall",
+            "minecraft:grimstone_bricks": "minecraft:deepslate_bricks",
+            "minecraft:grimstone_brick_slab": "minecraft:deepslate_brick_slab",
+            "minecraft:grimstone_brick_stairs": "minecraft:deepslate_brick_stairs",
+            "minecraft:grimstone_brick_wall": "minecraft:deepslate_brick_wall",
+            "minecraft:chiseled_grimstone": "minecraft:chiseled_deepslate"
+        }
+    },
+    {
+        "version": 2700,
+        "renames": {
+            //Rename cave vines blocks
+            "minecraft:cave_vines_head": "minecraft:cave_vines", 
+            "minecraft:cave_vines_body": "minecraft:cave_vines_plant"
+        }
+    },
+    {
+        "version": 2717,
+        "renames": {
+            //Rename azalea_leaves_flowers
+            "minecraft:azalea_leaves_flowers": "minecraft:flowering_azalea_leaves"
+        }
+    }
+]

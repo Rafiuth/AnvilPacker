@@ -1,6 +1,6 @@
 
 # Encoder
-- [ ] Block state attribute estimation
+- [.] Block state attribute estimation
   - [x] Heightmap opacity
     Basic but seems to be enough
   - [x] Light emission
@@ -21,7 +21,7 @@
 - [ ] Enable nullable globally
 
 # Features and Improvements
-- [ ] Update blocks.json to 1.17
+- [x] Update blocks.json to 1.17
 - [.] Block name aliases
 - [ ] Better NBT compression/Improve PNBT
 - [ ] Compress player data/stats (using another archive format would give this for free)
