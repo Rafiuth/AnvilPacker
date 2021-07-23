@@ -22,9 +22,12 @@ namespace AnvilPacker.Encoder
         private EstimatedLightAttribs _estimLightAttribs = null!;
         private RepDataEncMode _heightmapMode, _lightingMode;
 
-        public RegionDecoder(RegionBuffer region)
+        private RegionDecoderSettings _settings;
+
+        public RegionDecoder(RegionBuffer region, RegionDecoderSettings settings)
         {
             _region = region;
+            _settings = settings;
             region.Clear();
         }
 
@@ -74,7 +77,22 @@ namespace AnvilPacker.Encoder
         }
         private void CalcLights()
         {
-            new Lighter().Compute(_region, _estimLightAttribs.LightAttribs);
+            bool skipLighting = false;
+
+            if (_settings.DontLit) {
+                skipLighting = true;
+
+                foreach (var chunk in _region.ExistingChunks) {
+                    if (chunk.DataVersion >= DataVersions.v1_14_2_pre4) {
+                        chunk.SetFlag(ChunkFlags.LightDirty);
+                    } else {
+                        skipLighting = false;
+                    }
+                }
+            }
+            if (!skipLighting) {
+                new Lighter().Compute(_region, _estimLightAttribs.LightAttribs);
+            }
         }
 
         private void ReadHeader(DataReader stream)

@@ -18,7 +18,7 @@ namespace AnvilPacker
         {
             (
                 Name: "fast",
-                EncoderOpts: "block_codec=brotli{quality=6,window_size=22},meta_brotli_quality=6,meta_brotli_window_size=22",
+                EncoderOpts: "block_codec=brotli{quality=5,window_size=20},meta_brotli_quality=5,meta_brotli_window_size=20",
                 TransformPipe: "remove_empty_chunks,simplify_upgrade_data"
             ),
             (
@@ -28,7 +28,7 @@ namespace AnvilPacker
             ),
             (
                 Name: "lossy",
-                EncoderOpts: "block_codec=ap1",
+                EncoderOpts: "block_codec=ap1,meta_brotli_quality=8,meta_brotli_window_size=22",
                 TransformPipe: "remove_empty_chunks,simplify_upgrade_data,remove_hidden_blocks"
             )
         };
@@ -57,7 +57,10 @@ namespace AnvilPacker
         {
             ValidatePaths(opts, false, true);
 
-            using var packer = new WorldUnpacker(opts.Input, opts.Output);
+            var decoderSettings = new RegionDecoderSettings() {
+                DontLit = opts.DontLit
+            };
+            using var packer = new WorldUnpacker(opts.Input, opts.Output, decoderSettings);
             var task = packer.Run(opts.MaxThreads);
             ShowPackerProgress(packer, task);
         }

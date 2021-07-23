@@ -16,11 +16,13 @@ namespace AnvilPacker
     public class WorldUnpacker : PackProcessor
     {
         private IArchiveReader _archive;
+        private RegionDecoderSettings _decoderSettings;
 
-        public WorldUnpacker(string packPath, string worldPath)
+        public WorldUnpacker(string packPath, string worldPath, RegionDecoderSettings decoderSettings)
         {
             _world = new WorldInfo(worldPath);
             _archive = DataArchive.Open(packPath);
+            _decoderSettings = decoderSettings;
         }
 
         public override async Task Run(int maxThreads)
@@ -82,7 +84,7 @@ namespace AnvilPacker
                 mem.Position = 0;
             }
             var region = new RegionBuffer();
-            var decoder = new RegionDecoder(region);
+            var decoder = new RegionDecoder(region, _decoderSettings);
             decoder.Decode(new DataReader(mem), _regionProgress.CreateProgressListener());
 
             foreach (var transform in _meta.Transforms) {

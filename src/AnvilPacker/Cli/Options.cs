@@ -19,7 +19,7 @@ namespace AnvilPacker.Cli
         [Option('T', "threads", HelpText = "Number of threads to use during processing. Higher values demands more memory, as one region is processed per thread.")]
         public int MaxThreads { get; set; } = Environment.ProcessorCount;
 
-        [Option("log-level", HelpText = "Sets the log level. trace/debug/info/warn/error/fatal")]
+        [Option("log-level", HelpText = "Sets the log level. trace|debug|info|warn|error|fatal")]
         public string LogLevel { get; set; } = "info";
 
         [Option("log-file", HelpText = "Sets the path of the log file.")]
@@ -41,6 +41,8 @@ namespace AnvilPacker.Cli
     [Verb("unpack", HelpText = "Decompresses a given world.")]
     public class UnpackOptions : CliOptions
     {
+        [Option("dont-lit", HelpText = "Don't precompute light data for chunks targeting version >= 1.14.4. Only affects chunks whose light was stripped.")]
+        public bool DontLit { get; set; } = false;
     }
 
     [Verb("dump", HelpText = "Generates debug files for a given world.")]
