@@ -148,11 +148,11 @@ namespace AnvilPacker.Level.Versions.v1_13
         private ListTag SerializePalette(ChunkSection section, BlockId[] indices)
         {
             var palette = section.Palette;
-            indices.Fill(BlockId.MaxValue);
+            indices.Fill(BlockId.Invalid);
 
             var list = new ListTag();
             foreach (var id in section.Blocks) {
-                if (indices[id] != BlockId.MaxValue) continue;
+                if (indices[id] != BlockId.Invalid) continue;
 
                 var state = palette.GetState(id);
                 var tag = new CompoundTag();

@@ -72,7 +72,7 @@ namespace AnvilPacker.Level.Versions.v1_2_1
             const int CacheKeyMask = 7;
             var idCacheKeys = stackalloc ushort[CacheKeyMask + 1];
             var idCacheVals = stackalloc BlockId[CacheKeyMask + 1];
-            new Span<ushort>(idCacheKeys, CacheKeyMask).Fill(BlockId.MaxValue);
+            new Span<ushort>(idCacheKeys, CacheKeyMask).Fill(BlockId.Invalid);
 
             for (int i = 0; i < 4096; i += 2) {
                 int j = i >> 1;
