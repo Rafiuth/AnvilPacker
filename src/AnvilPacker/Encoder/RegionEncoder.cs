@@ -241,7 +241,6 @@ namespace AnvilPacker.Encoder
 
             bool deltaEnc = _settings.LightEncMode == RepDataEncMode.Delta;
             var preds = new Dictionary<ChunkSection, (NibbleArray? BlockLight, NibbleArray? SkyLight)>();
-            var emptyPreds = new NibbleArray(4096);
 
             if (deltaEnc) {
                 //Temporarly overwrite the region with reproduced data.
