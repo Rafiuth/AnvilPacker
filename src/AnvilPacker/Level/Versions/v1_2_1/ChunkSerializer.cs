@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using AnvilPacker.Data;
 using AnvilPacker.Level;
 using AnvilPacker.Util;
@@ -26,9 +27,11 @@ namespace AnvilPacker.Level.Versions.v1_2_1
             chunk.DataVersion = rootTag.PopMaybe<int>("DataVersion");
 
             if (tag.TryGet("Sections", out ListTag sectList)) {
+                var localPalette = new DictionarySlim<ushort, BlockId>(64);
+
                 for (int i = 0; i < sectList.Count; i++) {
                     var sectTag = sectList.Get<CompoundTag>(i);
-                    DeserializeSection(chunk, sectTag);
+                    DeserializeSection(chunk, sectTag, localPalette);
                     if (sectTag.Count <= 1) { //is "Y" the only value left?
                         sectList.RemoveAt(i--);
                     }
@@ -43,7 +46,7 @@ namespace AnvilPacker.Level.Versions.v1_2_1
             return chunk;
         }
 
-        private void DeserializeSection(Chunk chunk, CompoundTag tag)
+        private unsafe void DeserializeSection(Chunk chunk, CompoundTag tag, DictionarySlim<ushort, BlockId> localPalette)
         {
             int y = tag.GetSByte("Y");
 
@@ -64,8 +67,12 @@ namespace AnvilPacker.Level.Versions.v1_2_1
             }
 
             var globalPalette = section.Palette;
-            var localPalette = new DictionarySlim<ushort, BlockId>(32);
             var blocks = section.Blocks;
+
+            const int CacheKeyMask = 7;
+            var idCacheKeys = stackalloc ushort[CacheKeyMask + 1];
+            var idCacheVals = stackalloc BlockId[CacheKeyMask + 1];
+            new Span<ushort>(idCacheKeys, CacheKeyMask).Fill(BlockId.MaxValue);
 
             for (int i = 0; i < 4096; i += 2) {
                 int j = i >> 1;
@@ -79,17 +86,35 @@ namespace AnvilPacker.Level.Versions.v1_2_1
                 blocks[i + 0] = GetId((ushort)a);
                 blocks[i + 1] = GetId((ushort)b);
             }
+
             if (localPalette.Count == 1 && globalPalette.GetState(localPalette.First().Value).Material == BlockMaterial.Air) {
                 chunk.SetSection(y, null);
             }
 
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             BlockId GetId(ushort stateId)
             {
-                if (!localPalette.TryGetValue(stateId, out var id)) {
-                    var state = BlockRegistry.GetLegacyState(stateId);
-                    id = globalPalette.GetOrAddId(state);
-                    localPalette.Add(stateId, id);
+                int cacheIdx = stateId & CacheKeyMask;
+                if (idCacheKeys[cacheIdx] == stateId) {
+                    return idCacheVals[cacheIdx];
                 }
+                return GetIdUncached(stateId);
+            }
+            BlockId GetIdUncached(ushort stateId)
+            {
+                if (localPalette.TryGetValue(stateId, out var id)) {
+                    int cacheIdx = stateId & CacheKeyMask;
+                    idCacheKeys[cacheIdx] = stateId;
+                    idCacheVals[cacheIdx] = id;
+                    return id;
+                }
+                return GetIdSlow(stateId);
+            }
+            BlockId GetIdSlow(ushort stateId)
+            {
+                var state = BlockRegistry.GetLegacyState(stateId);
+                var id = globalPalette.GetOrAddId(state);
+                localPalette.Add(stateId, id);
                 return id;
             }
         }
