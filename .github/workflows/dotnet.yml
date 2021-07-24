@@ -28,17 +28,17 @@ jobs:
     
     #TODO: find a better way to do this
     - name: Publish Win64
-      run: dotnet publish -c Release -r win-x64 -o dist/win-x64 -p:PublishSingleFile=true -p:PublishTrimmed=true -p:PublishReadyToRun=false -p:CommitHash=${GITHUB_SHA::8}
+      run: dotnet publish -c Release -r win-x64 -o dist/win-x64 -p:IsPublish=true -p:CommitHash=${GITHUB_SHA::8}
       
     - name: Publish Linux64
-      run: dotnet publish -c Release -r linux-x64 -o dist/linux-x64 -p:PublishSingleFile=true -p:PublishTrimmed=true -p:PublishReadyToRun=false -p:CommitHash=${GITHUB_SHA::8}
+      run: dotnet publish -c Release -r linux-x64 -o dist/linux-x64 -p:IsPublish=true -p:CommitHash=${GITHUB_SHA::8}
       
     - name: Upload Win64 Artifacts
       uses: actions/upload-artifact@v2.2.4
       with:
         name: dist-win-x64
         path: dist/win-x64
-        
+    
     - name: Upload Linux64 Artifacts
       uses: actions/upload-artifact@v2.2.4
       with:
