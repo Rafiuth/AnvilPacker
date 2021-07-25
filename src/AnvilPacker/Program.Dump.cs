@@ -52,12 +52,15 @@ namespace AnvilPacker
         private static void PrintNbt(string input, string output)
         {
             var tag = ReadFileAsNbt(input);
-            string text = tag.ToString();
+            var sw = output == null ? Console.Out : new StreamWriter(output, false, Encoding.UTF8);
+
+            var printer = new NbtPrinter(sw) {
+                Pretty = true
+            };
+            printer.Print(tag);
 
             if (output == null) {
-                Console.Write(text);
-            } else {
-                File.WriteAllText(output, text, Encoding.UTF8);
+                sw.Dispose();
             }
         }
         private static void DumpBlocks(string input, string output)
@@ -128,7 +131,7 @@ namespace AnvilPacker
             try {
                 if (dr.ReadUShortBE() == 0x1F8B) {
                     _logger.Debug("Trying to read gzip compressed NBT tag...");
-                    dr.Position = 0;
+                    dr.BaseStream.Position = 0;
                     return NbtIO.ReadCompressed(dr.BaseStream);
                 }
             } catch (Exception ex) {
