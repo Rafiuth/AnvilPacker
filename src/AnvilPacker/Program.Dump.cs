@@ -59,7 +59,8 @@ namespace AnvilPacker
             };
             printer.Print(tag);
 
-            if (output == null) {
+            sw.Flush();
+            if (output != null) {
                 sw.Dispose();
             }
         }
