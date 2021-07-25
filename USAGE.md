@@ -1,4 +1,5 @@
 # Usage
+The CLI syntax is:
 ```
 AnvilPacker <command> [options]
 ```
@@ -15,7 +16,10 @@ Compresses a given world.
 Options:
 ```md
 -i|--input <path>           Input world path.
--o|--output <path>          Output file path.
+-o|--output <path>          Output file path. If this contain a extension,
+                            the output will be written to ZIP file. Otherwise,
+                            it will be written to a plain directory.
+                            The recommended extension is `.apw`
 
 Optional:
 -y|--overwrite              Overwrite the output path if it already exists. Default: false
@@ -32,13 +36,14 @@ Optional:
 --encoder-opts <name>       Specifies the encoder settings.
 
 Planned:
---add-transforms <pipe>     Adds a transform to the existing (preset) pipe.
---group-only <opts>         Compress by grouping region chunk tags together, 
+--add-transforms <pipe>     Adds a transform to the existing (preset) pipeline.
+--combine-only <opts>       Compress by combining chunk tags together, 
                             without any further processing.
 --verify                    Verify that regions were encoded correctly.
 ```
 
 ### Presets
+Presets that can be used with `--preset`
 
 #### **fast**
 - Transform pipe: `remove_empty_chunks,simplify_upgrade_data`
@@ -53,6 +58,7 @@ Planned:
 - Encoder opts: `block_codec=ap1`
 
 ### Encoder Options
+Fields of the object passed to `--encoder-opts`, represented using [Setting Notations](#Setting_notation).
 
 | Setting       | Type | Default | Description |
 | -------       | ---- | ------- | ----------- |
@@ -120,23 +126,21 @@ Optional:
 ## Setting notation
 Settings and other objects are notated using a JSON-like syntax. The main differences are:
 - Properties are not quotted.
-- Objects can be prefixed with their type: `object_type{property=value,...}` or `obj_property=obj_type`. In the later case, the actual value will depend on the property type (it may be a string or an object).
-- Strings can be delimited by either `'` or `"`, allowed escape codes are: `\n \r \t \" \' \\`.
+- Objects can be explicitly typed: `object_type{property=value,...}` or `obj_property=obj_type`. The later case is ambiguous with unquoted strings, so the actual value will depend on the property type.
+- Strings can be optionally delimited by either `'` or `"`. It supports the following escape codes: `\n \r \t \" \' \\`.
 - Whitespaces between tokens are not allowed _yet_.
 
 ## Transforms
-Transforms are used to help increase compression efficiency by converting chunk data into more efficient representations.
+Transforms are used to help increase compression efficiency by converting chunk data into simpler representations.
 
-A pipeline is simply a list of transforms, which are applied in order.
+A pipeline is simply a list of transforms, which are applied in order on a region.
 Example: `remove_empty_chunks,remove_hidden_blocks{radius=2,whitelist=[stone,dirt,sand,1,3,12]}`
 
 Available transforms are listed below.
 
 ### **remove_hidden_blocks**
-Replace blocks that are surrounded by opaque blocks, with one that appears several times around it.
+This is the main lossy transform, it effectively removes ores and other features by replacing blocks that are surrounded by opaque blocks, with one that appears several times around it.
 It generally improves compression by about 1.5-3 times in normal worlds.
-
-TODO: better description
 
 | Setting   | Type  | Default | Description |
 | -------   | ----  | ------- | ----------- |

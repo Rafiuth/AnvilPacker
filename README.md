@@ -1,11 +1,11 @@
 # AnvilPacker
 
-AnvilPacker is a tool to compresss Minecraft worlds for long term storage. It is currently capable of producing 3x to 70x smaller files, at good speed.
+AnvilPacker is a tool for compressing Minecraft worlds for long term storage. It is currently capable of producing files that are 3 to 70 times smaller, at good speed.
 
 # Features
 - Supports versions Java Edition `1.2.1` up to `1.17.1` (except 1.17+ worlds with increased height)
 - Lossless and lossy-ish compression
-- As fast as LZMA2 at the maximum level
+- As fast as LZMA2 on the maximum level
 
 # Benchmarks
 
@@ -39,6 +39,9 @@ AnvilPacker is a tool to compresss Minecraft worlds for long term storage. It is
 - [Witchcraft and Wizardry](https://www.planetminecraft.com/project/harry-potter-adventure-map-3347878/)
 - [Ariane 5](https://www.curseforge.com/minecraft/worlds/ariane-5-world/files)
 - [EF-cyberpunk](https://www.planetminecraft.com/project/cyberpunk-project-timelapse/)
+
+# Usage
+See [USAGE.md](https://github.com/Rafiuth/AnvilPacker/blob/main/USAGE.md)
 
 # How it works
 AnvilPacker uses a custom compression algorithm to compress block data, which is based on context modeling and arithmetic coding. It can deliver significantly smaller files, and is generally faster than general purpose algorithms, even at slower settings.
