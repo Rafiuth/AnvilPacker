@@ -21,6 +21,23 @@ namespace AnvilPacker
             return BitConverter.ToString(hash.Hash).Replace("-", "");
         }
 
+        public static unsafe string HashLight(RegionBuffer region)
+        {
+            using var hash = SHA256.Create();
+            foreach (var section in ChunkIterator.GetSections(region)) {
+                if (section.BlockLight != null) {
+                    var buf = section.BlockLight.Data;
+                    hash.TransformBlock(buf, 0, buf.Length, null, 0);
+                }
+                if (section.SkyLight != null) {
+                    var buf = section.SkyLight.Data;
+                    hash.TransformBlock(buf, 0, buf.Length, null, 0);
+                }
+            }
+            hash.TransformFinalBlock(new byte[0], 0, 0);
+            return BitConverter.ToString(hash.Hash).Replace("-", "");
+        }
+
         public static bool CompareBlocks(RegionBuffer r1, RegionBuffer r2)
         {
             if (r1.Size != r2.Size) {

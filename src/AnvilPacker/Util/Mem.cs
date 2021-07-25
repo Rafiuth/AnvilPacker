@@ -3,6 +3,7 @@ using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics;
@@ -307,6 +308,76 @@ namespace AnvilPacker.Util
                 val = Mem.BSwap(val);
                 ptr = ref Unsafe.Add(ref ptr, sizeof(T));
             }
+        }
+
+        /// <summary> Returns whether all elements in the array are equal the specified value. </summary>
+        public static bool AllEquals<T>(ReadOnlySpan<T> span, T value) where T : IEquatable<T>
+        {
+            if (Vector.IsHardwareAccelerated && !RuntimeHelpers.IsReferenceOrContainsReferences<T>()) {
+                if (Unsafe.SizeOf<T>() == 1) {
+                    return AllEqualsSimd(
+                        ref Unsafe.As<T, byte>(ref GetRef(span)),
+                        Unsafe.As<T, byte>(ref value),
+                        span.Length
+                    );
+                }
+                if (Unsafe.SizeOf<T>() == 2) {
+                    return AllEqualsSimd(
+                        ref Unsafe.As<T, short>(ref GetRef(span)),
+                        Unsafe.As<T, short>(ref value),
+                        span.Length
+                    );
+                }
+                if (Unsafe.SizeOf<T>() == 4) {
+                    return AllEqualsSimd(
+                        ref Unsafe.As<T, int>(ref GetRef(span)),
+                        Unsafe.As<T, int>(ref value),
+                        span.Length
+                    );
+                }
+                if (Unsafe.SizeOf<T>() == 8) {
+                    return AllEqualsSimd(
+                        ref Unsafe.As<T, long>(ref GetRef(span)),
+                        Unsafe.As<T, long>(ref value),
+                        span.Length
+                    );
+                }
+            }
+            ref T ptr = ref GetRef(span);
+            ref T endPtr = ref Unsafe.Add(ref ptr, span.Length);
+
+            while (Unsafe.IsAddressLessThan(ref ptr, ref endPtr)) {
+                if (!ptr.Equals(value)) {
+                    return false;
+                }
+                ptr = ref Unsafe.Add(ref ptr, 1);
+            }
+            return true;
+        }
+        private static bool AllEqualsSimd<T>(ref T ptr, T val, nint count) where T : unmanaged
+        {
+            ref T endPtr = ref Unsafe.Add(ref ptr, count);
+            int vecSize = Vector<T>.Count;
+
+            if (Vector.IsHardwareAccelerated && vecSize >= sizeof(T)) {
+                ref T endPtrAlign = ref Unsafe.Add(ref ptr, count / vecSize * vecSize);
+                var vecVal = new Vector<T>(val);
+
+                while (Unsafe.IsAddressLessThan(ref ptr, ref endPtrAlign)) {
+                    var currVal = Unsafe.As<T, Vector<T>>(ref ptr);
+                    if (!Vector.EqualsAll(vecVal, currVal)) {
+                        return false;
+                    }
+                    ptr = ref Unsafe.Add(ref ptr, vecSize);
+                }
+            }
+            while (Unsafe.IsAddressLessThan(ref ptr, ref endPtr)) {
+                if (!ptr.Equals(val)) {
+                    return false;
+                }
+                ptr = ref Unsafe.Add(ref ptr, 1);
+            }
+            return true;
         }
 
         /// <summary> Allocates a unmanaged memory block of <paramref name="count"/> <typeparamref name="T"/> elements from the heap. </summary>
