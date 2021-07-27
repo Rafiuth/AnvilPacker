@@ -41,6 +41,8 @@ namespace AnvilPacker
             var decodeOpaqueBlock = new ActionBlock<ArchiveEntry>(DecodeOpaque, decodeOpts);
 
             foreach (var entry in _archive.ReadEntries()) {
+                if (entry.Name.EqualsIgnoreCase("anvilpacker.json")) continue;
+                
                 if (Utils.FileHasExtension(entry.Name, REGION_EXT)) {
                     _regionProgress.AddItem();
                     await decodeRegionBlock.SendAsync(entry);
