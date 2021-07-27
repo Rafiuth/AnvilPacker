@@ -66,9 +66,6 @@ namespace AnvilPacker
 
         protected void LogStatus(string msg, string? filename = null)
         {
-            if (filename != null && Path.IsPathFullyQualified(filename)) {
-                filename = Path.GetRelativePath(_world.RootPath, filename);
-            }
             _logger.Info(msg, filename);
         }
 
@@ -79,7 +76,7 @@ namespace AnvilPacker
     {
         public string Version = null!;  //version + commit of the encoder
         public int DataVersion = 0;     //version number of this object
-        public DateTime Timestamp;      //time the file was encoded - probably useless
+        public DateTimeOffset Timestamp;//time the file was encoded - probably useless
         public List<ReversibleTransform> Transforms = null!; //transforms for the decoder to apply
     }
     public class PackerTaskProgress

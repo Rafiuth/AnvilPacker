@@ -37,7 +37,7 @@ namespace AnvilPacker
                 Version = GetInfoVersion(),
                 DataVersion = 1,
                 Transforms = _transforms.OfType<ReversibleTransform>().Reverse().ToList(),
-                Timestamp = DateTime.UtcNow
+                Timestamp = DateTimeOffset.Now
             };
         }
 
@@ -103,8 +103,8 @@ namespace AnvilPacker
 
         private WriteMessage EncodeRegion(string path)
         {
-            string relPath = Path.GetRelativePath(_world.RootPath, path);
-            LogStatus("Encoding '{0}'...", relPath);
+            string entryName = Path.GetRelativePath(_world.RootPath, path);
+            LogStatus("Encoding '{0}'...", entryName);
 
             //TODO: LoadRegion in a separate data flow block could improve perf with slow IO devices
             var region = new RegionBuffer();
@@ -113,9 +113,9 @@ namespace AnvilPacker
             try {
                 numChunks = region.Load(_world, path);
             } catch (Exception ex) {
-                _logger.Error(ex, "Failed to load region '{0}'. Copying to the output as is.", relPath);
+                _logger.Error(ex, "Failed to load region '{0}'. Copying to the output as is.", entryName);
                 return new WriteMessage() {
-                    Name = relPath,
+                    Name = entryName,
                     InputFileName = path,
                     Progress = _regionProgress,
                     Compress = true
@@ -127,7 +127,7 @@ namespace AnvilPacker
             }
 
             if (numChunks == 0) {
-                LogStatus("Discarding empty region '{0}'", path);
+                LogStatus("Discarding empty region '{0}'", entryName);
                 _regionProgress.Inc(1.0);
                 return default;
             }
@@ -136,7 +136,7 @@ namespace AnvilPacker
             encoder.Encode(mem, _regionProgress.CreateProgressListener());
 
             return new WriteMessage() {
-                Name = Path.ChangeExtension(relPath, REGION_EXT),
+                Name = Path.ChangeExtension(entryName, REGION_EXT),
                 Data = mem.BufferMem,
                 Compress = false
             };
@@ -149,8 +149,11 @@ namespace AnvilPacker
         };
         private WriteMessage EncodeOpaque(string path)
         {
+            string entryName = Path.GetRelativePath(_world.RootPath, path);
+            LogStatus("Copying '{0}'...", entryName);
+
             return new WriteMessage() {
-                Name = Path.GetRelativePath(_world.RootPath, path),
+                Name = entryName,
                 InputFileName = path,
                 Compress = !Utils.FileHasExtension(path, UNCOMPRESSABLE_FILE_EXTS),
                 Progress = _opaqueProgress
@@ -162,7 +165,7 @@ namespace AnvilPacker
             if (msg.Name == null) {
                 return;
             }
-            LogStatus("Writing '{0}'...", msg.Name);
+            _logger.Debug("...writing '{0}'", msg.Name);
 
             var compLevel = msg.Compress ? CompressionLevel.Optimal : CompressionLevel.NoCompression;
             using var es = _archive.CreateEntry(msg.Name, compLevel);
