@@ -14,21 +14,32 @@ jobs:
         include-prerelease: true
 
     #TODO: find a better way to do this
-    - name: Publish Win64
+    - name: Publish Win-x64
       run: dotnet publish src/AnvilPacker -c Release -p:IsPublish=true -p:CommitHash=${GITHUB_SHA::8} -r win-x64 -o dist/win-x64 
       
-    - name: Publish Linux64
+    - name: Publish Linux-x64
       run: dotnet publish src/AnvilPacker -c Release -p:IsPublish=true -p:CommitHash=${GITHUB_SHA::8} -r linux-x64 -o dist/linux-x64 
       
-    - name: Upload Win64 Artifacts
+    - name: Publish OSX-x64
+      run: dotnet publish src/AnvilPacker -c Release -p:IsPublish=true -p:CommitHash=${GITHUB_SHA::8} -r osx-x64 -o dist/osx-x64 
+      
+    
+    - name: Upload Win-x64 Artifacts
       uses: actions/upload-artifact@v2.2.4
       with:
-        name: dist-win-x64
+        name: AnvilPacker (Windows, x64)
         path: dist/win-x64
     
-    - name: Upload Linux64 Artifacts
+    - name: Upload Linux-x64 Artifacts
       uses: actions/upload-artifact@v2.2.4
       with:
-        name: dist-linux-x64
+        name: AnvilPacker (Linux, x64)
         path: dist/linux-x64
+        
+    - name: Upload OSX-x64 Artifacts
+      uses: actions/upload-artifact@v2.2.4
+      with:
+        name: AnvilPacker (macOS, x64)
+        path: dist/osx-x64
+        
         
