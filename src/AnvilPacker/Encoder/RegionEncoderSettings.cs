@@ -8,7 +8,7 @@ namespace AnvilPacker.Encoder
         public int MetaBrotliQuality = 8;
         public int MetaBrotliWindowSize = 22;
 
-        public RepDataEncMode LightEncMode = RepDataEncMode.Normal;
+        public RepDataEncMode LightEncMode = RepDataEncMode.Keep;
         public RepDataEncMode HeightmapEncMode = RepDataEncMode.Strip;
 
         public BlockCodecSettings BlockCodec = new BlockCodecSettings.AP1();
@@ -27,7 +27,7 @@ namespace AnvilPacker.Encoder
     public enum RepDataEncMode
     {
         Strip,  //Don't encode
-        Normal, //Encode as is
+        Keep,   //Encode as is
         Delta   //Encode the differences from the reproduced values
     }
     public abstract class BlockCodecSettings

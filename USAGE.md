@@ -1,4 +1,6 @@
 # Usage
+Prebuilt binaries are available in [releases](https://github.com/Rafiuth/AnvilPacker/releases).
+
 The CLI syntax is:
 ```
 AnvilPacker <command> [options]
@@ -98,7 +100,7 @@ Fields of the object passed to `--encoder-opts`, represented using [Setting Nota
 | Setting       | Type | Default | Description |
 | -------       | ---- | ------- | ----------- |
 | block_codec   | BlockCodec | ap1 | Specifies which block codec to use. |
-| light_enc_mode| RepDataEncMode | normal | Specififes how to encode light data. |
+| light_enc_mode| RepDataEncMode | keep | Specififes how to encode light data. |
 | heightmap_enc_mode | RepDataEncMode | strip | Specifies how to encode heightmaps. |
 | meta_brotli_quality  | int  | 8       | Brotli compression quality for metadata compression, where 0 is none/fastest and 11 is best/slowest. |
 | meta_brotli_window_size | int | 22    | Brotli sliding window size for metadata compression, in base 2 logarithm. Range: 10-24 |
@@ -106,16 +108,14 @@ Fields of the object passed to `--encoder-opts`, represented using [Setting Nota
 ### RepDataEncMode
 Reproducible data (lighting and heightmaps) can be encoded in one of the following ways:
 - **strip**: Remove it completely. The decoder will attempt to reconstruct it or leave it for the game to recompute if possible. Not recommended for modded worlds.
-- **normal**: Don't touch it, just compress it with Brotli. This is the safest option for light data. In normal worlds, it takes about 15% of the file size.
+- **keep**: Don't touch it, just compress it with Brotli. This is the safest option for light data. In normal worlds, it takes about 15% of the file size.
 - **delta**: Encode differences from the data the decoder would reconstruct. This gives smaller files and is lossless, but **there is no guarantee that future versions will decode it correctly**. Use it at your own risk ¯\\\_(ツ)\_/¯
 
 The decoder needs to know certain block attributes such as light emission/opacity and heightmap opacity to reconstruct this data. The encoder will source them from either a registry of known vanilla blocks, or estimate them based on existing data.
 
-In some cases, those estimated values will be inaccurate, which may cause wrong or glitchy lighting in the decoded world. If the target world version is >= 1.14.4, the decoder can be configured to leave the light data to be recomputed by the game itself (using `--dont-lit`; this may degrade loading speed [unconfirmed], see [Starlight](https://github.com/Tuinity/Starlight) if you are interested).
+In some cases, those estimated values will be inaccurate, which may cause wrong or glitchy lighting in the decoded world. If the target world version is >= 1.14.4, the decoder can be configured to leave the light data to be recomputed by the game using `--dont-lit`, which may degrade loading speed [unconfirmed], see [Starlight](https://github.com/Tuinity/Starlight) if you are interested.
 
-For lighting, the default is currently `normal` because the current light calculation implementation has some limitations:
-- doesn't handle region borders (light won't propagate trough them)
-- doesn't handle block shapes (added in 1.14.?)
+For lighting, the default is `normal` because the current decoder implementation doesn't handle block shapes.
 
 ## Block Codecs
 

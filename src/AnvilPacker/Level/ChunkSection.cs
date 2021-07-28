@@ -1,5 +1,6 @@
 #nullable enable
 
+using System;
 using AnvilPacker.Data;
 using AnvilPacker.Util;
 
@@ -83,5 +84,22 @@ namespace AnvilPacker.Level
         public static bool IsCoordInside(int x, int y, int z) => (uint)(x | y | z) < 16;
         /// <summary> Returns the block index for the specified coord, i.e.: <c>y*256 + z*16 + x</c> </summary>
         public static int GetIndex(int x, int y, int z) => y << 8 | z << 4 | x;
+
+        public NibbleArray? GetLightData(LightLayer layer)
+        {
+            return layer switch {
+                LightLayer.Sky      => SkyLight,
+                LightLayer.Block    => BlockLight,
+                _ => throw new InvalidOperationException()
+            };
+        }
+        public NibbleArray GetOrCreateLightData(LightLayer layer)
+        {
+            return layer switch {
+                LightLayer.Sky      => SkyLight ??= new(4096),
+                LightLayer.Block    => BlockLight ??= new(4096),
+                _ => throw new InvalidOperationException()
+            };
+        }
     }
 }

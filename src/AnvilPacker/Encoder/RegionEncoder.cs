@@ -34,6 +34,8 @@ namespace AnvilPacker.Encoder
 
         public void Encode(DataWriter stream, IProgress<double>? progress = null)
         {
+            WriteSyncTag(stream, "Root", 0);
+
             var headerStats = WritePart(stream, "Header", true, dw => {
                 WriteHeader(dw);
                 WriteMetadata(dw);
@@ -41,11 +43,14 @@ namespace AnvilPacker.Encoder
             var blockDataStats = WritePart(stream, "Blocks", false, dw => {
                 _blockCodec.Encode(dw, CodecProgressListener.MaybeCreate(_blockCount, progress));
             });
+
             if (_settings.HeightmapEncMode != RepDataEncMode.Strip) {
                 WritePart(stream, "Heightmaps", true, WriteHeightmaps);
             }
             if (_settings.LightEncMode != RepDataEncMode.Strip) {
                 WritePart(stream, "Lighting", true, WriteLightData);
+            } else {
+                WritePart(stream, "LightBorders", true, WriteLightBorders);
             }
 
             if (_logger.IsDebugEnabled) {
@@ -61,6 +66,8 @@ namespace AnvilPacker.Encoder
 
         private void WriteHeader(DataWriter stream)
         {
+            WriteSyncTag(stream, "Header", 0);
+
             //Note: this is an arithmetic shift, using a div here would give wrong values.
             //regionX = floorDiv(chunkX / 32) = x >> 5
             stream.WriteVarInt(_region.X >> 5);
@@ -73,10 +80,10 @@ namespace AnvilPacker.Encoder
             WriteChunkBitmap(stream);
 
             //depends on palette & header fields above
-            if (_settings.HeightmapEncMode != RepDataEncMode.Normal) {
+            if (_settings.HeightmapEncMode != RepDataEncMode.Keep) {
                 WriteHeightmapAttribs(stream);
             }
-            if (_settings.LightEncMode != RepDataEncMode.Normal) {
+            if (_settings.LightEncMode != RepDataEncMode.Keep) {
                 WriteLightAttribs(stream);
             }
             //no deps
@@ -254,7 +261,7 @@ namespace AnvilPacker.Encoder
                         section.BlockLight = new NibbleArray(4096);
                     }
                 }
-                new Lighter().Compute(_region, _estimLightAttribs.LightAttribs);
+                new Lighter(_region, _estimLightAttribs.LightAttribs).Compute();
 
                 //Restore original data and store the computed light in the dictionary.
                 foreach (var section in ChunkIterator.GetSections(_region)) {
@@ -307,7 +314,70 @@ namespace AnvilPacker.Encoder
                 }
             }
         }
+        private void WriteLightBorders(DataWriter stream)
+        {
+            WriteSyncTag(stream, "LightBorders", 0);
 
+            var (minSy, maxSy) = _region.GetChunkYExtents();
+            var emptyPlaneData = new byte[16 * 8];
+
+            foreach (var layer in new[] { LightLayer.Sky, LightLayer.Block }) {
+                WritePlane(true,  false, layer); //X-
+                WritePlane(true,  true,  layer); //X+
+                WritePlane(false, false, layer); //Z-
+                WritePlane(false, true,  layer); //Z+
+            }
+
+            void WritePlane(bool axisX, bool axisP, LightLayer layer)
+            {
+                //P[x, y] =
+                //  D[ 0, y,  x] for X-
+                //  D[15, y,  x] for X+
+                //  D[x,  y,  0] for Z-
+                //  D[x,  y, 15] for Z+
+                for (int cy = minSy; cy <= maxSy; cy++) {
+                    for (int ch = 0; ch < 32; ch++) {
+                        var section = _region.GetSection(
+                            !axisX ? ch : (axisP ? 31 : 0),
+                            cy,
+                            axisX ? ch : (axisP ? 31 : 0)
+                        );
+                        if (section == null) continue;
+
+                        var data = section.GetLightData(layer)?.Data;
+                        if (data == null) {
+                            stream.WriteBytes(emptyPlaneData);
+                            continue;
+                        }
+                        if (axisX) {
+                            WritePlaneX(stream, data, axisP);
+                        } else {
+                            WritePlaneZ(stream, data, axisP);
+                        }
+                    }
+                }
+            }
+            static void WritePlaneX(DataWriter stream, byte[] data, bool plus)
+            {
+                for (int by = 0; by < 16; by++) {
+                    int ofs = ChunkSection.GetIndex(plus ? 15 : 0, by, 0);
+
+                    for (int bz = 0; bz < 16; bz += 2) {
+                        int a = NibbleArray.Get(data, ofs + (bz + 0) * 16);
+                        int b = NibbleArray.Get(data, ofs + (bz + 1) * 16);
+                        stream.WriteByte(a | b << 4);
+                    }
+                }
+            }
+            static void WritePlaneZ(DataWriter stream, byte[] data, bool plus)
+            {
+                for (int by = 0; by < 16; by++) {
+                    int ofs = ChunkSection.GetIndex(0, by, plus ? 15 : 0) >> 1;
+                    stream.WriteBytes(data, ofs, 8);
+                }
+            }
+        }
+        
         private void WriteSyncTag(DataWriter stream, string id, int version)
         {
             //String IDs are mostly for ~possibly~ easier debugging if something goes terribly wrong

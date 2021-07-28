@@ -33,6 +33,8 @@ namespace AnvilPacker.Encoder
 
         public void Decode(DataReader stream, IProgress<double>? progress = null)
         {
+            int version = ReadSyncTag(stream, "Root", 0);
+
             ReadPart(stream, "Header", true, dw => {
                 ReadHeader(dw);
                 ReadMetadata(dw);
@@ -41,18 +43,31 @@ namespace AnvilPacker.Encoder
                 _blockCodec.Decode(stream, CodecProgressListener.MaybeCreate(_blockCount, progress));
             });
 
+            if (_heightmapMode != RepDataEncMode.Strip) {
+                ReadPart(stream, "Heightmaps", true, ReadHeightmaps);
+            }
+            if (_lightingMode != RepDataEncMode.Strip) {
+                ReadPart(stream, "Lighting", true, ReadLightData);
+            } else {
+                ReadPart(stream, "LightBorders", true, ReadLightBorders);
+            }
+            Prime();
+        }
+
+        private void Prime()
+        {
+            long startTime = Stopwatch.GetTimestamp();
+
             if (_heightmapMode == RepDataEncMode.Strip) {
                 CalcHeightmaps();
-            } else {
-                ReadPart(stream, "Heightmaps", true, ReadHeightmaps);
             }
             if (_lightingMode == RepDataEncMode.Strip) {
                 CalcLights();
-            } else {
-                ReadPart(stream, "Lighting", true, ReadLightData);
             }
-        }
 
+            long endTime = Stopwatch.GetTimestamp();
+            _logger.Trace("Region primed in {0}ms", (endTime - startTime) * 1000 / Stopwatch.Frequency);
+        }
         private void CalcHeightmaps()
         {
             var attribs = _estimHeightmapAttribs;
@@ -91,12 +106,14 @@ namespace AnvilPacker.Encoder
                 }
             }
             if (!skipLighting) {
-                new Lighter().Compute(_region, _estimLightAttribs.LightAttribs);
+                new Lighter(_region, _estimLightAttribs.LightAttribs, true).Compute();
             }
         }
 
         private void ReadHeader(DataReader stream)
         {
+            int version = ReadSyncTag(stream, "Header", 0);
+
             _region.X = stream.ReadVarInt() << 5;
             _region.Z = stream.ReadVarInt() << 5;
             _heightmapMode = (RepDataEncMode)stream.ReadByte();
@@ -107,10 +124,10 @@ namespace AnvilPacker.Encoder
             ReadChunkBitmap(stream);
 
             //depends on palette & header fields above
-            if (_heightmapMode != RepDataEncMode.Normal) {
+            if (_heightmapMode != RepDataEncMode.Keep) {
                 ReadHeightmapAttribs(stream);
             }
-            if (_lightingMode != RepDataEncMode.Normal) {
+            if (_lightingMode != RepDataEncMode.Keep) {
                 ReadLightAttribs(stream);
             }
             int blockCodecId = stream.ReadVarUInt();
@@ -300,7 +317,7 @@ namespace AnvilPacker.Encoder
                         section.BlockLight = new NibbleArray(4096);
                     }
                 }
-                new Lighter().Compute(_region, _estimLightAttribs.LightAttribs);
+                new Lighter(_region, _estimLightAttribs.LightAttribs).Compute();
 
                 //Restore original data and store the computed light in the dictionary.
                 foreach (var section in ChunkIterator.GetSections(_region)) {
@@ -338,6 +355,65 @@ namespace AnvilPacker.Encoder
                 }
             }
         }
+        private void ReadLightBorders(DataReader stream)
+        {
+            int version = ReadSyncTag(stream, "LightBorders", 0);
+
+            var (minSy, maxSy) = _region.GetChunkYExtents();
+
+            foreach (var layer in new[] { LightLayer.Sky, LightLayer.Block }) {
+                ReadPlane(true,  false, layer); //X-
+                ReadPlane(true,  true,  layer); //X+
+                ReadPlane(false, false, layer); //Z-
+                ReadPlane(false, true,  layer); //Z+
+            }
+
+            void ReadPlane(bool axisX, bool axisP, LightLayer layer)
+            {
+                //P[x, y] =
+                //  D[ 0, y,  x] for X-
+                //  D[15, y,  x] for X+
+                //  D[x,  y,  0] for Z-
+                //  D[x,  y, 15] for Z+
+                for (int cy = minSy; cy <= maxSy; cy++) {
+                    for (int ch = 0; ch < 32; ch++) {
+                        var section = _region.GetSection(
+                            !axisX ? ch : (axisP ? 31 : 0),
+                            cy,
+                            axisX ? ch : (axisP ? 31 : 0)
+                        );
+                        if (section == null) continue;
+
+                        var data = section.GetOrCreateLightData(layer).Data;
+
+                        if (axisX) {
+                            ReadPlaneX(stream, data, axisP);
+                        } else {
+                            ReadPlaneZ(stream, data, axisP);
+                        }
+                    }
+                }
+            }
+            static void ReadPlaneX(DataReader stream, byte[] data, bool plus)
+            {
+                for (int by = 0; by < 16; by++) {
+                    int ofs = ChunkSection.GetIndex(plus ? 15 : 0, by, 0);
+
+                    for (int bz = 0; bz < 16; bz += 2) {
+                        int v = stream.ReadByte();
+                        NibbleArray.Set(data, ofs + (bz + 0) * 16, v & 15);
+                        NibbleArray.Set(data, ofs + (bz + 1) * 16, v >> 4);
+                    }
+                }
+            }
+            static void ReadPlaneZ(DataReader stream, byte[] data, bool plus)
+            {
+                for (int by = 0; by < 16; by++) {
+                    int ofs = ChunkSection.GetIndex(0, by, plus ? 15 : 0) >> 1;
+                    stream.ReadBytes(data, ofs, 8);
+                }
+            }
+        }
 
         private int ReadSyncTag(DataReader stream, string id, int maxSupportedVersion)
         {
@@ -356,6 +432,7 @@ namespace AnvilPacker.Encoder
             if (dataId != id) {
                 throw new InvalidOperationException($"Unmatched part id: expecting '{id}', got '{dataId}'");
             }
+            long startTime = Stopwatch.GetTimestamp();
 
             if (compressed) {
                 using var comp = Compressors.NewBrotliDecoder(stream.AsStream(length), true);
@@ -363,6 +440,11 @@ namespace AnvilPacker.Encoder
             } else {
                 //TODO: limit by length
                 readContents(stream);
+            }
+            long endTime = Stopwatch.GetTimestamp();
+            long timeMillis = (endTime - startTime) * 1000 / Stopwatch.Frequency;
+            if (_logger.IsTraceEnabled) {
+                _logger.Trace($"Decoded part at '{_region}'. Len={length / 1024.0:0.000}KB Time={timeMillis}ms");
             }
         }
     }
