@@ -70,10 +70,13 @@ namespace AnvilPacker.Level.Versions.v1_2_1
             var blocks = section.Blocks;
 
             const int CacheKeyMask = 7;
-            var idCacheKeys = stackalloc ushort[CacheKeyMask + 1];
-            var idCacheVals = stackalloc BlockId[CacheKeyMask + 1];
-            new Span<ushort>(idCacheKeys, CacheKeyMask).Fill(BlockId.Invalid);
-
+            const int CacheSize = CacheKeyMask + 1;
+            //using int instead of ushort because it will avoid undefined
+            //behavior if we find a block with the invalid id (65535).
+            var idCacheKeys = stackalloc int[CacheSize];
+            var idCacheVals = stackalloc BlockId[CacheSize];
+            new Span<int>(idCacheKeys, CacheSize).Fill(-1);  //mark all cache keys as invalid
+            
             for (int i = 0; i < 4096; i += 2) {
                 int j = i >> 1;
                 int a = (blockId[i + 0] << 4) | (blockData[j] & 15);
