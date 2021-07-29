@@ -34,7 +34,7 @@ namespace AnvilPacker.Tests
                 Assert.IsType(expWriterType, writer);
 
                 foreach (var (name, data) in entries) {
-                    using var sw = writer.CreateEntry(name);
+                    using var sw = writer.Create(name);
                     sw.Write(Encoding.UTF8.GetBytes(data));
                 }
             }
@@ -48,7 +48,7 @@ namespace AnvilPacker.Tests
 
                     Assert.Equal(entry.Size, data.Length);
 
-                    using var sr = reader.OpenEntry(entry);
+                    using var sr = reader.Open(entry.Name);
                     var buf = new byte[4096];
                     int pos = 0;
                     while (true) {

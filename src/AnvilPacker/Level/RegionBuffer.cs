@@ -2,8 +2,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Text.RegularExpressions;
 using AnvilPacker.Data;
 using AnvilPacker.Util;
 
@@ -34,19 +32,17 @@ namespace AnvilPacker.Level
             Palette = new BlockPalette() { BlockRegistry.Air };
         }
 
-        /// <summary> Loads the specified region file. </summary>
-        /// <param name="path">Full path of the .mca file</param>
-        /// <param name="pos">The position of the region. Will be derived from <paramref name="path"/> if null.</param>
         /// <returns>Number of non empty chunks loaded.</returns>
-        public int Load(WorldInfo world, string path, (int X, int Z)? pos = null)
+        public int Load(WorldInfo world, RegionReader reader, string? debugPath = null)
         {
             Ensure.That(Size == 32);
 
             Clear();
-            (X, Z) = pos ?? GetRegionFilePos(path);
+            (X, Z) = (reader.X, reader.Z);
+            _lastLoadedRegionFilename = debugPath?.Replace('\\', '/');
+
             int chunksLoaded = 0;
 
-            using var reader = new RegionReader(path);
             foreach (var (tag, x, z) in reader.ReadAll()) {
                 Chunk chunk;
 
@@ -63,17 +59,12 @@ namespace AnvilPacker.Level
                 PutChunk(chunk);
                 chunksLoaded++;
             }
-            _lastLoadedRegionFilename = Path.GetRelativePath(world.RootPath, path).Replace('\\', '/');
-
             return chunksLoaded;
         }
-        /// <summary> Creates a new region file with the chunks present in this buffer. </summary>
-        /// <param name="path">Full path of the .mca file</param>
-        public void Save(WorldInfo world, string path)
+        public void Save(WorldInfo world, RegionWriter writer)
         {
             Ensure.That(Size == 32);
 
-            using var writer = new RegionWriter(path);
             foreach (var chunk in Chunks.ExceptNull()) {
                 int cx = chunk.X & 31;
                 int cz = chunk.Z & 31;
@@ -86,17 +77,6 @@ namespace AnvilPacker.Level
                     writer.Write(cx, cz, tag);
                 }
             }
-        }
-
-        private (int X, int Z) GetRegionFilePos(string path)
-        {
-            var m = Regex.Match(Path.GetFileName(path), @"^r\.(-?\d+)\.(-?\d+)\.mca$");
-            if (!m.Success) {
-                throw new FormatException("Region file name must have the form of 'r.0.0.mca'.");
-            }
-            int x = int.Parse(m.Groups[1].Value) * 32;
-            int z = int.Parse(m.Groups[2].Value) * 32;
-            return (x, z);
         }
 
         public void Clear()

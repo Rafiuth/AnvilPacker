@@ -2,6 +2,7 @@
 using System.IO;
 using System.Linq;
 using AnvilPacker.Cli;
+using AnvilPacker.Container;
 using AnvilPacker.Level;
 using AnvilPacker.Util;
 using CommandLine;
@@ -40,7 +41,7 @@ namespace AnvilPacker
                 var text = HelpText.AutoBuild(
                     result,
                     err => {
-                        err.Heading = "AnvilPacker v" + WorldPacker.GetInfoVersion();
+                        err.Heading = "AnvilPacker v" + PackProcessor.GetInfoVersion();
                         err.AdditionalNewLineAfterOption = false;
                         err.Copyright = "";
                         return err;

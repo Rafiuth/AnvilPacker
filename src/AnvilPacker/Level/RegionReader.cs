@@ -3,6 +3,7 @@ using System.Buffers;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using AnvilPacker.Data;
 using AnvilPacker.Util;
 using LibDeflate;
@@ -19,35 +20,69 @@ namespace AnvilPacker.Level
         private readonly DataReader _s;
         private readonly int[] _locations = new int[1024];
 
-        private Decompressor _gzipDec, _zlibDec;
-        private byte[] _inBuf = new byte[1024 * 32];
-        private byte[] _outBuf = new byte[1024 * 256];
+        private DeflateHelper _deflater = new DeflateHelper(MAX_COMPRESSED_CHUNK_SIZE, MAX_UNCOMPRESSED_CHUNK_SIZE);
 
-        public RegionReader(string filename)
+        public int X { get; }
+        public int Z { get; }
+
+        /// <summary> Creates the region reader based on the specified file. </summary>
+        public RegionReader(string path)
+            : this(File.OpenRead(path), path)
         {
-            _s = new DataReader(File.OpenRead(filename), false);
+        }
+        /// <summary> Creates the region reader based on the specified stream. </summary>
+        /// <param name="path">The path of the region, it is only used to extract the position. </summary>
+        public RegionReader(Stream stream, string path, bool leaveOpen = false)
+            : this(stream, 0, 0, leaveOpen)
+        {
+            (X, Z) = GetFilePos(path);
+        }
+        public RegionReader(Stream stream, int x, int z, bool leaveOpen = false)
+        {
+            Ensure.That(stream.CanSeek, "Stream must be seekable");
+            _s = new DataReader(stream, leaveOpen);
             if (_s.Length >= 8192) {
                 _s.ReadBulkBE<int>(_locations);
             }
+            X = x;
+            Z = z;
         }
 
+        /// <summary> Enumerates the NBT tag of all chunks in this region. </summary>
         public IEnumerable<(CompoundTag Tag, int X, int Z)> ReadAll()
         {
             //Read chunks sequentially to improve perf on slow medias (HDDs/whatever)
             //Don't really know how effective this is, hard to test because of caching.
             foreach (var (loc, i) in _locations.Select((v, i) => (v, i)).OrderBy(e => e.v)) {
-                var tag = Read(loc);
-                if (tag != null) {
+                if (IsValidLocation(loc)) {
+                    var tag = Read(loc);
                     yield return (tag, i & 31, i >> 5);
                 }
             }
         }
-        public CompoundTag Read(int x, int z)
+        /// <summary> Enumerates the raw data of all chunks in this region. </summary>
+        /// <remarks> The yielded ArraySegment is only valid until the next iteration, or the next call made in this instance. </remarks>
+        public IEnumerable<(ArraySegment<byte> TagData, int X, int Z)> ReadAllData()
         {
-            return Read(_locations[GetIndex(x, z)]);
+            foreach (var (loc, i) in _locations.Select((v, i) => (v, i)).OrderBy(e => e.v)) {
+                if (IsValidLocation(loc)) {
+                    var data = ReadData(loc);
+                    yield return (data, i & 31, i >> 5);
+                }
+            }
+        }
+        private bool IsValidLocation(int loc)
+        {
+            return (loc & 0xFF) != 0;
         }
 
         private CompoundTag Read(int loc)
+        {
+            var data = ReadData(loc);
+            var mem = new MemoryStream(data.Array, data.Offset, data.Count);
+            return NbtIO.Read(mem);
+        }
+        private ArraySegment<byte> ReadData(int loc)
         {
             int offset = (loc >> 8) * 4096;
             int length = (loc & 0xFF) * 4096;
@@ -61,57 +96,22 @@ namespace AnvilPacker.Level
             if (actualLen > length) {
                 throw new InvalidDataException($"Corrupted chunk: declared length larger than sector count.");
             }
-            if (compressionType == 3) {
-                var rawStream = _s.AsStream(actualLen);
-                return NbtIO.Read(rawStream);
-            }
-            var comprData = GetInBuffer(actualLen);
-            _s.ReadBytes(comprData);
-            var data = Decompress(compressionType, comprData);
-            var mem = new MemoryStream(data.Array, data.Offset, data.Count);
-            return NbtIO.Read(mem);
+            var data = _deflater.AllocInBuffer(actualLen);
+            _s.ReadBytes(data);
+            return Decompress(compressionType, data);
         }
 
-        private Span<byte> GetInBuffer(int length)
+        private ArraySegment<byte> Decompress(byte compressionType, ArraySegment<byte> data)
         {
-            EnsureCapacity(ref _inBuf, length, MAX_COMPRESSED_CHUNK_SIZE);
-            return _inBuf.AsSpan(0, length);
-        }
-        private ArraySegment<byte> Decompress(byte compressionType, Span<byte> data)
-        {
-            var decompressor = compressionType switch {
-                1 => _gzipDec ??= new GzipDecompressor(),
-                2 => _zlibDec ??= new ZlibDecompressor(),
+            if (compressionType == 3) {
+                return data;
+            }
+            var flavor = compressionType switch {
+                1 => DeflateFlavor.Gzip,
+                2 => DeflateFlavor.Zlib,
                 _ => throw new NotSupportedException($"Chunk compression method {compressionType}")
             };
-
-            while (true) {
-                switch (decompressor.Decompress(data, _outBuf, out int bytesWritten, out _)) {
-                    case OperationStatus.Done: {
-                        return new ArraySegment<byte>(_outBuf, 0, bytesWritten);
-                    }
-                    case OperationStatus.DestinationTooSmall: {
-                        EnsureCapacity(ref _outBuf, _outBuf.Length + 1, MAX_UNCOMPRESSED_CHUNK_SIZE);
-                        break; //try again
-                    }
-                    default: {
-                        throw new InvalidDataException("Failed to decompress chunk");
-                    }
-                }
-            }
-        }
-        private void EnsureCapacity(ref byte[] buf, int minLen, int limit)
-        {
-            if (buf.Length < minLen) {
-                int newLen = Math.Max(minLen + 1024, buf.Length * 2);
-                if (newLen > limit && minLen <= limit) {
-                    newLen = limit;
-                }
-                if (newLen > limit) {
-                    throw new NotSupportedException("Chunk data larger than allowed (trying to expand buffer too much)");
-                }
-                Array.Resize(ref buf, newLen);
-            }
+            return _deflater.Decompress(data, flavor);
         }
 
         private static int GetIndex(int x, int z)
@@ -120,11 +120,22 @@ namespace AnvilPacker.Level
             return x + z * 32;
         }
 
+        /// <summary> Parses the region position from the specified path. </summary>
+        public static (int X, int Z) GetFilePos(string path)
+        {
+            var m = Regex.Match(Path.GetFileName(path), @"^r\.(-?\d+)\.(-?\d+)\.mca$");
+            if (!m.Success) {
+                throw new FormatException("Region filename must have the form of 'r.0.0.mca'.");
+            }
+            int x = int.Parse(m.Groups[1].Value) * 32;
+            int z = int.Parse(m.Groups[2].Value) * 32;
+            return (x, z);
+        }
+
         public void Dispose()
         {
             _s.Dispose();
-            _gzipDec?.Dispose();
-            _zlibDec?.Dispose();
+            _deflater.Dispose();
         }
     }
 }

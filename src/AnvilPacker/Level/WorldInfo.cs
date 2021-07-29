@@ -14,28 +14,10 @@ namespace AnvilPacker.Level
     {
         private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
 
-        public string RootPath { get; }
-
-        public WorldInfo(string path)
+        public WorldInfo()
         {
-            RootPath = path;
         }
         
-        public IEnumerable<string> GetRegionDirs()
-        {
-            string[] paths = { 
-                "region/", 
-                "DIM-1/region/", 
-                "DIM1/region/"
-            };
-            foreach (var path in paths) {
-                var fullPath = Path.Combine(RootPath, path);
-                if (Directory.Exists(fullPath)) {
-                    yield return fullPath;
-                }
-            }
-        }
-
         /// <summary> Returns a serializer capable of handling the specified anvil tag. </summary>
         public IChunkSerializer GetSerializer(CompoundTag tag)
         {
