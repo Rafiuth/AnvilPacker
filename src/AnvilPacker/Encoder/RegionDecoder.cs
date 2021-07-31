@@ -66,7 +66,7 @@ namespace AnvilPacker.Encoder
             }
 
             long endTime = Stopwatch.GetTimestamp();
-            _logger.Trace("Region primed in {0}ms", (endTime - startTime) * 1000 / Stopwatch.Frequency);
+            _logger.Debug("Region primed in {0}ms", (endTime - startTime) * 1000 / Stopwatch.Frequency);
         }
         private void CalcHeightmaps()
         {
@@ -443,8 +443,8 @@ namespace AnvilPacker.Encoder
             }
             long endTime = Stopwatch.GetTimestamp();
             long timeMillis = (endTime - startTime) * 1000 / Stopwatch.Frequency;
-            if (_logger.IsTraceEnabled) {
-                _logger.Trace($"Decoded part at '{_region}'. Len={length / 1024.0:0.000}KB Time={timeMillis}ms");
+            if (_logger.IsDebugEnabled) {
+                _logger.Debug($"Decoded part {id} at '{_region}'. Len={length / 1024.0:0.000}KB Time={timeMillis}ms");
             }
         }
     }

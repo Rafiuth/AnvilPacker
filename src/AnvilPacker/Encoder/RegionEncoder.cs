@@ -410,8 +410,8 @@ namespace AnvilPacker.Encoder
             stream.WriteIntLE(len);
             stream.Position = endPos;
 
-            if (_logger.IsTraceEnabled) {
-                _logger.Trace($"Stats for {id} part at '{_region}': Len={len / 1024.0:0.000}KB Time={timeMillis}ms");
+            if (_logger.IsDebugEnabled) {
+                _logger.Debug($"Stats for {id} part at '{_region}': Len={len / 1024.0:0.000}KB Time={timeMillis}ms");
             }
             return new PartStats() {
                 Length = len,

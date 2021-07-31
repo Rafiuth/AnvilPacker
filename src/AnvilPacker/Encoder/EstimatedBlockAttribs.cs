@@ -126,9 +126,9 @@ namespace AnvilPacker.Encoder
                     int emission = emissionHist[i].CalcEstimatedEmission();
                     LightAttribs[i] = new BlockLightInfo(opacity, emission);
 
-                    if (_logger.IsTraceEnabled) {
-                        _logger.Trace("Estimated opacity  for {0}: {1} hist={{{2}}}", block, opacity, opacityHist[i]);
-                        _logger.Trace("Estimated emission for {0}: {1} hist={{{2}}}", block, emission, emissionHist[i]);
+                    if (_logger.IsDebugEnabled) {
+                        _logger.Debug("Estimated opacity  for {0}: {1} hist={{{2}}}", block, opacity, opacityHist[i]);
+                        _logger.Debug("Estimated emission for {0}: {1} hist={{{2}}}", block, emission, emissionHist[i]);
                     }
                 }
             }
