@@ -25,6 +25,7 @@ namespace AnvilPacker.Container.Sinks
     {
         private readonly TransformPipe _transforms;
         private readonly RegionEncoderSettings _encoderSettings;
+        private readonly MemoryDataWriter _mem = new MemoryDataWriter(1024 * 1024 * 4);
 
         public RegionEncSink(PackProcessor packer, TransformPipe transforms, RegionEncoderSettings encoderSettings)
             : base(packer)
@@ -36,11 +37,11 @@ namespace AnvilPacker.Container.Sinks
         public override bool Accepts(string filename, long length)
             => filename.EndsWithIgnoreCase(".mca");
 
-        public override Task Process(string filename, IProgress<double> progress)
+        public override async Task Process(string filename, IProgress<double> progress)
         {
             int numChunks = 0;
 
-            using (var reader = new RegionReader(OpenFaucet(filename), filename)) {
+            using (var reader = new RegionReader(await OpenFaucet(filename), filename)) {
                 numChunks = _region.Load(_packer._world, reader, filename);
             }
 
@@ -50,14 +51,17 @@ namespace AnvilPacker.Container.Sinks
             }
             if (numChunks == 0) {
                 _logger.Info("Discarding empty region '{0}'", filename);
-                return Task.CompletedTask;
+                return;
             }
+            _mem.Clear();
+
+            var encoder = new RegionEncoder(_region, _encoderSettings);
+            encoder.Encode(_mem, progress);
+
             var outPath = Path.ChangeExtension(filename, PackProcessor.ENC_REGION_EXT);
-            using (var outs = new DataWriter(OpenDrain(outPath, CompressionLevel.NoCompression))) {
-                var encoder = new RegionEncoder(_region, _encoderSettings);
-                encoder.Encode(outs, progress);
+            using (var outStream = await OpenDrain(outPath, CompressionLevel.NoCompression)) {
+                await outStream.WriteAsync(_mem.BufferMem);
             }
-            return Task.CompletedTask;
         }
     }
     public class RegionDecSink : RegionSink
@@ -73,9 +77,9 @@ namespace AnvilPacker.Container.Sinks
         public override bool Accepts(string filename, long length)
             => filename.EndsWithIgnoreCase(PackProcessor.ENC_REGION_EXT);
 
-        public override Task Process(string filename, IProgress<double> progress)
+        public override async Task Process(string filename, IProgress<double> progress)
         {
-            using (var stream = new DataReader(OpenFaucet(filename))) {
+            using (var stream = new DataReader(await OpenFaucet(filename))) {
                 var decoder = new RegionDecoder(_region, _decoderSettings);
                 decoder.Decode(stream, progress);
             }
@@ -85,10 +89,9 @@ namespace AnvilPacker.Container.Sinks
             }
 
             var outPath = Path.ChangeExtension(filename, ".mca");
-            using (var writer = new RegionWriter(outPath)) {
+            using (var writer = new RegionWriter(await OpenDrain(outPath))) {
                 _region.Save(_packer._world, writer);
             }
-            return Task.CompletedTask;
         }
     }
 }

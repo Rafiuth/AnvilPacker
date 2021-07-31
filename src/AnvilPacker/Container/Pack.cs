@@ -2,11 +2,14 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.IO.Compression;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
 using AnvilPacker.Container.Sinks;
+using AnvilPacker.Data;
 using AnvilPacker.Data.Archives;
 using AnvilPacker.Encoder.Transforms;
 using AnvilPacker.Level;
@@ -19,7 +22,7 @@ namespace AnvilPacker.Container
     public abstract class PackProcessor : IDisposable
     {
         public const string BASE_DATA_DIR = "anvilpacker/";
-        public const string BLOB_BASE_DIR = "anvilpacker/blobs/";
+        public const string BASE_BLOB_DIR = "anvilpacker/blobs/";
         public const string METADATA_PATH = "anvilpacker/metadata.json";
         public const string ENC_REGION_EXT = ".apr"; //Anvil Pack Region
 
@@ -28,9 +31,11 @@ namespace AnvilPacker.Container
 
         internal readonly IArchiveReader _inArchive;
         internal readonly IArchiveWriter _outArchive;
+        private readonly AsyncAutoResetEvent _outEntryAvailEvent = new(true);
+
         internal WorldInfo _world = null!;
         internal PackMetadata _meta = null!;
-        
+
         private readonly BufferBlock<ArchiveEntry> _pendingFiles = new();
         private int _nextBlobId = 0;
 
@@ -79,8 +84,10 @@ namespace AnvilPacker.Container
 
         private async Task RunWorkerAsync()
         {
-            var sinks = CreateSinks();
+            var sinks = new List<FileSink>();
             var copyBuf = new byte[16384];
+
+            CreateSinks(sinks);
 
             while (await _pendingFiles.OutputAvailableAsync()) {
                 var file = await _pendingFiles.ReceiveAsync();
@@ -92,30 +99,36 @@ namespace AnvilPacker.Container
             }
 
             foreach (var sink in sinks) {
-                sink.Finish();
+                await sink.Finish();
                 sink.Dispose();
             }
         }
 
-        private async Task<bool> Process(FileSink[] sinks, ArchiveEntry file)
+        private async Task<bool> Process(List<FileSink> sinks, ArchiveEntry file)
         {
             foreach (var sink in sinks) {
                 if (sink.Accepts(file.Name, file.Size)) {
                     try {
-                        await sink.Process(file.Name, GetProgressListener(sink));
+                        _logger.Info("Processing '{0}'", file.Name);
+
+                        var progress = GetProgressListener(sink);
+                        await sink.Process(file.Name, progress);
+                        progress.Report(1.0);
+
+                        _logger.Trace("...processed '{0}'", file.Name);
                         return true;
                     } catch (Exception ex) {
-                        _logger.Error(ex, "Failed to process file '{0}', copying as is...", file.Name);
+                        _logger.Error(ex, "Failed to process file '{0}', copying as is.", file.Name);
+                        return false;
                     }
-                    break;
                 }
             }
             return false;
         }
         private async Task CopyToOutput(string filename, byte[] buf)
         {
-            using var ins = _inArchive.Open(filename);
-            using var outs = _outArchive.Create(filename);
+            using var ins = await OpenInput(filename);
+            using var outs = await CreateOutput(filename);
 
             while (true) {
                 int bytesRead = await ins.ReadAsync(buf, 0, buf.Length);
@@ -139,14 +152,34 @@ namespace AnvilPacker.Container
             return task.CreateProgressListener();
         }
 
+        internal Task<Stream> OpenInput(string name)
+        {
+            return Task.FromResult(_inArchive.Open(name));
+        }
+        internal async Task<Stream> CreateOutput(string name, CompressionLevel compLevel = CompressionLevel.Optimal)
+        {
+            if (_outArchive.SupportsSimultaneousWrites) {
+                return _outArchive.Create(name, compLevel);
+            }
+            _logger.Trace("Acquiring entry lock for {0}", name);
+            await _outEntryAvailEvent.WaitAsync();
+            _logger.Trace("...entry lock acquired {0}", name);
+            
+            var stream = _outArchive.Create(name, compLevel);
+            return new TrackedStream(stream, () => {
+                _logger.Trace("Releasing entry lock for {0}", name);
+                _outEntryAvailEvent.Set();
+            }, false);
+        }
+
         /// <summary> 
         /// Called before processing files. 
-        /// This method should write/read metadata, and init <see cref="_world"/>. 
+        /// This method should write/read metadata, and init <see cref="_world"/>, <see cref="_meta"/>. 
         /// </summary>
         protected virtual Task Begin() => Task.CompletedTask;
         protected virtual Task End() => Task.CompletedTask;
-        
-        protected abstract FileSink[] CreateSinks();
+
+        protected abstract void CreateSinks(List<FileSink> sinks);
 
         public virtual void Dispose()
         {

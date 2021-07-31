@@ -1,13 +1,13 @@
 #nullable enable
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using AnvilPacker.Container.Sinks;
 using AnvilPacker.Encoder;
-using AnvilPacker.Encoder.Transforms;
 using AnvilPacker.Level;
 using AnvilPacker.Util;
 using Newtonsoft.Json;
@@ -31,13 +31,11 @@ namespace AnvilPacker.Container
             return Task.CompletedTask;
         }
 
-        protected override FileSink[] CreateSinks()
+        protected override void CreateSinks(List<FileSink> sinks)
         {
-            return new FileSink[] {
-                new RegionDecSink(this, _decoderSettings),
-                new BlobDecSink(this),
-                new MetadataDisposerSink(this)
-            };
+            sinks.Add(new RegionDecSink(this, _decoderSettings));
+            sinks.Add(new BlobDecSink(this));
+            sinks.Add(new MetadataDisposerSink(this));
         }
 
         private void ReadMetadata()

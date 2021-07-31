@@ -12,14 +12,25 @@ namespace AnvilPacker.Container.Sinks
 {
     public abstract class BlobSink : FileSink
     {
+        /* Blob format:
+         *
+         * u8 Version = 0;
+         * Entries { //stream of entries; stops when Type==End. compressed with Brotli.
+         *   u8 Type;       //End=0, Plain=1, Gzipped=2
+         *   utf8 Name;     //null terminated
+         *   vuint DataLen;
+         *   byte[] Data;
+         * }
+         */
         protected const int MAX_BLOB_SIZE = 1024 * 1024 * 4;
-        protected const int MAX_ENTRY_SIZE = 1024 * 64;
+        protected const int MAX_ENTRY_SIZE = 1024 * 128;
 
         protected DeflateHelper _deflater = new DeflateHelper(MAX_BLOB_SIZE, MAX_BLOB_SIZE);
 
         protected static readonly string[] FILE_EXTS = {
-            ".json", ".dat", ".nbt", ".mcfunction",
-            ".yml", ".yaml", ".toml",
+            ".json", ".dat", ".dat_old", ".nbt", ".mcfunction",
+            ".mcmeta", ".yml", ".yaml", ".toml",
+            //.txt left out because it could have important info
         };
 
         protected BlobSink(PackProcessor packer) 
@@ -63,12 +74,12 @@ namespace AnvilPacker.Container.Sinks
             var (type, data) = DetectType(rawData, filename);
 
             if (data.Length > MAX_BLOB_SIZE * 3 / 4) {
-                using var outs = OpenDrain(filename);
+                using var outs = await OpenDrain(filename);
                 await outs.WriteAsync(rawData);
                 return;
             }
             if (_mem.Position + data.Length > MAX_BLOB_SIZE) {
-                Flush();
+                await Flush();
             }
             var stream = _compr!;
             stream.WriteByte((byte)type);
@@ -79,7 +90,7 @@ namespace AnvilPacker.Container.Sinks
 
         private async Task<Memory<byte>> ReadData(string filename)
         {
-            using var stream = OpenFaucet(filename);
+            using var stream = await OpenFaucet(filename);
             int pos = 0;
             int len = (int)stream.Length;
             var inBuf = _deflater.AllocInBuffer(len).Array!;
@@ -112,16 +123,16 @@ namespace AnvilPacker.Container.Sinks
             }
         }
 
-        private void Flush(bool reset = true)
+        private async Task Flush(bool reset = true)
         {
             if (_mem.Position <= 0) return;
 
             _compr!.WriteByte(0); //end
             _compr!.Dispose();
 
-            var blobName = Path.Combine(PackProcessor.BLOB_BASE_DIR, _packer.NextBlobId().ToString());
-            using (var stream = OpenDrain(blobName, CompressionLevel.NoCompression)) {
-                stream.Write(_mem.BufferSpan);
+            var blobName = Path.Combine(PackProcessor.BASE_BLOB_DIR, _packer.NextBlobId().ToString());
+            using (var stream = await OpenDrain(blobName, CompressionLevel.NoCompression)) {
+                await stream.WriteAsync(_mem.BufferMem);
             }
             if (reset) {
                 _mem.Clear();
@@ -134,9 +145,9 @@ namespace AnvilPacker.Container.Sinks
             _compr = Compressors.NewBrotliEncoder(_mem, true, 6, 22);
         }
 
-        public override void Finish()
+        public override Task Finish()
         {
-            Flush(false);
+            return Flush(false);
         }
     }
     public class BlobDecSink : BlobSink
@@ -147,11 +158,11 @@ namespace AnvilPacker.Container.Sinks
         }
 
         public override bool Accepts(string filename, long length)
-            => Utils.IsSubPath(PackProcessor.BLOB_BASE_DIR, filename);
+            => Utils.IsSubPath(PackProcessor.BASE_BLOB_DIR, filename);
 
-        public override Task Process(string filename, IProgress<double> progress)
+        public override async Task Process(string filename, IProgress<double> progress)
         {
-            using var inStream = OpenFaucet(filename);
+            using var inStream = await OpenFaucet(filename);
             int version = inStream.ReadByte();
             Ensure.That(version <= 0, "Unsupported blob version");
 
@@ -175,10 +186,10 @@ namespace AnvilPacker.Container.Sinks
                     default: throw new NotSupportedException();
                 }
 
-                using var outs = OpenDrain(name);
-                outs.Write(buffer);
+                using (var outs = await OpenDrain(name)) {
+                    await outs.WriteAsync(buffer);
+                }
             }
-            return Task.CompletedTask;
         }
     }
 }

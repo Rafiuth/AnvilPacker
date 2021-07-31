@@ -1,6 +1,7 @@
 #nullable enable
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -18,6 +19,7 @@ namespace AnvilPacker.Container
     {
         readonly TransformPipe _transforms;
         readonly RegionEncoderSettings _encoderSettings;
+        readonly bool _enableBlobs = true;
 
         public WorldPacker(string worldPath, string packPath, TransformPipe transforms, RegionEncoderSettings encoderSettings)
             : base(worldPath, packPath)
@@ -40,12 +42,12 @@ namespace AnvilPacker.Container
             return Task.CompletedTask;
         }
 
-        protected override FileSink[] CreateSinks()
+        protected override void CreateSinks(List<FileSink> sinks)
         {
-            return new FileSink[] {
-                new RegionEncSink(this, _transforms, _encoderSettings),
-                new BlobEncSink(this)
-            };
+            sinks.Add(new RegionEncSink(this, _transforms, _encoderSettings));
+            if (_enableBlobs) {
+                sinks.Add(new BlobEncSink(this));
+            }
         }
 
         private void WriteMetadata()

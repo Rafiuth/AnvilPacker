@@ -20,6 +20,7 @@ namespace AnvilPacker.Level
         private const int MAX_COMPRESSED_CHUNK_SIZE = 256 * 4096; //1MB / .mca hard limit
 
         private readonly DataWriter _s;
+        private readonly bool _leaveOpen;
         // Chunk index table. each entry is encoded as: `sectorId << 8 | sectorCount`
         private int[] _locations = new int[1024];
         private bool _headerDirty = true;
@@ -33,9 +34,14 @@ namespace AnvilPacker.Level
         {
         }
         public RegionWriter(string filename)
+            : this(File.Create(filename))
         {
-            _s = new DataWriter(File.Create(filename));
+        }
+        public RegionWriter(Stream stream, bool leaveOpen = false)
+        {
+            _s = new DataWriter(stream);
             _s.Position = 8192;
+            _leaveOpen = leaveOpen;
         }
 
         public void WriteHeader()
@@ -124,7 +130,9 @@ namespace AnvilPacker.Level
         public void Dispose()
         {
             WriteHeader();
-            _s.Dispose();
+            if (!_leaveOpen) {
+                _s.Dispose();
+            }
             _chunkBuf.Dispose();
             _zlibEnc.Dispose();
         }
