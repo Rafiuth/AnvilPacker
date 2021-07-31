@@ -5,6 +5,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using AnvilPacker.Level;
+using AnvilPacker.Util;
 
 namespace AnvilPacker.Encoder.Transforms
 {
@@ -18,8 +19,8 @@ namespace AnvilPacker.Encoder.Transforms
         };
 
         public static TransformPipe Empty { get; } = new(Enumerable.Empty<TransformBase>());
-        
-        //Example: "hidden_block_removal{samples=64,radius=3,cum_freqs=false,whitelist=['stone',dirt,4]},predict_upgrade_data"
+
+        //Example: "remove_hidden_blocks{samples=64,radius=3,cum_freqs=false,whitelist=['stone',dirt,4]},predict_upgrade_data"
         //Syntax is similar to JSON5
         private static readonly SettingParser _parser = new SettingParser(
             rootType: typeof(TransformPipe), 

@@ -1,4 +1,6 @@
-﻿using System;
+﻿#nullable enable
+
+using System;
 using System.IO;
 using System.Linq;
 using AnvilPacker.Cli;
@@ -28,7 +30,7 @@ namespace AnvilPacker
                 s.HelpWriter = null;
             });
             var result = parser.ParseArguments(
-                args, 
+                args,
                 programs.Select(p => p.OptsType).ToArray()
             );
             if (result is Parsed<object> parsed) {

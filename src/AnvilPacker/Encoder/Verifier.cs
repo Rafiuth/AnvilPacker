@@ -4,38 +4,50 @@ using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using AnvilPacker.Data;
 using AnvilPacker.Level;
+using AnvilPacker.Util;
 
-namespace AnvilPacker
+namespace AnvilPacker.Encoder
 {
     public class Verifier
     {
         public static unsafe string HashBlocks(RegionBuffer region)
         {
-            using var hash = SHA256.Create();
-            var buf = new byte[4096 * sizeof(BlockId)];
+            using var hasher = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+            var header = new byte[16];
+            Mem.WriteLE(header, 0, 0xABCD0001);
+
             foreach (var section in ChunkIterator.GetSections(region)) {
-                MemoryMarshal.AsBytes(section.Blocks.AsSpan()).CopyTo(buf);
-                hash.TransformBlock(buf, 0, buf.Length, null, 0);
+                Mem.WriteLE(header, 4, section.X);
+                Mem.WriteLE(header, 8, section.Y);
+                Mem.WriteLE(header, 12, section.Z);
+                hasher.AppendData(header);
+                hasher.AppendData(MemoryMarshal.AsBytes(section.Blocks.AsSpan()));
             }
-            hash.TransformFinalBlock(new byte[0], 0, 0);
-            return BitConverter.ToString(hash.Hash).Replace("-", "");
+            var hash = hasher.GetCurrentHash();
+            return BitConverter.ToString(hash).Replace("-", "");
         }
 
         public static unsafe string HashLight(RegionBuffer region)
         {
-            using var hash = SHA256.Create();
+            using var hasher = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+            var header = new byte[16];
+            Mem.WriteLE(header, 0, 0xABCD0002);
+
             foreach (var section in ChunkIterator.GetSections(region)) {
+                Mem.WriteLE(header, 4, section.X);
+                Mem.WriteLE(header, 8, section.Y);
+                Mem.WriteLE(header, 12, section.Z);
+                hasher.AppendData(header);
+
                 if (section.BlockLight != null) {
-                    var buf = section.BlockLight.Data;
-                    hash.TransformBlock(buf, 0, buf.Length, null, 0);
+                    hasher.AppendData(section.BlockLight.Data);
                 }
                 if (section.SkyLight != null) {
-                    var buf = section.SkyLight.Data;
-                    hash.TransformBlock(buf, 0, buf.Length, null, 0);
+                    hasher.AppendData(section.SkyLight.Data);
                 }
             }
-            hash.TransformFinalBlock(new byte[0], 0, 0);
-            return BitConverter.ToString(hash.Hash).Replace("-", "");
+            var hash = hasher.GetCurrentHash();
+            return BitConverter.ToString(hash).Replace("-", "");
         }
 
         public static bool CompareBlocks(RegionBuffer r1, RegionBuffer r2)
