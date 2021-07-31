@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -10,54 +11,60 @@ namespace AnvilPacker.Tests
 {
     public class DataArchiveTests
     {
-        [Fact]
-        public void Test()
-        {
-            if (File.Exists("test_data_archive.zip")) {
-                File.Delete("test_data_archive.zip");
-            }
-            TestArchive("test_data_archive.zip", typeof(ZipArchiveWriter), typeof(ZipArchiveReader));
+        private static byte[] UTF(string s) => Encoding.UTF8.GetBytes(s);
+        private static readonly (string Name, byte[] Data)[] Entries = {
+            ("lorem.txt",   UTF("Lorem ipsum, dolor sit amet. Nihil vero eos eum dolores porro.")),
+            ("fox.txt",     UTF("The quick brown fox jumped over the lazy dog.")),
+            ("abc.txt",     UTF("abcdefghijklmnopqrstuvwxyz\nABCDEFGIJKLMNOPQRSTUVWXYZ\n0123456789")),
+            ("junk.txt",    UTF("Junk 123\nBinary \x02\x01\n\náéióú\nUnicode: 💁👌🎍😍\nEnd")),
+            ("large.bin",   new byte[1024 * 1024 * 8])
+        };
 
-            if (Directory.Exists("test_data_archive_fs")) {
-                Directory.Delete("test_data_archive_fs", true);
-            }
-            TestArchive("test_data_archive_fs", typeof(FileSystemArchiveWriter), typeof(FileSystemArchiveReader));
-        }
-
+        [InlineData("test_archive.zip", typeof(ZipArchiveWriter), typeof(ZipArchiveReader))]
+        [InlineData("test_archive_fs", typeof(FileSystemArchiveWriter), typeof(FileSystemArchiveReader))]
+        [Theory]
         private void TestArchive(string filename, Type expWriterType, Type expReaderType)
         {
-            var entries = new (string Name, string Data)[] {
-                ("lorem.txt", "Lorem ipsum, dolor sit amet. Nihil vero eos eum dolores porro."),
-                ("fox.txt", "The quick brown fox jumped over the lazy dog.")
-            };
-            using (var writer = DataArchive.Create(filename)) {
-                Assert.IsType(expWriterType, writer);
-
-                foreach (var (name, data) in entries) {
-                    using var sw = writer.Create(name);
-                    sw.Write(Encoding.UTF8.GetBytes(data));
-                }
+            if (File.Exists(filename)) {
+                File.Delete(filename);
+            } else if (Directory.Exists(filename)) {
+                Directory.Delete(filename, true);
             }
 
-            using (var reader = DataArchive.Open(filename)) {
-                Assert.IsType(expReaderType, reader);
+            TestWriter(filename, expWriterType);
+            TestReader(filename, expReaderType);
+        }
 
-                foreach (var entry in reader.ReadEntries()) {
-                    var text = entries.First(e => e.Name == entry.Name).Data;
-                    var data = Encoding.UTF8.GetBytes(text);
+        private void TestReader(string filename, Type expType)
+        {
+            using var reader = DataArchive.Open(filename);
+            Assert.IsType(expType, reader);
 
-                    Assert.Equal(entry.Size, data.Length);
+            foreach (var entry in reader.ReadEntries()) {
+                var data = Entries.First(e => e.Name == entry.Name).Data;
 
-                    using var sr = reader.Open(entry.Name);
-                    var buf = new byte[4096];
-                    int pos = 0;
-                    while (true) {
-                        int read = sr.Read(buf, pos, buf.Length - pos);
-                        if (read <= 0) break;
-                        pos += read;
-                    }
-                    Assert.Equal(data, buf[0..data.Length]);
+                Assert.Equal(entry.Size, data.Length);
+
+                using var sr = reader.Open(entry.Name);
+                var buf = new byte[data.Length];
+                int pos = 0;
+                while (true) {
+                    int read = sr.Read(buf, pos, buf.Length - pos);
+                    if (read <= 0) break;
+                    pos += read;
                 }
+                Assert.True(data.AsSpan().SequenceEqual(buf));
+            }
+        }
+
+        private void TestWriter(string filename, Type expType)
+        {
+            using var writer = DataArchive.Create(filename);
+            Assert.IsType(expType, writer);
+
+            foreach (var (name, data) in Entries) {
+                using var sw = writer.Create(name);
+                sw.Write(data);
             }
         }
     }
