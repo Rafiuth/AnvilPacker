@@ -73,6 +73,8 @@ Optional:
                             Only affects chunks whose light was stripped.
 ```
 
+---
+
 ## Setting notation
 Some settings are passed in a JSON-like syntax. The main differences are:
 - Properties are not quotted.
@@ -114,9 +116,18 @@ Reproducible data (lighting and heightmaps) can be encoded in one of the followi
 
 The decoder needs to know certain block attributes such as light emission/opacity and heightmap opacity to reconstruct this data. The encoder will source them from either a registry of known vanilla blocks, or estimate them based on existing data.
 
-In some cases, those estimated values will be inaccurate, which may cause wrong or glitchy lighting in the decoded world. If the target world version is >= 1.14.4, the decoder can be configured to leave the light data to be recomputed by the game using `--dont-lit`, which may degrade loading speed [unconfirmed], see [Starlight](https://github.com/Tuinity/Starlight) if you are interested.
+In some cases, the estimated values will be inaccurate, which may result in wrong or glitchy lighting in the decoded world. If the target world version is >= 1.14.4, the decoder can be configured to leave the light data to be recomputed by the game using `--dont-lit`. This may degrade loading speed [unconfirmed], but will always produce correct results. [Starlight](https://github.com/Tuinity/Starlight) could be used to speedup load times.
 
-For lighting, the default is `normal` because the current decoder implementation doesn't handle block shapes.
+For lighting, the default is `keep` because the current decoder implementation doesn't handle block shapes.
+
+## Solid Compression
+By default, some files are concatenated together, and compressed into "blobs". This can be disabled with the `--no-blobs` switch.
+
+The following conditions determine whether a file will be solid compressed:
+- Must be smaller than 128KB
+- Extension must be one of: `.json .dat .dat_old .nbt .mcfunction .mcmeta .yml .yaml .toml`
+
+Compressed NBT files (or any gzipped file) are uncompressed before they are recompressed.
 
 ## Block Codecs
 

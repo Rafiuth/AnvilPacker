@@ -6,6 +6,8 @@ AnvilPacker is a tool for compressing Minecraft worlds for long term storage. It
 - Supports versions Java Edition `1.2.1` up to `1.17.1` (except 1.17+ worlds with increased height)
 - Lossless and lossy-ish compression
 - As fast as LZMA2 on the maximum level
+- Lighting and heightmaps can be stripped and recomputed during decode
+- Solid compression of small files (playerdata, datapacks, etc.)
 
 # Benchmarks
 
@@ -47,10 +49,8 @@ See [USAGE.md](https://github.com/Rafiuth/AnvilPacker/blob/main/USAGE.md)
 AnvilPacker uses a custom compression algorithm to compress block data, which is based on context modeling and arithmetic coding. It can deliver significantly smaller files, and is generally faster than general purpose algorithms, even at slower settings.
 
 # Planned
-- Remove reproducible data such as lighting and heightmaps
-- Compress smaller data files together (playerdata, datapacks, etc.)
-- Support for BE/PE worlds
 - Ingame decoder mod
+- Support for BE/PE worlds
 
 # Related Projects
 - [mc_recompress](https://github.com/pruby/mc_recompress)
