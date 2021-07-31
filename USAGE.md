@@ -45,7 +45,8 @@ Optional:
                             the specified file.
 --preset <name>             Specifies which preset to use.
 --transform-pipe <pipe>     A transform pipe string to apply in regions.
---encoder-opts <name>       Specifies the encoder settings.
+--encoder-opts <opts>       Specifies the encoder settings.
+--no-blobs                  Disable solid compression of small files.
 
 Planned:
 --add-transforms <pipe>     Adds a transform to the existing (preset) pipeline.

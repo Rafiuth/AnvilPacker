@@ -36,6 +36,9 @@ namespace AnvilPacker.Cli
 
         [Option("encoder-opts", HelpText = "Sets the region encoder options.")]
         public string EncoderOpts { get; set; }
+
+        [Option("no-blobs", HelpText = "Disable solid compression of small files.")]
+        public bool NoBlobs { get; set; } = false;
     }
 
     [Verb("unpack", HelpText = "Decompresses a given world.")]

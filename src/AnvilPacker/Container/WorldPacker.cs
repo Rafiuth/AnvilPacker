@@ -17,35 +17,31 @@ namespace AnvilPacker.Container
 {
     public partial class WorldPacker : PackProcessor
     {
-        readonly TransformPipe _transforms;
-        readonly RegionEncoderSettings _encoderSettings;
-        readonly bool _enableBlobs = true;
+        readonly WorldPackerSettings _settings;
 
-        public WorldPacker(string worldPath, string packPath, TransformPipe transforms, RegionEncoderSettings encoderSettings)
+        public WorldPacker(string worldPath, string packPath, WorldPackerSettings settings)
             : base(worldPath, packPath)
         {
-            _transforms = transforms;
-            _encoderSettings = encoderSettings;
-
-            _meta = new() {
-                Version = GetInfoVersion(),
-                DataVersion = 1,
-                Transforms = _transforms.OfType<ReversibleTransform>().Reverse().ToList(),
-                Timestamp = DateTimeOffset.Now
-            };
+            _settings = settings;
         }
 
         protected override Task Begin()
         {
-            WriteMetadata();
+            _meta = new() {
+                Version = GetInfoVersion(),
+                DataVersion = 1,
+                Transforms = _settings.Transforms.OfType<ReversibleTransform>().Reverse().ToList(),
+                Timestamp = DateTimeOffset.Now
+            };
             _world = new WorldInfo();
+            WriteMetadata();
             return Task.CompletedTask;
         }
 
         protected override void CreateSinks(List<FileSink> sinks)
         {
-            sinks.Add(new RegionEncSink(this, _transforms, _encoderSettings));
-            if (_enableBlobs) {
+            sinks.Add(new RegionEncSink(this, _settings.Transforms, _settings.EncoderSettings));
+            if (_settings.DisableBlobs) {
                 sinks.Add(new BlobEncSink(this));
             }
         }
@@ -58,5 +54,12 @@ namespace AnvilPacker.Container
 
             _metaJsonSerializer.Serialize(jw, _meta);
         }
+    }
+
+    public class WorldPackerSettings
+    {
+        public TransformPipe Transforms { get; init; } = null!;
+        public RegionEncoderSettings EncoderSettings { get; init; } = null!;
+        public bool DisableBlobs { get; init; }
     }
 }

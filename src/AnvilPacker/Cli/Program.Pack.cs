@@ -46,10 +46,12 @@ namespace AnvilPacker
             opts.EncoderOpts ??= preset.EncoderOpts;
             opts.TransformPipe ??= preset.TransformPipe;
 
-            var transforms = TransformPipe.Parse(opts.TransformPipe);
-            var encoderSettings = RegionEncoderSettings.Parse(opts.EncoderOpts);
-
-            using var packer = new WorldPacker(opts.Input, opts.Output, transforms, encoderSettings);
+            var settings = new WorldPackerSettings() {
+                Transforms = TransformPipe.Parse(opts.TransformPipe),
+                EncoderSettings = RegionEncoderSettings.Parse(opts.EncoderOpts),
+                DisableBlobs = opts.NoBlobs
+            };
+            using var packer = new WorldPacker(opts.Input, opts.Output, settings);
             var task = packer.Run(opts.MaxThreads);
             ShowPackerProgress(packer, task);
         }
