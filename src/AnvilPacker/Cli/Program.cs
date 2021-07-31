@@ -56,14 +56,14 @@ namespace AnvilPacker
         private static void Init(CliOptions? opts)
         {
             var config = new NLog.Config.LoggingConfiguration();
-            var minLogLevel = opts.LogLevel != null ? LogLevel.FromString(opts.LogLevel) :
+            var minLogLevel = opts?.LogLevel != null ? LogLevel.FromString(opts.LogLevel) :
 #if DEBUG
             LogLevel.Debug;
 #else
             LogLevel.Info; 
 #endif
             config.AddRule(minLogLevel, LogLevel.Fatal, BufferedConsoleLogTarget.Instance);
-            if (opts.LogFile != null) {
+            if (opts?.LogFile != null) {
                 var fileTarget = new NLog.Targets.FileTarget();
                 fileTarget.ArchiveOldFileOnStartup = false;
                 fileTarget.FileName = opts.LogFile;
@@ -94,7 +94,7 @@ namespace AnvilPacker
                     Error($"{msg} Use -y to force overwrite.");
                 }
                 Console.Write($"{msg} Overwrite? [y/n] ");
-                string res = Console.ReadLine();
+                string res = Console.ReadLine()!;
                 if (!res.StartsWithIgnoreCase("y")) {
                     Error("Cancelled");
                 }
