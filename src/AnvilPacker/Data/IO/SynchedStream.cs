@@ -3,7 +3,6 @@ using System.IO;
 
 namespace AnvilPacker.Data
 {
-
     /// <summary> Provides a wrapper around a stream that locks on a object for every operation. </summary>
     public class SynchedStream : Stream
     {

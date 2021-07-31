@@ -4,6 +4,7 @@ using System.Text;
 using AnvilPacker.Cli;
 using AnvilPacker.Data;
 using AnvilPacker.Level;
+using AnvilPacker.Util;
 
 namespace AnvilPacker
 {
@@ -67,7 +68,7 @@ namespace AnvilPacker
         private static void DumpBlocks(string input, string output)
         {
             var region = new RegionBuffer();
-            region.Load(new WorldInfo(Path.GetDirectoryName(input)), input);
+            DebugTools.LoadRegion(region, input);
             bool extendedId = region.Palette.Count > 256;
             var (minSy, maxSy) = region.GetChunkYExtents();
 
@@ -101,7 +102,7 @@ namespace AnvilPacker
         private static void DumpRawChunks(string input, string output)
         {
             var region = new RegionBuffer();
-            region.Load(new WorldInfo(Path.GetDirectoryName(input)), input);
+            DebugTools.LoadRegion(region, input);
             bool extendedId = region.Palette.Count > 256;
 
             using var fs = new DataWriter(File.Create(output));

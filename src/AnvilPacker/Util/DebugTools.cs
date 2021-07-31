@@ -30,5 +30,21 @@ namespace AnvilPacker.Util
                 }
             }
         }
+
+        public static void LoadRegion(RegionBuffer region, string filename)
+        {
+            using var reader = new RegionReader(filename);
+            region.Load(new WorldInfo(), reader, filename);
+        }
+        public static void LoadRegion(RegionBuffer region, string filename, int x, int z)
+        {
+            using var reader = new RegionReader(File.OpenRead(filename), x, z);
+            region.Load(new WorldInfo(), reader, filename);
+        }
+        public static void SaveRegion(RegionBuffer region, string filename)
+        {
+            using var writer = new RegionWriter(filename);
+            region.Save(new WorldInfo(), writer);
+        }
     }
 }

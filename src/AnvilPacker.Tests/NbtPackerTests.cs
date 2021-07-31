@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using AnvilPacker.Data;
 using AnvilPacker.Encoder.PNbt;
+using AnvilPacker.Encoder;
 using Xunit;
 
 namespace AnvilPacker.Tests

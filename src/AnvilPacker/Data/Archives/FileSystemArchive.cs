@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
+using System.IO.Enumeration;
 using System.Linq;
 using AnvilPacker.Util;
 
@@ -15,52 +16,49 @@ namespace AnvilPacker.Data.Archives
 
         public FileSystemArchiveReader(string rootPath)
         {
-            Ensure.That(Directory.Exists(rootPath), "rootPath must be a valid directory");
+            if (!Directory.Exists(rootPath)) {
+                throw new ArgumentException($"Directory '{rootPath}' does not exist.");
+            }
             _root = rootPath;
         }
 
         public IEnumerable<ArchiveEntry> ReadEntries()
         {
-            foreach (var file in Directory.EnumerateFiles(_root, "*", SearchOption.AllDirectories)) {
-                yield return new Entry(_root, file);
+            var opts = new EnumerationOptions() {
+                RecurseSubdirectories = true,
+            };
+            var enumerable = new FileSystemEnumerable<ArchiveEntry>(_root, Map, opts) {
+                ShouldIncludePredicate = Filter
+            };
+            return enumerable;
+
+            static ArchiveEntry Map(ref FileSystemEntry e)
+            {
+                var root = e.RootDirectory;
+                var dir = e.Directory.Slice(root.Length);
+                //remove leading /
+                if (!Path.EndsInDirectorySeparator(root) && dir.Length > 0) {
+                    dir = dir.Slice(1);
+                }
+                return new ArchiveEntry(Path.Join(dir, e.FileName), e.Length);
             }
-        }
-        public ArchiveEntry FindEntry(string name)
-        {
-            var path = Path.Combine(_root, name);
-            if (!File.Exists(path)) {
-                return null;
+            static bool Filter(ref FileSystemEntry e)
+            {
+                return !e.IsDirectory;
             }
-            return new Entry(_root, path);
         }
 
-        public Stream OpenEntry(ArchiveEntry entry)
+        public bool Exists(string name)
         {
-            return File.OpenRead(((Entry)entry)._fullPath);
+            return File.Exists(Path.Combine(_root, name));
+        }
+        public Stream Open(string name)
+        {
+            return File.OpenRead(Path.Combine(_root, name));
         }
 
         public void Dispose()
         {
-        }
-
-        private class Entry : ArchiveEntry
-        {
-            public readonly string _fullPath;
-
-            public override string Name { get; }
-            public override long Size { get; }
-            public override long CompressedSize => Size;
-            public override DateTimeOffset Timestamp { get; }
-
-            public Entry(string rootPath, string fullPath)
-            {
-                _fullPath = fullPath;
-                Name = Path.GetRelativePath(rootPath, fullPath);
-
-                var info = new FileInfo(fullPath);
-                Size = info.Length;
-                Timestamp = info.LastWriteTime;
-            }
         }
     }
 
@@ -72,11 +70,13 @@ namespace AnvilPacker.Data.Archives
 
         public FileSystemArchiveWriter(string rootPath)
         {
-            Ensure.That(!Directory.Exists(rootPath), "rootPath already exists");
+            if (Directory.Exists(rootPath)) {
+                throw new ArgumentException($"Directory '{rootPath}' already exists.");
+            }
             _root = rootPath;
         }
 
-        public Stream CreateEntry(string name, CompressionLevel compLevel = CompressionLevel.Optimal)
+        public Stream Create(string name, CompressionLevel compLevel = CompressionLevel.Optimal)
         {
             var path = Path.Combine(_root, name);
             Directory.CreateDirectory(Path.GetDirectoryName(path));

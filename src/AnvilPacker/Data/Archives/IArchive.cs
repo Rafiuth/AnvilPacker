@@ -13,23 +13,34 @@ namespace AnvilPacker.Data.Archives
         int EntryCount { get; }
 
         IEnumerable<ArchiveEntry> ReadEntries();
-        ArchiveEntry? FindEntry(string name);
 
-        Stream OpenEntry(ArchiveEntry entry);
+        bool Exists(string name);
+        
+        /// <exception cref="FileNotFoundException" />
+        Stream Open(string name);
     }
     public interface IArchiveWriter : IDisposable
     {
         /// <summary> Whether this archive supports writting multiple entries at the same time. </summary>
         bool SupportsSimultaneousWrites => false;
 
-        Stream CreateEntry(string name, CompressionLevel compLevel = CompressionLevel.Optimal);
+        Stream Create(string name, CompressionLevel compLevel = CompressionLevel.Optimal);
     }
 
-    public abstract class ArchiveEntry
+    public struct ArchiveEntry
     {
-        public abstract string Name { get; }
-        public abstract long Size { get; }
-        public abstract long CompressedSize { get; }
-        public abstract DateTimeOffset Timestamp { get; }
+        public string Name { get; }
+        public long Size { get; }
+
+        public ArchiveEntry(string name, long size)
+        {
+            Name = name;
+            Size = size;
+        }
+
+        public override string ToString()
+        {
+            return $"{Name} ({Size / 1024.0:0.000}KB";
+        }
     }
 }

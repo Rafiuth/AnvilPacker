@@ -10,7 +10,7 @@ using Pidgin;
 using static Pidgin.Parser;
 using static Pidgin.Parser<char>;
 
-namespace AnvilPacker
+namespace AnvilPacker.Util
 {
     //TODO: Allow whitespace
     public class SettingParser
@@ -157,6 +157,7 @@ namespace AnvilPacker
 
         public T Parse<T>(string str)
         {
+            //FIXME: will silently fail when _rootType != null && str has braces like `{prop=x}`
             var json = ParseRaw(str);
             return (T)json.ToObject(_rootType ?? typeof(T), _serializer)!;
         }

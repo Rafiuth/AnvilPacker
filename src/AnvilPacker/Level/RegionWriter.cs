@@ -20,6 +20,7 @@ namespace AnvilPacker.Level
         private const int MAX_COMPRESSED_CHUNK_SIZE = 256 * 4096; //1MB / .mca hard limit
 
         private readonly DataWriter _s;
+        private readonly bool _leaveOpen;
         // Chunk index table. each entry is encoded as: `sectorId << 8 | sectorCount`
         private int[] _locations = new int[1024];
         private bool _headerDirty = true;
@@ -28,14 +29,19 @@ namespace AnvilPacker.Level
         private byte[] _compBuf = new byte[1024 * 64];
         private ZlibCompressor _zlibEnc = new(6);
 
-        public RegionWriter(string path, int rx, int rz)
-            : this(Path.Combine(path, $"r.{rx}.{rz}.mca"))
+        public RegionWriter(string dir, int rx, int rz)
+            : this(Path.Combine(dir, $"r.{rx}.{rz}.mca"))
         {
         }
         public RegionWriter(string filename)
+            : this(File.Create(filename))
         {
-            _s = new DataWriter(File.Create(filename));
+        }
+        public RegionWriter(Stream stream, bool leaveOpen = false)
+        {
+            _s = new DataWriter(stream);
             _s.Position = 8192;
+            _leaveOpen = leaveOpen;
         }
 
         public void WriteHeader()
@@ -65,15 +71,19 @@ namespace AnvilPacker.Level
 
         public void Write(int x, int z, CompoundTag tag)
         {
+            _chunkBuf.Clear();
+            NbtIO.Write(tag, _chunkBuf);
+            Write(x, z, _chunkBuf.BufferSpan);
+        }
+        public void Write(int x, int z, Span<byte> rawData)
+        {
             ref int loc = ref _locations[GetIndex(x, z)];
             long startPos = _s.Position;
 
             Ensure.That(loc == 0, "Chunk can only be written once.");
             Debug.Assert(startPos % 4096 == 0, "File position should always be aligned to 4096 bytes.");
 
-            _chunkBuf.Clear();
-            NbtIO.Write(tag, _chunkBuf);
-            var data = Compress(_chunkBuf.BufferSpan);
+            var data = Compress(rawData);
 
             const int HDR_LEN = 5; //LEN:4 + CM:1
             loc = PackLocation(startPos, data.Length + HDR_LEN);
@@ -120,7 +130,9 @@ namespace AnvilPacker.Level
         public void Dispose()
         {
             WriteHeader();
-            _s.Dispose();
+            if (!_leaveOpen) {
+                _s.Dispose();
+            }
             _chunkBuf.Dispose();
             _zlibEnc.Dispose();
         }

@@ -19,18 +19,18 @@ namespace AnvilPacker.Data.Archives
 
         public IEnumerable<ArchiveEntry> ReadEntries()
         {
-            return _zip.Entries.Select(e => new Entry(e));
-        }
-        public ArchiveEntry FindEntry(string name)
-        {
-            var entry = _zip.GetEntry(name);
-            return entry == null ? null : new Entry(entry);
+            return _zip.Entries.Select(e => new ArchiveEntry(e.FullName, e.Length));
         }
 
-        public Stream OpenEntry(ArchiveEntry entry)
+        public bool Exists(string name)
+        {
+            return _zip.GetEntry(name) != null;
+        }
+        public Stream Open(string name)
         {
             lock (_zip) {
-                var stream = ((Entry)entry)._handle.Open();
+                var entry = _zip.GetEntry(name) ?? throw new FileNotFoundException();
+                var stream = entry.Open();
                 return new SynchedStream(stream, _zip);
             }
         }
@@ -38,21 +38,6 @@ namespace AnvilPacker.Data.Archives
         public void Dispose()
         {
             _zip.Dispose();
-        }
-
-        private class Entry : ArchiveEntry
-        {
-            public readonly ZipArchiveEntry _handle;
-
-            public override string Name => _handle.FullName;
-            public override long Size => _handle.Length;
-            public override long CompressedSize => _handle.CompressedLength;
-            public override DateTimeOffset Timestamp => _handle.LastWriteTime;
-
-            public Entry(ZipArchiveEntry entry)
-            {
-                _handle = entry;
-            }
         }
     }
 
@@ -67,7 +52,7 @@ namespace AnvilPacker.Data.Archives
             _zip = ZipFile.Open(path, ZipArchiveMode.Create);
         }
 
-        public Stream CreateEntry(string name, CompressionLevel compLevel = CompressionLevel.Optimal)
+        public Stream Create(string name, CompressionLevel compLevel = CompressionLevel.Optimal)
         {
             var entry = _zip.CreateEntry(name, compLevel);
             return entry.Open();

@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using AnvilPacker.Cli;
+using AnvilPacker.Container;
 using AnvilPacker.Encoder;
 using AnvilPacker.Encoder.Transforms;
 

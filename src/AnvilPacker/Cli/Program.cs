@@ -1,7 +1,10 @@
-﻿using System;
+﻿#nullable enable
+
+using System;
 using System.IO;
 using System.Linq;
 using AnvilPacker.Cli;
+using AnvilPacker.Container;
 using AnvilPacker.Level;
 using AnvilPacker.Util;
 using CommandLine;
@@ -27,7 +30,7 @@ namespace AnvilPacker
                 s.HelpWriter = null;
             });
             var result = parser.ParseArguments(
-                args, 
+                args,
                 programs.Select(p => p.OptsType).ToArray()
             );
             if (result is Parsed<object> parsed) {
@@ -40,7 +43,7 @@ namespace AnvilPacker
                 var text = HelpText.AutoBuild(
                     result,
                     err => {
-                        err.Heading = "AnvilPacker v" + WorldPacker.GetInfoVersion();
+                        err.Heading = "AnvilPacker v" + PackProcessor.GetInfoVersion();
                         err.AdditionalNewLineAfterOption = false;
                         err.Copyright = "";
                         return err;
