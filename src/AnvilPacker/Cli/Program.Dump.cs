@@ -128,7 +128,7 @@ namespace AnvilPacker
 
         private static NbtTag ReadFileAsNbt(string path)
         {
-            var dr = new DataReader(File.OpenRead(path));
+            using var dr = new DataReader(File.OpenRead(path));
 
             try {
                 if (dr.ReadUShortBE() == 0x1F8B) {
@@ -147,11 +147,10 @@ namespace AnvilPacker
             } catch (Exception ex) {
                 _logger.Debug(ex, "Failed to read uncompressed NBT tag.");
             }
-            dr.Dispose();
 
             try {
                 _logger.Debug("Trying to read anvil region...");
-                using var region = new RegionReader(path);
+                using var region = new RegionReader(dr.BaseStream, 0, 0);
                 var tags = new ListTag();
                 foreach (var (tag, x, z) in region.ReadAll()) {
                     tags.Add(tag);

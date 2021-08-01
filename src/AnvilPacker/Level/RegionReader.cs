@@ -40,6 +40,8 @@ namespace AnvilPacker.Level
         public RegionReader(Stream stream, int x, int z, bool leaveOpen = false)
         {
             Ensure.That(stream.CanSeek, "Stream must be seekable");
+
+            stream.Position = 0;
             _s = new DataReader(stream, leaveOpen);
             if (_s.Length >= 8192) {
                 _s.ReadBulkBE<int>(_locations);
