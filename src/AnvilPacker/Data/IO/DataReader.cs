@@ -77,9 +77,13 @@ namespace AnvilPacker.Data
         }
         private void FillBuffer()
         {
-            if (_bufPos >= _bufLen) {
+            if (_buf.Length > 0 && _bufPos >= _bufLen) {
                 _bufLen = BaseStream.Read(_buf);
                 _bufPos = 0;
+
+                if (_bufLen == 0) {
+                    throw new EndOfStreamException();
+                }
             }
         }
 
@@ -96,7 +100,7 @@ namespace AnvilPacker.Data
         [MethodImpl(NoInline)]
         private T ReadUnbuffered<T>() where T : unmanaged
         {
-            FillBuffer(); //fill buffer before so we might call Read() once
+            FillBuffer();
             Unsafe.SkipInit(out T value);
             ReadBytes(Mem.CreateSpan<T, byte>(ref value, 1));
             return value;
@@ -168,29 +172,6 @@ namespace AnvilPacker.Data
         public void ReadBytes(byte[] buffer, int offset, int count)
         {
             ReadBytes(buffer.AsSpan(offset, count));
-        }
-
-        public void SkipBytes(int count)
-        {
-            if (BaseStream.CanSeek) {
-                Position += count;
-            } else {
-                int bufAvail = Math.Min(count, _bufLen - _bufPos);
-                if (bufAvail > 0) {
-                    _bufPos += bufAvail;
-                    count -= bufAvail;
-                }
-                if (count <= 0) return;
-
-                var buf = _buf.Length > 512 ? _buf : stackalloc byte[1024];
-                while (count > 0) {
-                    int bytesRead = BaseStream.Read(buf);
-                    if (bytesRead <= 0) {
-                        throw new EndOfStreamException();
-                    }
-                    count -= bytesRead;
-                }
-            }
         }
 
         public void ReadBulkLE<T>(Span<T> buf) where T : unmanaged
@@ -269,6 +250,47 @@ namespace AnvilPacker.Data
                     buf = newBuf;
                 }
             }
+        }
+
+        public void SkipBytes(int count)
+        {
+            if (BaseStream.CanSeek) {
+                Position += count;
+            } else {
+                int bufAvail = Math.Min(count, _bufLen - _bufPos);
+                if (bufAvail > 0) {
+                    _bufPos += bufAvail;
+                    count -= bufAvail;
+                }
+                if (count <= 0) return;
+
+                var buf = _buf.Length > 512 ? _buf : stackalloc byte[1024];
+                while (count > 0) {
+                    int bytesRead = BaseStream.Read(buf);
+                    if (bytesRead <= 0) {
+                        throw new EndOfStreamException();
+                    }
+                    count -= bytesRead;
+                }
+            }
+        }
+
+        /// <summary> Returns a subview of the current reader. </summary>
+        /// <remarks> This reader should not be used until the returned object is disposed. </remarks>
+        public DataReader Slice(int length)
+        {
+            Stream stream;
+            if (BaseStream is StreamWrapper sw) {
+                //avoid nesting streams, each level could have a buffer copy
+                if (length > sw._remainingBytes) {
+                    throw new EndOfStreamException();
+                }
+                sw._remainingBytes -= length;
+                stream = sw._dr.AsStream(length);
+            } else {
+                stream = AsStream(length);
+            }
+            return new DataReader(stream, false);
         }
     }
 }

@@ -19,9 +19,9 @@ namespace AnvilPacker.Data
 
         private class StreamWrapper : Stream
         {
-            private DataReader _dr;
+            internal DataReader _dr;
             private bool _leaveOpen;
-            private long _remainingBytes;
+            internal long _remainingBytes;
             private long _length;
 
             private byte[] _buf => _dr._buf;

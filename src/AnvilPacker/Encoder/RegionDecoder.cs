@@ -40,7 +40,7 @@ namespace AnvilPacker.Encoder
                 ReadMetadata(dw);
             });
             ReadPart(stream, "Blocks", false, dw => {
-                _blockCodec.Decode(stream, CodecProgressListener.MaybeCreate(_blockCount, progress));
+                _blockCodec.Decode(dw, CodecProgressListener.MaybeCreate(_blockCount, progress));
             });
 
             if (_heightmapMode != RepDataEncMode.Strip) {
@@ -435,11 +435,11 @@ namespace AnvilPacker.Encoder
             long startTime = Stopwatch.GetTimestamp();
 
             if (compressed) {
-                using var comp = Compressors.NewBrotliDecoder(stream.AsStream(length), true);
-                readContents(comp);
+                using var pr = Compressors.NewBrotliDecoder(stream.AsStream(length), true);
+                readContents(pr);
             } else {
-                //TODO: limit by length
-                readContents(stream);
+                using var pr = stream.Slice(length);
+                readContents(pr);
             }
             long endTime = Stopwatch.GetTimestamp();
             long timeMillis = (endTime - startTime) * 1000 / Stopwatch.Frequency;
