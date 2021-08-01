@@ -67,7 +67,7 @@ namespace AnvilPacker
                 var fileTarget = new NLog.Targets.FileTarget();
                 fileTarget.ArchiveOldFileOnStartup = false;
                 fileTarget.FileName = opts.LogFile;
-                fileTarget.Layout = "[${level:uppercase=true} ${logger:shortName=true}] ${replace-newlines:replacement=\n:${message}} ${exception:format=toString}";
+                fileTarget.Layout = "[${level:uppercase=true} ${logger:shortName=true}#${threadid}] ${replace-newlines:replacement=\n:${message}} ${exception:format=toString}";
                 config.AddRule(minLogLevel, LogLevel.Fatal, fileTarget);
             }
             NLog.LogManager.Configuration = config;

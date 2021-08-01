@@ -25,13 +25,13 @@ namespace AnvilPacker.Container.Sinks
         protected const int MAX_BLOB_SIZE = 1024 * 1024 * 4;
         protected const int MAX_ENTRY_SIZE = 1024 * 128;
 
-        protected DeflateHelper _deflater = new DeflateHelper(MAX_BLOB_SIZE, MAX_BLOB_SIZE);
-
         protected static readonly string[] FILE_EXTS = {
             ".json", ".dat", ".dat_old", ".nbt", ".mcfunction",
             ".mcmeta", ".yml", ".yaml", ".toml",
             //.txt left out because it could have important info
         };
+
+        protected DeflateHelper _deflater = new DeflateHelper(MAX_BLOB_SIZE, MAX_BLOB_SIZE);
 
         protected BlobSink(PackProcessor packer) 
             : base(packer)

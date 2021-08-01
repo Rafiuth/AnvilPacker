@@ -10,8 +10,9 @@ namespace AnvilPacker.Data
     /// </summary>
     //this is about 1.3x slower than PackedBitStorage (random access)
     //using a div by const thing like Minecraft does might improve it (see libdivide)
-
-    // bit[i] = (data[i / elemBits] >> (i % elemBits)) & mask
+    
+    // valsPerLong = 64 / elemBits
+    // val[i] = (data[i / valsPerLong] >> ((i % valsPerLong) * elemBits)) & mask
     public class SparseBitStorage : IBitStorage
     {
         public long[] Data { get; }

@@ -105,7 +105,7 @@ namespace AnvilPacker.Encoder
             }
 
             if (hasDynamicBlocks) {
-                _logger.Info($"Found dynamic blocks in {region}, estimating light attributes...");
+                _logger.Info($"Found unknown blocks in {region}, estimating light attributes...");
                 EstimateFromData(region);
             }
         }

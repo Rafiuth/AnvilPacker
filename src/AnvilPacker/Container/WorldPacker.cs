@@ -41,7 +41,7 @@ namespace AnvilPacker.Container
         protected override void CreateSinks(List<FileSink> sinks)
         {
             sinks.Add(new RegionEncSink(this, _settings.Transforms, _settings.EncoderSettings));
-            if (_settings.DisableBlobs) {
+            if (!_settings.DisableBlobs) {
                 sinks.Add(new BlobEncSink(this));
             }
         }
