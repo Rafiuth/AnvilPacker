@@ -34,7 +34,7 @@ namespace AnvilPacker.Cli
         [Option("transform-pipe", HelpText = "A list of transforms to apply in regions.")]
         public string TransformPipe { get; set; }
 
-        [Option("encoder-opts", HelpText = "Sets the region encoder options.")]
+        [Option('e', "encoder-opts", HelpText = "Sets the region encoder options.")]
         public string EncoderOpts { get; set; }
 
         [Option("no-blobs", HelpText = "Disable solid compression of small files.")]
