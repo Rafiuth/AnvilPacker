@@ -9,7 +9,7 @@
     <ProduceReferenceAssembly>false</ProduceReferenceAssembly>
     <InvariantGlobalization>true</InvariantGlobalization>
     
-    <VersionPrefix>0.8.0</VersionPrefix>
+    <VersionPrefix>0.9.0</VersionPrefix>
     <InformationalVersion Condition="'$(CommitHash)' != ''">$(VersionPrefix)-$(CommitHash)</InformationalVersion>
   </PropertyGroup>
   
