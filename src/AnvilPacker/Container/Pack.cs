@@ -90,11 +90,11 @@ namespace AnvilPacker.Container
             CreateSinks(sinks);
 
             while (await _pendingFiles.OutputAvailableAsync()) {
-                var file = await _pendingFiles.ReceiveAsync();
-                
-                if (!await Process(sinks, file)) {
-                    _logger.Info("Copying file '{0}'", file.Name);
-                    await CopyToOutput(file.Name, copyBuf);
+                while (_pendingFiles.TryReceive(out var file)) {
+                    if (!await Process(sinks, file)) {
+                        _logger.Info("Copying file '{0}'", file.Name);
+                        await CopyToOutput(file.Name, copyBuf);
+                    }
                 }
             }
 
@@ -108,21 +108,22 @@ namespace AnvilPacker.Container
         {
             foreach (var sink in sinks) {
                 if (sink.Accepts(file.Name, file.Size)) {
+                    var progress = GetProgressListener(sink);
+
                     try {
                         _logger.Info("Processing '{0}'", file.Name);
-
-                        var progress = GetProgressListener(sink);
                         await sink.Process(file.Name, progress);
-                        progress.Report(1.0);
-
                         _logger.Trace("...processed '{0}'", file.Name);
                         return true;
                     } catch (Exception ex) {
                         _logger.Error(ex, "Failed to process file '{0}', copying as is.", file.Name);
                         return false;
+                    } finally {
+                        progress.Report(1.0);
                     }
                 }
             }
+            _opaqueProgress.Inc(1.0);
             return false;
         }
         private async Task CopyToOutput(string filename, byte[] buf)
