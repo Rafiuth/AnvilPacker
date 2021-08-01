@@ -1,7 +1,6 @@
 using System;
 using System.Diagnostics;
 using System.Linq;
-using System.Numerics;
 using System.Runtime.CompilerServices;
 using AnvilPacker.Data;
 using AnvilPacker.Util;
@@ -19,12 +18,12 @@ namespace AnvilPacker.Level
 
         readonly RegionBuffer _region;
         readonly BlockLightInfo[] _lightAttribs;
-        readonly LightNode[] _queue = new LightNode[32768];
         readonly Heightmap[] _heightmaps = new Heightmap[32 * 32];
         readonly short[] _emptyHeights = new short[16 * 16]; //all values set to lowest
         readonly bool _enqueueBorders;
 
-        private SectionCache _cache = new SectionCache(0);
+        LightNode[] _queue = new LightNode[32768];
+        SectionCache _cache = new SectionCache(0);
 
         public Lighter(RegionBuffer region, BlockLightInfo[] blockAttribs, bool enqueueBorders = false)
         {
@@ -86,11 +85,11 @@ namespace AnvilPacker.Level
                 }
 
                 if (IsRegionBorder(section.X, section.Z)) {
-                    queueTail = EnqueueBorders(queue, queueTail, section, LightLayer.Block);
+                    queueTail = EnqueueBorders(queueTail, section, LightLayer.Block);
                 }
                 if (queueTail > 0) {
                     cache.SetOrigin(_region, section, LightLayer.Block);
-                    PropagateLight(cache, queue, queueTail);
+                    PropagateLight(cache, queueTail);
                 }
             }
         }
@@ -150,11 +149,11 @@ namespace AnvilPacker.Level
                 }
             }
             if (IsRegionBorder(chunk.X, chunk.Z)) {
-                queueTail = EnqueueBorders(queue, queueTail, chunk, LightLayer.Sky);
+                queueTail = EnqueueBorders(queueTail, chunk, LightLayer.Sky);
             }
             if (queueTail > 0) {
                 _cache.SetOrigin(_region, chunk, LightLayer.Sky, minY >> 4, maxY >> 4);
-                PropagateLight(_cache, queue, queueTail);
+                PropagateLight(_cache, queueTail);
             }
 
             //Fills the sky light column from minY to maxY (inclusive) with 15
@@ -195,8 +194,9 @@ namespace AnvilPacker.Level
             }
         }
 
-        private int EnqueueBorders(LightNode[] queue, int queueTail, ChunkSection section, LightLayer layer)
+        private int EnqueueBorders(int queueTail, ChunkSection section, LightLayer layer)
         {
+            var queue = _queue;
             var data = section.GetLightData(layer);
             int sy = section.Y * 16;
 
@@ -234,11 +234,11 @@ namespace AnvilPacker.Level
                 }
             }
         }
-        private int EnqueueBorders(LightNode[] queue, int queueTail, Chunk chunk, LightLayer layer)
+        private int EnqueueBorders(int queueTail, Chunk chunk, LightLayer layer)
         {
             foreach (var section in chunk.Sections) {
                 if (section != null) {
-                    queueTail = EnqueueBorders(queue, queueTail, section, layer);
+                    queueTail = EnqueueBorders(queueTail, section, layer);
                 }
             }
             return queueTail;
@@ -248,8 +248,9 @@ namespace AnvilPacker.Level
             return _enqueueBorders && (cx == 0 || cx == 31 || cz == 0 || cz == 31);
         }
 
-        private void PropagateLight(SectionCache cache, LightNode[] queue, int queueTail)
+        private void PropagateLight(SectionCache cache, int queueTail)
         {
+            var queue = _queue;
             var attrs = _lightAttribs;
             var sides = BLOCK_SIDES;
 
@@ -281,7 +282,28 @@ namespace AnvilPacker.Level
                         queue[queueTail++].Set(sx, sy, sz, newLevel);
                     }
                 }
+                if (queueTail + 8 > queue.Length) {
+                    ShiftQueue(ref queueHead, ref queueTail);
+                    queue = _queue;
+                }
             }
+        }
+
+        private void ShiftQueue(ref int queueHead, ref int queueTail)
+        {
+            var newQueue = _queue;
+            int count = queueTail - queueHead;
+
+            if (count > _queue.Length / 2) {
+                //Expand a bit if we can't get away with just a shift.
+                //This should be very rare, if it ever happens at all.
+                newQueue = new LightNode[_queue.Length + 4096];
+            }
+            Array.Copy(_queue, queueHead, newQueue, 0, count);
+
+            _queue = newQueue;
+            queueHead = 0;
+            queueTail = count;
         }
 
         private struct SectionCache
