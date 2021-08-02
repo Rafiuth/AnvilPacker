@@ -40,7 +40,7 @@ namespace AnvilPacker.Data.Archives
                 if (!Path.EndsInDirectorySeparator(root) && dir.Length > 0) {
                     dir = dir.Slice(1);
                 }
-                return new ArchiveEntry(Path.Join(dir, e.FileName), e.Length);
+                return new ArchiveEntry(Path.Join(dir, e.FileName).Replace('\\', '/'), e.Length);
             }
             static bool Filter(ref FileSystemEntry e)
             {
@@ -78,7 +78,10 @@ namespace AnvilPacker.Data.Archives
 
         public Stream Create(string name, CompressionLevel compLevel = CompressionLevel.Optimal)
         {
-            var path = Path.Combine(_root, name);
+            var path = Path.Combine(_root, name.Replace('\\', '/'));
+            if (!Utils.IsSubPath(_root, path)) {
+                throw new ArgumentException($"Entry '{name}' tried to escape root path");
+            }
             Directory.CreateDirectory(Path.GetDirectoryName(path));
             return File.Create(path);
         }

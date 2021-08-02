@@ -54,6 +54,7 @@ namespace AnvilPacker.Data.Archives
 
         public Stream Create(string name, CompressionLevel compLevel = CompressionLevel.Optimal)
         {
+            name = name.Replace('\\', '/'); //workaround for https://github.com/dotnet/runtime/issues/1553
             var entry = _zip.CreateEntry(name, compLevel);
             return entry.Open();
         }
