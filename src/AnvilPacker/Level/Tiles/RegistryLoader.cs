@@ -15,8 +15,13 @@ namespace AnvilPacker.Level
     {
         private static readonly ILogger _logger = LogManager.GetCurrentClassLogger();
 
+        private static bool _loaded = false;
+
         public static void Load()
         {
+            if (_loaded) return;
+            _loaded = true;
+            
             var sw = Stopwatch.StartNew();
 
             LoadBlocks();

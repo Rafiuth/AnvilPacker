@@ -126,5 +126,34 @@ namespace AnvilPacker.Tests
                 Assert.Equal(5678, reader.ReadIntLE());
             }
         }
+
+        [Fact]
+        public void TestSlice()
+        {
+            var data = new byte[256];
+            for (int i = 0; i < data.Length; i++) {
+                data[i] = (byte)i;
+            }
+            var reader = new DataReader(new MemoryStream(data));
+
+            var r1 = reader.Slice(128);
+            var b1 = r1.ReadBytes(64);
+            Assert.Equal(b1, data[0..64]);
+
+            var r2 = r1.Slice(64);
+            var b2 = r2.ReadBytes(64);
+            Assert.Equal(b2, data[64..128]);
+            Assert.ThrowsAny<Exception>(() => r2.ReadByte());
+
+            var r3 = reader.Slice(64);
+            var b3 = r3.ReadBytes(32);
+            Assert.Equal(b3, data[128..160]);
+
+            var b4 = r3.ReadBytes(32);
+            Assert.Equal(b4, data[160..192]);
+
+            var b5 = reader.ReadBytes(64);
+            Assert.Equal(b5, data[192..256]);
+        }
     }
 }
