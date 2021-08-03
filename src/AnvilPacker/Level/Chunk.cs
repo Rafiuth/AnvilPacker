@@ -20,7 +20,7 @@ namespace AnvilPacker.Level
 
         /// <summary> Data that the serializer doesn't know how to handle. This is the root tag from the region chunk. </summary>
         public CompoundTag? Opaque;
-        public int DataVersion;
+        public DataVersion DataVersion;
         public ChunkFlags Flags;
 
         public Chunk(int x, int z, BlockPalette palette, int initialMinY = 0, int initialMaxY = 8)

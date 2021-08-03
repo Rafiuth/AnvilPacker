@@ -18,7 +18,7 @@ namespace AnvilPacker.Level.Versions.v1_13
             
             int x = tag.Pop<int>("xPos");
             int z = tag.Pop<int>("zPos");
-            int version = rootTag.Pop<int>("DataVersion");
+            var version = (DataVersion)rootTag.Pop<int>("DataVersion");
             var chunk = new Chunk(x, z, palette);
             chunk.Opaque = rootTag;
             chunk.DataVersion = version;
@@ -36,7 +36,7 @@ namespace AnvilPacker.Level.Versions.v1_13
                 }
             }
             DeserializeHeightmaps(chunk, tag.PopMaybe<CompoundTag>("Heightmaps"));
-            chunk.SetFlag(ChunkFlags.LightDirty, version >= DataVersions.v1_14_2_pre4 && !tag.PopMaybe<bool>("isLightOn"));
+            chunk.SetFlag(ChunkFlags.LightDirty, version >= DataVersion.ForcedLightRecalc && !tag.PopMaybe<bool>("isLightOn"));
 
             //Remove legacy data from upgrated worlds
             tag.Remove("HeightMap");
@@ -113,7 +113,7 @@ namespace AnvilPacker.Level.Versions.v1_13
             tag.SetCompound("Heightmaps", SerializeHeightmaps(chunk));
 
             bool lightDirty = chunk.HasFlag(ChunkFlags.LightDirty);
-            if (chunk.DataVersion >= DataVersions.v1_14_2_pre4) {
+            if (chunk.DataVersion >= DataVersion.ForcedLightRecalc) {
                 tag.SetBool("isLightOn", !lightDirty);
             } else if (lightDirty) {
                 throw new NotSupportedException($"Light can't be maked as dirty in this chunk version (v1.13+{chunk.DataVersion})");
@@ -121,7 +121,7 @@ namespace AnvilPacker.Level.Versions.v1_13
 
             var rootTag = new CompoundTag();
             rootTag.SetCompound("Level", tag);
-            rootTag.SetInt("DataVersion", chunk.DataVersion);
+            rootTag.SetInt("DataVersion", (int)chunk.DataVersion);
             ChunkNbtUtils.MergeOpaque(chunk.Opaque, rootTag);
 
             return rootTag;
@@ -202,7 +202,7 @@ namespace AnvilPacker.Level.Versions.v1_13
         
         private static IBitStorage CreateStorage(Chunk chunk, int count, int bits, long[] data = null)
         {
-            if (chunk.DataVersion >= DataVersions.v1_16_s13) {
+            if (chunk.DataVersion >= DataVersion.v1_16_s13) {
                 return new SparseBitStorage(count, bits, data);
             } else {
                 return new PackedBitStorage(count, bits, data);

@@ -24,7 +24,7 @@ namespace AnvilPacker.Level.Versions.v1_2_1
             int z = tag.Pop<int>("zPos");
             var chunk = new Chunk(x, z, palette);
             chunk.Opaque = rootTag;
-            chunk.DataVersion = rootTag.PopMaybe<int>("DataVersion");
+            chunk.DataVersion = (DataVersion)rootTag.PopMaybe<int>("DataVersion");
 
             if (tag.TryGet("Sections", out ListTag sectList)) {
                 var localPalette = new DictionarySlim<ushort, BlockId>(64);
@@ -151,7 +151,7 @@ namespace AnvilPacker.Level.Versions.v1_2_1
 
             var rootTag = new CompoundTag();
             rootTag.SetCompound("Level", tag);
-            rootTag.SetInt("DataVersion", chunk.DataVersion);
+            rootTag.SetInt("DataVersion", (int)chunk.DataVersion);
             ChunkNbtUtils.MergeOpaque(chunk.Opaque, rootTag);
 
             return rootTag;

@@ -82,7 +82,7 @@ namespace AnvilPacker.Encoder
             }
             bool NeedsHeightmap(Chunk chunk, string type)
             {
-                if (DataVersions.IsBeforeFlattening(chunk.DataVersion)) {
+                if (chunk.DataVersion <= DataVersion.BeforeFlattening) {
                     return type == Heightmap.TYPE_LEGACY;
                 }
                 var status = chunk.Opaque?["Level"]?["Status"]?.Value<string>();
@@ -98,7 +98,7 @@ namespace AnvilPacker.Encoder
                 skipLighting = true;
 
                 foreach (var chunk in _region.ExistingChunks) {
-                    if (chunk.DataVersion >= DataVersions.v1_14_2_pre4) {
+                    if (chunk.DataVersion >= DataVersion.ForcedLightRecalc) {
                         chunk.SetFlag(ChunkFlags.LightDirty);
                     } else {
                         skipLighting = false;
@@ -196,7 +196,7 @@ namespace AnvilPacker.Encoder
 
             foreach (var chunk in _region.ExistingChunks) {
                 chunk.Flags = (ChunkFlags)stream.ReadVarUInt();
-                chunk.DataVersion = stream.ReadVarUInt();
+                chunk.DataVersion = (DataVersion)stream.ReadVarUInt();
                 chunk.Opaque = NbtIO.Read(stream);
             }
         }

@@ -34,7 +34,7 @@ namespace AnvilPacker.Encoder.Transforms
 
         private bool IsEmpty(Chunk chunk)
         {
-            if (chunk.DataVersion < DataVersions.v1_14_4) {
+            if (chunk.DataVersion < DataVersion.v1_14_4) {
                 return false; //TODO: handle legacy chunks
             }
             var level = chunk.Opaque["Level"] as CompoundTag;

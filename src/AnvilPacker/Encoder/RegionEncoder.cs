@@ -150,7 +150,7 @@ namespace AnvilPacker.Encoder
 
             foreach (var chunk in _region.ExistingChunks) {
                 stream.WriteVarUInt((int)chunk.Flags);
-                stream.WriteVarUInt(chunk.DataVersion);
+                stream.WriteVarUInt((int)chunk.DataVersion);
                 //pnbt: 39.156KB, nbt: 42.892KB
                 NbtIO.Write(chunk.Opaque, stream);
             }
