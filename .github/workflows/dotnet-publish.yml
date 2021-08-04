@@ -19,13 +19,13 @@ jobs:
 
     #TODO: find a better way to do this
     - name: Publish Win-x64
-      run: dotnet publish src/AnvilPacker -c Release -p:IsPublish=true -p:CommitHash=${GITHUB_SHA::8} -r win-x64 -o dist/win-x64 
+      run: dotnet publish src/AnvilPacker -c Release -p:IsPublish=true -p:CommitHash=${GITHUB_SHA::8} -r win-x64 -o dist/AnvilPacker-win-x64 
 
     - name: Publish Linux-x64
-      run: dotnet publish src/AnvilPacker -c Release -p:IsPublish=true -p:CommitHash=${GITHUB_SHA::8} -r linux-x64 -o dist/linux-x64 
+      run: dotnet publish src/AnvilPacker -c Release -p:IsPublish=true -p:CommitHash=${GITHUB_SHA::8} -r linux-x64 -o dist/AnvilPacker-linux-x64 
 
     - name: Publish OSX-x64
-      run: dotnet publish src/AnvilPacker -c Release -p:IsPublish=true -p:CommitHash=${GITHUB_SHA::8} -r osx-x64 -o dist/osx-x64 
+      run: dotnet publish src/AnvilPacker -c Release -p:IsPublish=true -p:CommitHash=${GITHUB_SHA::8} -r osx-x64 -o dist/AnvilPacker-osx-x64 
 
 
     - name: Zip binaries
