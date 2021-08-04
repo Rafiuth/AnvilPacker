@@ -14,7 +14,7 @@ AnvilPacker pack -i input_world/ -o compressed_world.apw
 
 Compressing a world using brotli and removing light data: (not recommended, see [RepDataEncMode](#RepDataEncMode) for details)
 ```
-AnvilPacker pack -i input_world/ -o compressed_world.apw --encoder-opts block_codec=brotli,light_enc_mode=strip
+AnvilPacker pack -i input_world/ -o compressed_world.apw -e block_codec=brotli,light_enc_mode=strip
 ```
 
 Decompressing a world:
