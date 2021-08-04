@@ -1,6 +1,9 @@
 name: Publish
 
-on: workflow_dispatch
+on:
+  push:
+    tags: [ 'v**' ]
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -16,30 +19,19 @@ jobs:
     #TODO: find a better way to do this
     - name: Publish Win-x64
       run: dotnet publish src/AnvilPacker -c Release -p:IsPublish=true -p:CommitHash=${GITHUB_SHA::8} -r win-x64 -o dist/win-x64 
-      
+
     - name: Publish Linux-x64
       run: dotnet publish src/AnvilPacker -c Release -p:IsPublish=true -p:CommitHash=${GITHUB_SHA::8} -r linux-x64 -o dist/linux-x64 
-      
+
     - name: Publish OSX-x64
       run: dotnet publish src/AnvilPacker -c Release -p:IsPublish=true -p:CommitHash=${GITHUB_SHA::8} -r osx-x64 -o dist/osx-x64 
-      
-    
-    - name: Upload Win-x64 Artifacts
-      uses: actions/upload-artifact@v2.2.4
+
+
+    - name: Zip binaries
+      run: cd dist && ls -d */ | xargs -I %1 bash -c 'p=%1; zip -r -5 ${p%/}.zip $p' && cd ..
+
+    - name: Release
+      uses: softprops/action-gh-release@v1
       with:
-        name: AnvilPacker (Windows, x64)
-        path: dist/win-x64
-    
-    - name: Upload Linux-x64 Artifacts
-      uses: actions/upload-artifact@v2.2.4
-      with:
-        name: AnvilPacker (Linux, x64)
-        path: dist/linux-x64
-        
-    - name: Upload OSX-x64 Artifacts
-      uses: actions/upload-artifact@v2.2.4
-      with:
-        name: AnvilPacker (macOS, x64)
-        path: dist/osx-x64
-        
-        
+        draft: true
+        files: 'dist/*.zip'
