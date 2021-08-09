@@ -55,6 +55,7 @@ namespace AnvilPacker.Container.Sinks
     {
         private MemoryDataWriter _mem = new(MAX_BLOB_SIZE);
         private DataWriter? _compr;
+        private int _numEntries;
 
         public BlobEncSink(PackProcessor packer)
             : base(packer)
@@ -70,7 +71,7 @@ namespace AnvilPacker.Container.Sinks
 
         public override async Task Process(string filename, IProgress<double> progress)
         {
-            var rawData = await ReadData(filename);
+            var rawData = await ReadInputData(filename);
             var (type, data) = DetectType(rawData, filename);
 
             if (data.Length > MAX_BLOB_SIZE * 3 / 4) {
@@ -86,9 +87,10 @@ namespace AnvilPacker.Container.Sinks
             stream.WriteNulString(filename);
             stream.WriteVarUInt(data.Length);
             stream.WriteBytes(data.Span);
+            _numEntries++;
         }
 
-        private async Task<Memory<byte>> ReadData(string filename)
+        private async Task<Memory<byte>> ReadInputData(string filename)
         {
             using var stream = await OpenFaucet(filename);
             int pos = 0;
@@ -125,14 +127,15 @@ namespace AnvilPacker.Container.Sinks
 
         private async Task Flush(bool reset = true)
         {
-            if (_mem.Position <= 0) return;
-
-            _compr!.WriteByte(0); //end
-            _compr!.Dispose();
-
-            var blobName = Path.Combine(PackProcessor.BASE_BLOB_DIR, _packer.NextBlobId().ToString());
-            using (var stream = await OpenDrain(blobName, CompressionLevel.NoCompression)) {
-                await stream.WriteAsync(_mem.BufferMem);
+            if (_compr != null) {
+                _compr!.WriteByte(0); //end
+                _compr!.Dispose();
+            }
+            if (_numEntries > 0) {
+                var blobName = Path.Combine(PackProcessor.BASE_BLOB_DIR, _packer.NextBlobId().ToString());
+                using (var stream = await OpenDrain(blobName, CompressionLevel.NoCompression)) {
+                    await stream.WriteAsync(_mem.BufferMem);
+                }
             }
             if (reset) {
                 _mem.Clear();
@@ -143,6 +146,7 @@ namespace AnvilPacker.Container.Sinks
         {
             _mem.WriteByte(0); //version
             _compr = Compressors.NewBrotliEncoder(_mem, true, 6, 22);
+            _numEntries = 0;
         }
 
         public override Task Finish()
