@@ -12,11 +12,14 @@ import net.minecraft.state.property.*;
 import net.minecraft.util.*;
 import net.minecraft.util.math.*;
 import net.minecraft.util.registry.*;
+import net.minecraft.util.shape.*;
 import net.minecraft.world.*;
 
 import java.io.*;
 import java.lang.reflect.*;
 import java.util.*;
+import java.util.Objects;
+import java.util.regex.*;
 import java.util.stream.*;
 
 public class Main
@@ -34,18 +37,47 @@ public class Main
         data.version = version.getName();
         data.worldVersion = version.getWorldVersion();
         data.numBlockStates = 0;
+
+        var blocks = new LinkedHashMap<XBlock, XBlock>();
         
         for (Block block : Registry.BLOCK) {
             Identifier key = Registry.BLOCK.getId(block);
-            data.blocks.add(new XBlock(key, block));
+            var xblock = new XBlock(key, block, data);
+            blocks.compute(xblock, (k, prev) -> {
+                if (prev == null) return k;
+                prev.names.add(xblock.names.get(0));
+                return prev; 
+            });
             data.numBlockStates += block.getStateManager().getStates().size();
         }
 
-        String str = new Gson().toJson(data);
+        data.blocks.addAll(blocks.keySet());
 
-        Files.write(str, new File("blocks.json"), Charsets.UTF_8);
+        var gson = new GsonBuilder()
+            .setPrettyPrinting()
+            .disableHtmlEscaping()
+            .create();
+        String json = gson.toJson(data);
+
+        //int arrays \[\s*(?:\d+\s*,\s*)*\s*\d+\s*\]
+        json = minify(json, "\\[\\s*(?:\\d+\\s*,\\s*)*\\s*\\d+\\s*\\]");
+        //string arrays \[\s*(?:\"[A-Za-z0-9 ,_\-:$]*\"\s*,\s*)*\s*\"[A-Za-z0-9 ,_\-:$]*\"\s*\]
+        json = minify(json, "\\[\\s*(?:\\\"[A-Za-z0-9 ,_\\-:$]*\\\"\\s*,\\s*)*\\s*\\\"[A-Za-z0-9 ,_\\-:$]*\\\"\\s*\\]");
+
+        Files.write(json, new File("blocks.json"), Charsets.UTF_8);
 
         System.out.println("Done");
+    }
+
+    static String minify(String json, String regex)
+    {
+        var pattern = Pattern.compile(regex);
+        var matcher = pattern.matcher(json);
+        return matcher.replaceAll(m -> {
+            String s = m.group(0);
+            s = s.replaceAll("[\\r\\n\\s]+", "").replace(",", ", ");
+            return Matcher.quoteReplacement(s);
+        });
     }
 
     static class XData
@@ -53,46 +85,66 @@ public class Main
         public String version;
         public int worldVersion;
         public int numBlockStates;
+
         public List<XBlock> blocks = new ArrayList<>();
         public Collection<XMaterial> materials = XMaterial.known.values();
     }
     static class XBlock
     {
-        public String name;
-        public int minStateId, maxStateId;
+        public List<String> names = new ArrayList<>();
+        public int numStates;
         public int defaultStateId;
         public String material;
         public List<XBlockProperty> properties = new ArrayList<>();
         public XBlockStates states;
 
-        public XBlock(Identifier key, Block block)
+        public XBlock(Identifier key, Block block, XData data)
         {
-            name = key.getPath();
+            var name = key.getPath();
             if (!key.getNamespace().equals("minecraft")) {
                 name = key.toString();
             }
+            names.add(name);
+
             StateManager<Block, BlockState> stateMgr = block.getStateManager();
-            
-            minStateId = Integer.MAX_VALUE;
-            maxStateId = 0;
+
+            int minStateId = Integer.MAX_VALUE;
             for (BlockState bs : stateMgr.getStates()) {
                 int id = Block.getRawIdFromState(bs);
                 minStateId = Math.min(minStateId, id);
-                maxStateId = Math.max(maxStateId, id);
             }
-            
+            numStates = stateMgr.getStates().size();
             states = new XBlockStates(block);
+            BlockState defaultState = block.getDefaultState();
+
+            defaultStateId = Block.getRawIdFromState(defaultState) - minStateId;
 
             for (Property<?> prop : block.getStateManager().getProperties()) {
                 properties.add(XBlockProperty.create(prop));
             }
-            BlockState defaultState = block.getDefaultState();
-
-            defaultStateId = Block.getRawIdFromState(defaultState);
 
             material = XMaterial.known.computeIfAbsent(defaultState.getMaterial(), v -> {
-                throw new IllegalStateException("Unknown material for block " + name);
+                throw new IllegalStateException("Unknown material for block " + key);
             }).name;
+        }
+        
+        //Java records are so bad -
+        //you can't have hierarchies, no extra ctors, THE BRACES ARE REQUIRED
+        //like wtf, i'd rather use lombok
+        @Override
+        public boolean equals(Object obj)
+        {
+            return obj instanceof XBlock b && 
+                   b.defaultStateId == defaultStateId &&
+                   b.numStates == numStates && 
+                   b.material.equals(material) &&
+                   b.properties.equals(properties) &&
+                   b.states.equals(states);
+        }
+        @Override
+        public int hashCode()
+        {
+            return properties.hashCode();
         }
     }
     static class XBlockStates
@@ -100,21 +152,34 @@ public class Main
         public Object/* int|List<int> */ flags;
         public Object/* int|List<int> */ light;
 
+        //Bit set indicating whether light passes throught direction [Y- Y+ Z- Z+ X- X+]
+        //Only present if any state has the flag "HasSidedTransparency"
+        public Object/* int|List<int> */ transparentSides;
+
         private static final BlockView emptyView = EmptyBlockView.INSTANCE;
         private static final BlockPos zeroPos = BlockPos.ORIGIN;
 
         public XBlockStates(Block block)
         {
             StateManager<Block, BlockState> stateMgr = block.getStateManager();
-            List<Integer> flags = new ArrayList<>();
-            List<Integer> light = new ArrayList<>();
+            var flags = new ArrayList<Integer>();
+            var light = new ArrayList<Integer>();
+            var transparentSides = new ArrayList<Integer>();
+            boolean hasAnyTransparentSide = false;
 
             for (BlockState state : stateMgr.getStates()) {
                 flags.add(getFlags(state));
                 light.add(state.getLuminance() << 4 | state.getOpacity(emptyView, zeroPos));
+                if (state.hasSidedTransparency()) {
+                    transparentSides.add(getTransparentSides(state));
+                    hasAnyTransparentSide = true;
+                } else {
+                    transparentSides.add(0);
+                }
             }
             this.flags = deduplicate(flags);
             this.light = deduplicate(light);
+            this.transparentSides = hasAnyTransparentSide ? deduplicate(transparentSides) : null;
         }
 
         private static Object deduplicate(List<Integer> arr)
@@ -138,8 +203,8 @@ public class Main
             if (bs.isFullCube(emptyView, zeroPos))
                 flags |= 1 << 2;
 
-            //if (bs.isOpaqueFullCube(emptyView, zeroPos))
-            //    flags |= 1 << 3; //Opaque && FullCube
+            if (bs.hasSidedTransparency())
+                flags |= 1 << 3;
 
             if (bs.hasRandomTicks())
                 flags |= 1 << 4;
@@ -151,6 +216,32 @@ public class Main
                 flags |= 1 << 6; //IsImmerse
 
             return flags;
+        }
+
+        private int getTransparentSides(BlockState bs)
+        {
+            int mask = 0;
+            for (int i = 0; i < 6; i++) {
+                var faceShape = bs.getCullingFace(emptyView, zeroPos, Direction.byId(i));
+                if (!VoxelShapes.unionCoversFullCube(faceShape, VoxelShapes.empty())) {
+                    mask |= 1 << i;
+                }
+            }
+            return mask;
+        }
+
+        @Override
+        public boolean equals(Object obj)
+        {
+            return obj instanceof XBlockStates o && 
+                   o.flags.equals(flags) && 
+                   o.light.equals(light) &&
+                   Objects.equals(o.transparentSides, transparentSides);
+        }
+        @Override
+        public int hashCode()
+        {
+            return flags.hashCode();
         }
     }
     static class XMaterial
@@ -239,6 +330,19 @@ public class Main
             this.type = type;
         }
 
+        @Override
+        public boolean equals(Object obj)
+        {
+            return obj instanceof XBlockProperty o && 
+                   o.name.equals(name) && 
+                   o.type.equals(type);
+        }
+        @Override
+        public int hashCode()
+        {
+            return name.hashCode() * 31 + type.hashCode();
+        }
+
         public static XBlockProperty create(Property<?> prop)
         {
             if (prop instanceof BooleanProperty) {
@@ -266,6 +370,15 @@ public class Main
                 min = prop.getValues().stream().min(Integer::compareTo).get();
                 max = prop.getValues().stream().max(Integer::compareTo).get();
             }
+
+            @Override
+            public boolean equals(Object obj)
+            {
+                return obj instanceof XPropInt o && 
+                       o.min == min && 
+                       o.max == max &&
+                       super.equals(obj);
+            }
         }
 
         public static class XPropBool extends XBlockProperty
@@ -273,6 +386,12 @@ public class Main
             public XPropBool(BooleanProperty prop)
             {
                 super(prop.getName(), "bool");
+            }
+
+            @Override
+            public boolean equals(Object obj)
+            {
+                return obj instanceof XPropBool && super.equals(obj);
             }
         }
 
@@ -289,6 +408,15 @@ public class Main
                                   .stream()
                                   .map(v -> v.asString())
                                   .collect(Collectors.toList());
+            }
+
+            @Override
+            public boolean equals(Object obj)
+            {
+                return obj instanceof XPropEnum o && 
+                       o.enumType.equals(enumType) && 
+                       o.values.equals(values) &&
+                       super.equals(obj);
             }
         }
     }

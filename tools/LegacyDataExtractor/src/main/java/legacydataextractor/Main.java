@@ -1,30 +1,21 @@
 package legacydataextractor;
 
+import java.io.*;
+import java.util.*;
+import java.util.Map.*;
+import java.util.regex.*;
+import java.util.stream.*;
+
 import com.google.common.base.*;
-import com.google.common.collect.*;
 import com.google.common.io.*;
 import com.google.gson.*;
-import net.minecraft.*;
+
 import net.minecraft.block.*;
-import net.minecraft.block.BlockDoor.*;
-import net.minecraft.block.BlockRailBase.*;
 import net.minecraft.block.material.*;
 import net.minecraft.block.properties.*;
 import net.minecraft.block.state.*;
-import net.minecraft.block.state.BlockStateContainer.*;
 import net.minecraft.init.*;
-import net.minecraft.item.*;
 import net.minecraft.util.*;
-import net.minecraft.util.math.*;
-import net.minecraft.util.registry.*;
-import net.minecraft.world.*;
-import net.minecraft.world.chunk.*;
-
-import java.io.*;
-import java.lang.reflect.*;
-import java.util.*;
-import java.util.Map.*;
-import java.util.stream.*;
 
 public class Main
 {
@@ -51,11 +42,37 @@ public class Main
             }
         }
 
-        String str = new Gson().toJson(data);
+        Gson gson = new GsonBuilder()
+            .setPrettyPrinting()
+            .disableHtmlEscaping()
+            .create();
+        String json = gson.toJson(data);
 
-        Files.write(str, new File("legacy_blocks.json"), Charsets.UTF_8);
+        //int arrays \[\s*(?:\d+\s*,\s*)*\s*\d+\s*\]
+        json = minify(json, "\\[\\s*(?:\\d+\\s*,\\s*)*\\s*\\d+\\s*\\]");
+        //string arrays \[\s*(?:\"[A-Za-z0-9 _\-:$]*\"\s*,\s*)*\s*\"[A-Za-z0-9 _\-:$]*\"\s*\]
+        json = minify(json, "\\[\\s*(?:(?:null|\\\"[A-Za-z0-9 ,_\\-:$]*\\\")\\s*,\\s*)*\\s*(?:null|\\\"[A-Za-z0-9 ,_\\-:$]*\\\")\\s*\\]");
+
+        Files.write(json, new File("blocks.json"), Charsets.UTF_8);
 
         System.out.println("Done");
+    }
+
+    static String minify(String json, String regex)
+    {
+        Pattern pattern = Pattern.compile(regex);
+        Matcher matcher = pattern.matcher(json);
+        StringBuffer sb = new StringBuffer();
+
+        while (matcher.find()) {
+            String s = matcher.group(0);
+            s = s.replaceAll("[\\r\\n\\s]+", "").replace("\",", "\", ");
+            s = Matcher.quoteReplacement(s);
+
+            matcher.appendReplacement(sb, s);
+        }
+        matcher.appendTail(sb);
+        return sb.toString();
     }
 
     static class XData
@@ -166,8 +183,8 @@ public class Main
             if (bs.isFullCube())
                 flags |= 1 << 2;
 
-            if (bs.isOpaqueCube()) 
-                flags |= 1 << 3;
+            //if (bs.hasSidedTransparency()) 
+            //    flags |= 1 << 3;
             
             if (bs.getBlock().getTickRandomly())
                 flags |= 1 << 4;
@@ -177,10 +194,15 @@ public class Main
 
             if (bs.getBlock() instanceof BlockLiquid) 
                 flags |= 1 << 6;
-            
-            if (bs.getMaterial() == Material.AIR)
-                flags |= 1 << 7;
 
+            //Fix for some blocks with wrong values
+            if (bs.getBlock() instanceof BlockBarrier || 
+                bs.getBlock() instanceof BlockMobSpawner || 
+                bs.getBlock() instanceof BlockSlime)
+            {
+                flags &= ~(1 << 0); //not opaque
+            }
+            
             return flags;
         }
     }
