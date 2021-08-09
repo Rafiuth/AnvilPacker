@@ -132,11 +132,11 @@ namespace AnvilPacker.Level
 
                     for (int y = h; y < hMax; y++) {
                         var sides =
-                            (y == h  ? SideFlags.YNeg : 0) |
-                            (y < hXN ? SideFlags.XNeg : 0) |
-                            (y < hXP ? SideFlags.XPos : 0) |
-                            (y < hZN ? SideFlags.ZNeg : 0) |
-                            (y < hZP ? SideFlags.ZPos : 0);
+                            (y == h  ? Direction.YNeg : 0) |
+                            (y < hXN ? Direction.XNeg : 0) |
+                            (y < hXP ? Direction.XPos : 0) |
+                            (y < hZN ? Direction.ZNeg : 0) |
+                            (y < hZP ? Direction.ZPos : 0);
                         //TODO: do we need to enqueue up to (inclusive) the neighbor block?
                         //It causes a significant performance drop, and results were the same in my tests.
 
@@ -204,14 +204,14 @@ namespace AnvilPacker.Level
                 int sx = section.X & 31;
                 int sz = section.Z & 31;
 
-                if (sx ==  0) EnqueuePlaneX(0,  SideFlags.XPos);
-                if (sx == 31) EnqueuePlaneX(15, SideFlags.XNeg);
-                if (sz ==  0) EnqueuePlaneZ(0,  SideFlags.ZPos);
-                if (sz == 31) EnqueuePlaneZ(15, SideFlags.ZNeg);
+                if (sx ==  0) EnqueuePlaneX(0,  Direction.XPos);
+                if (sx == 31) EnqueuePlaneX(15, Direction.XNeg);
+                if (sz ==  0) EnqueuePlaneZ(0,  Direction.ZPos);
+                if (sz == 31) EnqueuePlaneZ(15, Direction.ZNeg);
             }
             return queueTail;
             
-            void EnqueuePlaneX(int xo, SideFlags sides)
+            void EnqueuePlaneX(int xo, Direction sides)
             {
                 for (int by = 0; by < 16; by++) {
                     for (int bz = 0; bz < 16; bz++) {
@@ -222,7 +222,7 @@ namespace AnvilPacker.Level
                     }
                 }
             }
-            void EnqueuePlaneZ(int zo, SideFlags sides)
+            void EnqueuePlaneZ(int zo, Direction sides)
             {
                 for (int by = 0; by < 16; by++) {
                     for (int bx = 0; bx < 16; bx++) {
@@ -252,7 +252,7 @@ namespace AnvilPacker.Level
         {
             var queue = _queue;
             var attrs = _lightAttribs;
-            var sides = BLOCK_SIDES;
+            var sides = Directions.Normals;
 
             int queueHead = 0;
 
@@ -260,7 +260,7 @@ namespace AnvilPacker.Level
                 ref var node = ref queue[queueHead++];
 
                 for (int i = 0; i < sides.Length; i++) {
-                    if ((node.Dirs & (SideFlags)(1 << i)) == 0) continue;
+                    if ((node.Dirs & (Direction)(1 << i)) == 0) continue;
 
                     int sx = node.X + sides[i].X;
                     int sy = node.Y + sides[i].Y;
@@ -379,10 +379,10 @@ namespace AnvilPacker.Level
             public sbyte X, Z;  //Relative to the origin chunk
             public short Y;     //Absolute
             public byte Level;
-            public SideFlags Dirs;
+            public Direction Dirs;
 
             //Not using ctors because jit will create a copy before the array store
-            public void Set(int x, int y, int z, int level, SideFlags dirs = SideFlags.All)
+            public void Set(int x, int y, int z, int level, Direction dirs = Direction.All)
             {
                 X = (sbyte)x;
                 Y = (short)y;
@@ -395,29 +395,6 @@ namespace AnvilPacker.Level
 
             public override string ToString() => $"Pos=[{X} {Y} {Z}] Level={Level} Dirs={Dirs} ";
         }
-
-        [Flags]
-        private enum SideFlags : byte
-        {
-            XNeg = 1 << 0,
-            XPos = 1 << 1,
-            ZNeg = 1 << 2,
-            ZPos = 1 << 3,
-            YNeg = 1 << 4,
-            YPos = 1 << 5,
-
-            AllHorz = XNeg | XPos | ZNeg | ZPos,
-            AllVert = YNeg | YPos,
-            All = AllHorz | AllVert
-        }
-        private static readonly Vec3i[] BLOCK_SIDES = {
-            new(-1, 0, 0),
-            new(+1, 0, 0),
-            new(0, 0, -1),
-            new(0, 0, +1),
-            new(0, -1, 0),
-            new(0, +1, 0),
-        };
     }
 
     public enum LightLayer
