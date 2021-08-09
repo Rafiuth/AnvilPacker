@@ -7,7 +7,6 @@ import com.google.gson.*;
 import com.mojang.bridge.game.*;
 import net.minecraft.*;
 import net.minecraft.block.*;
-import net.minecraft.state.*;
 import net.minecraft.state.property.*;
 import net.minecraft.util.*;
 import net.minecraft.util.math.*;
@@ -16,7 +15,6 @@ import net.minecraft.util.shape.*;
 import net.minecraft.world.*;
 
 import java.io.*;
-import java.lang.reflect.*;
 import java.util.*;
 import java.util.Objects;
 import java.util.regex.*;
@@ -48,7 +46,7 @@ public class Main
                 prev.names.add(xblock.names.get(0));
                 return prev; 
             });
-            data.numBlockStates += block.getStateManager().getStates().size();
+            data.numBlockStates += xblock.numStates;
         }
 
         data.blocks.addAll(blocks.keySet());
@@ -106,18 +104,17 @@ public class Main
             }
             names.add(name);
 
-            StateManager<Block, BlockState> stateMgr = block.getStateManager();
+            var stateMgr = block.getStateManager();
+            var sortedStates = ImmutableList.sortedCopyOf(
+                Comparator.comparingInt(XBlock::getStateIndex), 
+                stateMgr.getStates()
+            );
 
-            int minStateId = Integer.MAX_VALUE;
-            for (BlockState bs : stateMgr.getStates()) {
-                int id = Block.getRawIdFromState(bs);
-                minStateId = Math.min(minStateId, id);
-            }
-            numStates = stateMgr.getStates().size();
-            states = new XBlockStates(block);
-            BlockState defaultState = block.getDefaultState();
+            numStates = sortedStates.size();
+            states = new XBlockStates(block, sortedStates);
+            var defaultState = block.getDefaultState();
 
-            defaultStateId = Block.getRawIdFromState(defaultState) - minStateId;
+            defaultStateId = getStateIndex(defaultState);
 
             for (Property<?> prop : block.getStateManager().getProperties()) {
                 properties.add(XBlockProperty.create(prop));
@@ -127,7 +124,34 @@ public class Main
                 throw new IllegalStateException("Unknown material for block " + key);
             }).name;
         }
-        
+
+        public static int getStateIndex(BlockState state)
+        {
+            int id = 0;
+            int shift = 1;
+
+            var props = state.getBlock().getStateManager().getProperties();
+
+            for (Property<?> prop : props) {
+                id += getValueIndex(state, prop) * shift;
+                shift *= prop.getValues().size();
+            }
+            return id;
+        }
+        private static int getValueIndex(BlockState state, Property<?> prop)
+        {
+            int index = 0;
+
+            Object value = state.get(prop);
+            for (Object possValue : prop.getValues()) {
+                if (value.equals(possValue)) {
+                    return index;
+                }
+                index++;
+            }
+            throw new IllegalStateException("Block value index not found: " + state.toString() + " " + prop.getName());
+        }
+
         //Java records are so bad -
         //you can't have hierarchies, no extra ctors, THE BRACES ARE REQUIRED
         //like wtf, i'd rather use lombok
@@ -159,15 +183,14 @@ public class Main
         private static final BlockView emptyView = EmptyBlockView.INSTANCE;
         private static final BlockPos zeroPos = BlockPos.ORIGIN;
 
-        public XBlockStates(Block block)
+        public XBlockStates(Block block, List<BlockState> states)
         {
-            StateManager<Block, BlockState> stateMgr = block.getStateManager();
             var flags = new ArrayList<Integer>();
             var light = new ArrayList<Integer>();
             var transparentSides = new ArrayList<Integer>();
             boolean hasAnyTransparentSide = false;
 
-            for (BlockState state : stateMgr.getStates()) {
+            for (BlockState state : states) {
                 flags.add(getFlags(state));
                 light.add(state.getLuminance() << 4 | state.getOpacity(emptyView, zeroPos));
                 if (state.hasSidedTransparency()) {
@@ -354,7 +377,7 @@ public class Main
             }
         }
 
-        public static String getEnumName(Class<? extends Enum> type)
+        public static String getEnumName(Class<? extends Enum<?>> type)
         {
             return type.getSimpleName();
         }
@@ -369,6 +392,14 @@ public class Main
 
                 min = prop.getValues().stream().min(Integer::compareTo).get();
                 max = prop.getValues().stream().max(Integer::compareTo).get();
+                
+                //assert values order, expected to be [min, ..., max]
+                int i = min;
+                for (Integer val : prop.getValues()) {
+                    if (val != i++) {
+                        throw new IllegalStateException("IntProperty unordered");
+                    }
+                }
             }
 
             @Override
@@ -386,6 +417,11 @@ public class Main
             public XPropBool(BooleanProperty prop)
             {
                 super(prop.getName(), "bool");
+
+                if (prop.getValues().stream().findFirst().get() != true) {
+                    //values are expected to be [true, false]
+                    throw new IllegalStateException("BoolProperty unordered");
+                }
             }
 
             @Override
