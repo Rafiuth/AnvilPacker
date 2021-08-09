@@ -2,27 +2,29 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
-using AnvilPacker.Data;
-using AnvilPacker.Util;
 
 namespace AnvilPacker.Level
 {
+    using BlockPropertyValue = KeyValuePair<string, string>;
+    
     public class BlockState : IEquatable<BlockState>
     {
         /// <summary> 
-        /// Unique ID for this block state, or -1 if the block is dynamic. <br/>
+        /// Unique ID for this block state, or -1 if the block is unknown. <br/>
         /// When <c>HasAttrib(BlockAttributes.Legacy) == true</c>, this value represents the numeric block ID.
         /// </summary>
         public int Id { get; set; }
         public Block Block { get; set; }
-        public (string Key, string Value)[] Properties { get; set; } = Array.Empty<(string, string)>();
+        public BlockPropertyValue[] Properties { get; set; } = Array.Empty<BlockPropertyValue>();
         public BlockAttributes Attributes { get; set; }
 
         /// <summary> Amount of light this block absorbs. [0..15] </summary>
         public byte LightOpacity { get; set; }
         /// <summary> Amount of light this block emits. [0..15] </summary>
         public byte LightEmission { get; set; }
+
+        /// <summary> Sides that let light pass through. <see cref="Direction.None" /> if the attribute <see cref="BlockAttributes.HasSidedTransparency"/> is not set. </summary>
+        public Direction TransparentSides { get; set; } = Direction.None;
 
         public BlockMaterial Material => Block.Material;
 

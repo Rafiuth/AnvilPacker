@@ -1,0 +1,57 @@
+//Block defs for older versions. Block structure is the same as in blocks.json, 
+//plus the version_removed field.
+[
+  {
+    "version_removed": 2503,
+    "names": [
+      "andesite_wall",
+      "brick_wall",
+      "cobblestone_wall",
+      "diorite_wall",
+      "end_stone_brick_wall",
+      "granite_wall",
+      "mossy_cobblestone_wall",
+      "mossy_stone_brick_wall",
+      "nether_brick_wall",
+      "prismarine_wall",
+      "red_nether_brick_wall",
+      "red_sandstone_wall",
+      "sandstone_wall",
+      "stone_brick_wall"
+    ],
+    "numStates": 64,
+    "defaultStateId": 31, // up=true,waterlogged=false,<north,east,south,west>=false
+    "material": "stone",
+    "properties": [
+      { "type": "bool", "name": "up"    },
+      { "type": "bool", "name": "north" },
+      { "type": "bool", "name": "east"  },
+      { "type": "bool", "name": "south" },
+      { "type": "bool", "name": "west"  },
+      { "type": "bool", "name": "waterlogged" }
+    ],
+    "states": {
+      "flags": [65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 65, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3],
+      "light": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    }
+  },
+  {
+    "version_removed": 2679,
+    "names": ["cauldron"],
+    "numStates": 4,
+    "defaultStateId": 0,
+    "material": "metal",
+    "properties": [
+      {
+        "min": 0,
+        "max": 3,
+        "name": "level",
+        "type": "int"
+      }
+    ],
+    "states": {
+      "flags": 2,
+      "light": 0
+    }
+  }
+]

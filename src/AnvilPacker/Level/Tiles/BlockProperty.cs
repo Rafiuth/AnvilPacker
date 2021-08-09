@@ -10,7 +10,7 @@ namespace AnvilPacker.Level
     {
         public string Name { get; init; }
         public string[] Values { get; init; }
-        public int ValueCount => Values.Length;
+        public int NumValues => Values.Length;
 
         public virtual string GetValue(int index)
         {

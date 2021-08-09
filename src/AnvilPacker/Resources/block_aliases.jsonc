@@ -1,0 +1,206 @@
+//List of renamed blocks. If properties are also changed, declare the block in versioned.json instead.
+//Last update: 1.17
+[
+  {
+    "version": 1480,
+    "renames": {
+      //coral blocks
+      "blue_coral": "tube_coral_block",
+      "pink_coral": "brain_coral_block",
+      "purple_coral": "bubble_coral_block",
+      "red_coral": "fire_coral_block",
+      "yellow_coral": "horn_coral_block",
+      "blue_coral_plant": "tube_coral",
+      "pink_coral_plant": "brain_coral",
+      "purple_coral_plant": "bubble_coral",
+      "red_coral_plant": "fire_coral",
+      "yellow_coral_plant": "horn_coral",
+      "blue_coral_fan": "tube_coral_fan",
+      "pink_coral_fan": "brain_coral_fan",
+      "purple_coral_fan": "bubble_coral_fan",
+      "red_coral_fan": "fire_coral_fan",
+      "yellow_coral_fan": "horn_coral_fan",
+      "blue_dead_coral": "dead_tube_coral",
+      "pink_dead_coral": "dead_brain_coral",
+      "purple_dead_coral": "dead_bubble_coral",
+      "red_dead_coral": "dead_fire_coral",
+      "yellow_dead_coral": "dead_horn_coral"
+    }
+  },
+  {
+    "version": 1484,
+    "renames": {
+      //seagrass blocks
+      "sea_grass": "seagrass",
+      "tall_sea_grass": "tall_seagrass"
+    }
+  },
+  {
+    "version": 1487,
+    "renames": {
+      //prismarine bricks
+      "prismarine_bricks_slab": "prismarine_brick_slab", 
+      "prismarine_bricks_stairs": "prismarine_brick_stairs"
+    }
+  },
+  {
+    "version": 1488,
+    "renames": {
+      //kelp/kelptop
+      "kelp_top": "kelp", 
+      "kelp": "kelp_plant"
+    }
+  },
+  {
+    "version": 1490,
+    "renames": {
+      //melon
+      "melon_block": "melon"
+    }
+  },
+  {
+    "version": 1510,
+    "renames": {
+      //EntityTheRenameningFix
+      "portal": "nether_portal",
+      "oak_bark": "oak_wood",
+      "spruce_bark": "spruce_wood",
+      "birch_bark": "birch_wood",
+      "jungle_bark": "jungle_wood",
+      "acacia_bark": "acacia_wood",
+      "dark_oak_bark": "dark_oak_wood",
+      "stripped_oak_bark": "stripped_oak_wood",
+      "stripped_spruce_bark": "stripped_spruce_wood",
+      "stripped_birch_bark": "stripped_birch_wood",
+      "stripped_jungle_bark": "stripped_jungle_wood",
+      "stripped_acacia_bark": "stripped_acacia_wood",
+      "stripped_dark_oak_bark": "stripped_dark_oak_wood",
+      "mob_spawner": "spawner"
+    }
+  },
+  {
+    "version": 1515,
+    "renames": {
+      //coral fan blocks
+      "tube_coral_fan": "tube_coral_wall_fan",
+      "brain_coral_fan": "brain_coral_wall_fan",
+      "bubble_coral_fan": "bubble_coral_wall_fan",
+      "fire_coral_fan": "fire_coral_wall_fan",
+      "horn_coral_fan": "horn_coral_wall_fan"
+    }
+  },
+  {
+    "version": 1802,
+    "renames": {
+      //sign blocks & stone slabs
+      "stone_slab": "smooth_stone_slab", 
+      "sign": "oak_sign", 
+      "wall_sign": "oak_wall_sign"
+    }
+  },
+  {
+    "version": 2209,
+    "renames": {
+      //bee_hive
+      "bee_hive": "beehive"
+    }
+  },
+  {
+    "version": 2508,
+    "renames": {
+      //rename fungi blocks to fungus
+      "warped_fungi": "warped_fungus", 
+      "crimson_fungi": "crimson_fungus"
+    }
+  },
+  {
+    "version": 2528,
+    "renames": {
+      //soul fire torch and soul fire lantern
+      "soul_fire_torch": "soul_torch", 
+      "soul_fire_wall_torch": "soul_wall_torch", 
+      "soul_fire_lantern": "soul_lantern"
+    }
+  },
+  {
+    "version": 2680,
+    "renames": {
+      //grass_path
+      "grass_path": "dirt_path"
+    }
+  },
+  {
+    "version": 2690,
+    "renames": {
+      //Rename copper blocks to new oxidized terms
+      "weathered_copper_block": "oxidized_copper_block",
+      "semi_weathered_copper_block": "weathered_copper_block",
+      "lightly_weathered_copper_block": "exposed_copper_block",
+      "weathered_cut_copper": "oxidized_cut_copper",
+      "semi_weathered_cut_copper": "weathered_cut_copper",
+      "lightly_weathered_cut_copper": "exposed_cut_copper",
+      "weathered_cut_copper_stairs": "oxidized_cut_copper_stairs",
+      "semi_weathered_cut_copper_stairs": "weathered_cut_copper_stairs",
+      "lightly_weathered_cut_copper_stairs": "exposed_cut_copper_stairs",
+      "weathered_cut_copper_slab": "oxidized_cut_copper_slab",
+      "semi_weathered_cut_copper_slab": "weathered_cut_copper_slab",
+      "lightly_weathered_cut_copper_slab": "exposed_cut_copper_slab",
+      "waxed_semi_weathered_copper": "waxed_weathered_copper",
+      "waxed_lightly_weathered_copper": "waxed_exposed_copper",
+      "waxed_semi_weathered_cut_copper": "waxed_weathered_cut_copper",
+      "waxed_lightly_weathered_cut_copper": "waxed_exposed_cut_copper",
+      "waxed_semi_weathered_cut_copper_stairs": "waxed_weathered_cut_copper_stairs",
+      "waxed_lightly_weathered_cut_copper_stairs": "waxed_exposed_cut_copper_stairs",
+      "waxed_semi_weathered_cut_copper_slab": "waxed_weathered_cut_copper_slab",
+      "waxed_lightly_weathered_cut_copper_slab": "waxed_exposed_cut_copper_slab"
+    }
+  },
+  {
+    "version": 2691,
+    "renames": {
+      //Rename copper blocks suffixes
+      "waxed_copper": "waxed_copper_block",
+      "oxidized_copper_block": "oxidized_copper",
+      "weathered_copper_block": "weathered_copper",
+      "exposed_copper_block": "exposed_copper"
+    }
+  },
+  {
+    "version": 2696,
+    "renames": {
+      //Rename grimstone block items to deepslate
+      "grimstone": "deepslate",
+      "grimstone_slab": "cobbled_deepslate_slab",
+      "grimstone_stairs": "cobbled_deepslate_stairs",
+      "grimstone_wall": "cobbled_deepslate_wall",
+      "polished_grimstone": "polished_deepslate",
+      "polished_grimstone_slab": "polished_deepslate_slab",
+      "polished_grimstone_stairs": "polished_deepslate_stairs",
+      "polished_grimstone_wall": "polished_deepslate_wall",
+      "grimstone_tiles": "deepslate_tiles",
+      "grimstone_tile_slab": "deepslate_tile_slab",
+      "grimstone_tile_stairs": "deepslate_tile_stairs",
+      "grimstone_tile_wall": "deepslate_tile_wall",
+      "grimstone_bricks": "deepslate_bricks",
+      "grimstone_brick_slab": "deepslate_brick_slab",
+      "grimstone_brick_stairs": "deepslate_brick_stairs",
+      "grimstone_brick_wall": "deepslate_brick_wall",
+      "chiseled_grimstone": "chiseled_deepslate"
+    }
+  },
+  {
+    "version": 2700,
+    "renames": {
+      //Rename cave vines blocks
+      "cave_vines_head": "cave_vines", 
+      "cave_vines_body": "cave_vines_plant"
+    }
+  },
+  {
+    "version": 2717,
+    "renames": {
+      //Rename azalea_leaves_flowers
+      "azalea_leaves_flowers": "flowering_azalea_leaves"
+    }
+  }
+]

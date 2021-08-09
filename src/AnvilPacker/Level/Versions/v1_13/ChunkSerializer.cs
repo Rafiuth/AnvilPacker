@@ -49,7 +49,7 @@ namespace AnvilPacker.Level.Versions.v1_13
             int y = tag.GetSByte("Y");
  
             var blockStates = tag.PopMaybe<long[]>("BlockStates");
-            var palette = DeserializePalette(tag.PopMaybe<ListTag>("Palette"), chunk.Palette);
+            var palette = DeserializePalette(tag.PopMaybe<ListTag>("Palette"), chunk);
             
             var skyLight = tag.PopMaybe<byte[]>("SkyLight");
             var blockLight = tag.PopMaybe<byte[]>("BlockLight");
@@ -67,14 +67,15 @@ namespace AnvilPacker.Level.Versions.v1_13
                 section.BlockLight = new NibbleArray(blockLight);
             }
         }
-        private static BlockId[] DeserializePalette(ListTag list, BlockPalette destPalette)
+        private static BlockId[] DeserializePalette(ListTag list, Chunk chunk)
         {
             if (list == null) return null;
 
             var palette = new BlockId[list.Count];
+            var destPalette = chunk.Palette;
             int i = 0;
             foreach (CompoundTag tag in list) {
-                var state = BlockRegistry.ParseState(tag);
+                var state = BlockRegistry.ParseState(tag, chunk.DataVersion);
                 palette[i++] = destPalette.GetOrAddId(state);
             }
             if (palette.Length == 1 && destPalette.GetState(palette[0]).Material == BlockMaterial.Air) {

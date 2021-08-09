@@ -11,6 +11,8 @@ using NLog;
 
 namespace AnvilPacker.Level
 {
+    using BlockPropertyValue = KeyValuePair<string, string>;
+
     public class RegistryLoader
     {
         private static readonly ILogger _logger = LogManager.GetCurrentClassLogger();
@@ -26,7 +28,9 @@ namespace AnvilPacker.Level
 
             LoadBlocks();
             LoadLegacyBlocks();
-
+            LoadVersionedBlocks();
+            LoadBlockAliases();
+            
             BlockRegistry.Air = BlockRegistry.GetBlock("air").DefaultState;
 
             sw.Stop();
@@ -36,60 +40,152 @@ namespace AnvilPacker.Level
         private static void LoadBlocks()
         {
             using var json = LoadJson("blocks.json");
-            var arr = json.RootElement.GetProperty("blocks");
+            var jArr = json.RootElement.GetProperty("blocks");
 
             var propCache = new HashSet<BlockProperty>();
 
-            foreach (var jb in arr.EnumerateArray()) {
-                var name = ResourceName.Parse(jb.GetString("name"));
-                int minStateId = jb.GetInt("minStateId");
-                int maxStateId = jb.GetInt("maxStateId");
-                int defaultStateId = jb.GetInt("defaultStateId");
-                var props = ParseProperties(jb.GetProperty("properties"), propCache);
-                var materialName = jb.GetString("material");
+            foreach (var jb in jArr.EnumerateArray()) {
+                DeserializeBlocks(jb, propCache, block => {
+                    BlockRegistry.KnownBlocks.Add(block.Name, block);
+                });
+            }
+        }
+        private static void LoadBlockAliases()
+        {
+            using var json = LoadJson("block_aliases.jsonc");
 
-                var states = new BlockState[maxStateId - minStateId + 1];
+            var renames = new Dictionary<ResourceName, List<(DataVersion Version, ResourceName NewName)>>();
+
+            foreach (var jelem in json.RootElement.EnumerateArray()) {
+                var version = (DataVersion)jelem.GetInt("version");
+                var jrenames = jelem.GetProperty("renames");
+
+                foreach (var entry in jrenames.EnumerateObject()) {
+                    var oldName = entry.Name;
+                    var newName = entry.Value.GetString();
+                    var records = renames.GetOrAdd(oldName, () => new());
+                    records.Add((version, newName));
+                }
+            }
+            var blockRecords = new List<(DataVersion, Block)>();
+
+            foreach (var (name, records) in renames) {
+                records.Sort((a, b) => a.Version - b.Version);
+                blockRecords.Clear();
+
+                foreach (var (version, newName) in records) {
+                    var latestName = LatestName(version, newName);
+                    var block = BlockRegistry.KnownBlocks[latestName];
+                    var renamedBlock = block.Rename(name);
+
+                    blockRecords.Add((version, renamedBlock));
+                }
+                BlockRegistry.KnownVersionedBlocks.Add(name, blockRecords.ToArray());
+            }
+
+            ResourceName LatestName(DataVersion version, ResourceName name)
+            {
+                while (renames.TryGetValue(name, out var records)) {
+                    var record = records[^1];
+                    if (record.Version <= version) break;
+                    
+                    (version, name) = record;
+                }
+                return name;
+            }
+        }
+        private static void LoadVersionedBlocks()
+        {
+            using var json = LoadJson("blocks_versioned.jsonc");
+
+            var propCache = new HashSet<BlockProperty>();
+
+            foreach (var jb in json.RootElement.EnumerateArray()) {
+                var version = (DataVersion)jb.GetInt("version_removed") - 1;
+                DeserializeBlocks(jb, propCache, block => {
+                    var entry = (version, block);
+
+                    var dict = BlockRegistry.KnownVersionedBlocks;
+                    if (!dict.TryGetValue(block.Name, out var arr)) {
+                        dict.Add(block.Name, new[] { entry });
+                    } else {
+                        //Insert the entry at the appropriate (sorted) index.
+                        //This should be rare, so maybe not worth using a list.
+                        var newArr = new (DataVersion, Block)[arr.Length + 1];
+                        int i = 0;
+                        for (; i < arr.Length; i++) {
+                            Ensure.That(arr[i].Version != version, "Cannot have multiple blocks with the same version");
+                            if (arr[i].Version > version) break;
+                        }
+                        newArr[i] = entry;
+                        //arr: 0 * 1 2 3
+                        //idx:   1
+                        if (i > 0) { //lower half, [0]
+                            Array.Copy(arr, 0, newArr, 0, i);
+                        }
+                        if (i < arr.Length) { //upper half, [1..3]
+                            Array.Copy(arr, i, newArr, i + 1, arr.Length - i);
+                        }
+                        dict[block.Name] = newArr;
+                    }
+                });
+            }
+        }
+        private static void DeserializeBlocks(JsonElement jb, HashSet<BlockProperty> propCache, Action<Block> consume)
+        {
+            var jNames = jb.GetProperty("names");
+            int numStates = jb.GetInt("numStates");
+            int defaultStateId = jb.GetInt("defaultStateId");
+            var props = ParseProperties(jb.GetProperty("properties"), propCache);
+            var materialName = jb.GetString("material");
+
+            var jStates = jb.GetProperty("states");
+            var jFlags = jStates.GetProperty("flags");
+            var jLight = jStates.GetProperty("light"); //packed light info, luminance << 4 | opacity
+            bool jTransSideExists = jStates.TryGetProperty("transparentSides", out var jTransSides);
+
+            bool jFlagsIsArr = jFlags.ValueKind == JsonValueKind.Array;
+            bool jLightIsArr = jLight.ValueKind == JsonValueKind.Array;
+            bool jTransSideIsArr = jTransSides.ValueKind == JsonValueKind.Array;
+
+            foreach (var jname in jNames.EnumerateArray()) {
+                var states = new BlockState[numStates];
                 var block = new Block() {
-                    Name = name,
+                    Id = BlockRegistry.NextBlockId(),
+                    Name = ResourceName.Parse(jname.GetString()),
                     States = states,
                     Properties = props,
-                    Material = BlockMaterial.Registry[materialName],
-                    IsKnown = true
+                    Material = BlockMaterial.Registry[materialName]
                 };
 
-                var statesProp = jb.GetProperty("states");
-                var stateFlags = statesProp.GetProperty("flags");
-                var stateLight = statesProp.GetProperty("light"); //packed light info, luminance << 4 | opacity
-                bool stateFlagsIsArr = stateFlags.ValueKind == JsonValueKind.Array;
-                bool stateLightIsArr = stateLight.ValueKind == JsonValueKind.Array;
+                for (int id = 0; id < numStates; id++) {
+                    int flags = (jFlagsIsArr ? jFlags[id] : jFlags).GetInt32();
+                    int light = (jLightIsArr ? jLight[id] : jLight).GetInt32();
+                    int transSides = !jTransSideExists ? 0 : (jTransSideIsArr ? jTransSides[id] : jTransSides).GetInt32();
 
-                for (int id = minStateId; id <= maxStateId; id++) {
-                    int i = id - minStateId;
-                    var flags = (stateFlagsIsArr ? stateFlags[i] : stateFlags).GetInt32();
-                    var light = (stateLightIsArr ? stateLight[i] : stateLight).GetInt32();
-
-                    states[i] = new BlockState() {
-                        Id = id,
+                    states[id] = new BlockState() {
+                        Id = BlockRegistry.NextStateId(),
                         Block = block,
                         Attributes = (BlockAttributes)flags,
                         LightOpacity = (byte)(light & 15),
                         LightEmission = (byte)(light >> 4),
-                        Properties = CreatePropertyValues(props, i)
+                        TransparentSides = Directions.FromVanillaMask(transSides),
+                        Properties = CreatePropertyValues(props, id)
                     };
                 }
-                block.DefaultState = states[defaultStateId - minStateId];
-                BlockRegistry.KnownBlocks.Add(block.Name, block);
+                block.DefaultState = states[defaultStateId];
+                consume(block);
             }
         }
 
         private static void LoadLegacyBlocks()
         {
             using var json = LoadJson("legacy_blocks.json");
-            var arr = json.RootElement.GetProperty("blocks");
+            var jArr = json.RootElement.GetProperty("blocks");
 
             var propCache = new HashSet<BlockProperty>();
 
-            foreach (var jb in arr.EnumerateArray()) {
+            foreach (var jb in jArr.EnumerateArray()) {
                 var name = ResourceName.Parse(jb.GetString("name"));
                 int id = jb.GetInt("id");
                 int defaultStateId = jb.GetInt("defaultStateId");
@@ -98,30 +194,27 @@ namespace AnvilPacker.Level
                 var states = new BlockState[16];
 
                 var block = new Block() {
+                    Id = BlockRegistry.NextBlockId(),
                     Name = name,
                     States = states,
                     Properties = props,
-                    Material = BlockMaterial.Registry[materialName],
-                    IsKnown = true
+                    Material = BlockMaterial.Registry[materialName]
                 };
 
-                var statesProp = jb.GetProperty("states");
-                var stateFlags = statesProp.GetProperty("flags");
-                var stateLight = statesProp.GetProperty("light"); //packed light info, luminance << 4 | opacity
-                var stateProps = statesProp.GetProperty("states");
-                bool stateFlagsIsArr = stateFlags.ValueKind == JsonValueKind.Array;
-                bool stateLightIsArr = stateLight.ValueKind == JsonValueKind.Array;
-                bool statePropsIsArr = stateProps.ValueKind == JsonValueKind.Array;
+                var jStates = jb.GetProperty("states");
+                var jFlags = jStates.GetProperty("flags");
+                var jLight = jStates.GetProperty("light"); //packed light info, luminance << 4 | opacity
+                var jProps = jStates.GetProperty("states");
+                bool jFlagsIsArr = jFlags.ValueKind == JsonValueKind.Array;
+                bool jLightIsArr = jLight.ValueKind == JsonValueKind.Array;
+                bool jPropsIsArr = jProps.ValueKind == JsonValueKind.Array;
 
                 for (int m = 0; m < 16; m++) {
                     int stateId = id << 4 | m;
-                    var flags = (stateFlagsIsArr ? stateFlags[m] : stateFlags).GetInt();
-                    var light = (stateLightIsArr ? stateLight[m] : stateLight).GetInt();
-                    var rawVals = statePropsIsArr ? (m < stateProps.GetArrayLength() ? stateProps[m].GetString() : null) : stateProps.GetString();
+                    var flags = (jFlagsIsArr ? jFlags[m] : jFlags).GetInt();
+                    var light = (jLightIsArr ? jLight[m] : jLight).GetInt();
+                    var rawVals = jPropsIsArr ? (m < jProps.GetArrayLength() ? jProps[m].GetString() : null) : jProps.GetString();
 
-                    if (stateId != defaultStateId && rawVals == null) {
-                        continue; //avoid creating unecessary objects
-                    }
                     states[m] = new BlockState() {
                         Id = stateId,
                         Block = block,
@@ -131,26 +224,22 @@ namespace AnvilPacker.Level
                     };
                     if (rawVals != null) {
                         var vals = rawVals.Split(',');
-                        states[m].Properties = props.Select((p, i) => (p.Name, vals[i])).ToArray();
+                        states[m].Properties = props.Select((p, i) => new BlockPropertyValue(p.Name, vals[i])).ToArray();
                     }
                 }
                 block.DefaultState = states[defaultStateId & 15];
-                //fill the states we skipped
-                for (int m = 0; m < 16; m++) {
-                    states[m] ??= block.DefaultState;
-                }
                 BlockRegistry.KnownLegacyBlocks.Add(id, block);
             }
         }
 
-        private static (string Key, string Value)[] CreatePropertyValues(List<BlockProperty> props, int stateId)
+        private static BlockPropertyValue[] CreatePropertyValues(List<BlockProperty> props, int stateId)
         {
-            var vals = new (string Key, string Value)[props.Count];
+            var vals = new BlockPropertyValue[props.Count];
             int shift = 1, i = 0;
             foreach (var prop in props) {
-                int valIndex = (stateId / shift) % prop.ValueCount;
-                vals[i] = (prop.Name, prop.GetValue(valIndex));
-                shift *= prop.ValueCount;
+                int valIndex = (stateId / shift) % prop.NumValues;
+                vals[i] = new(prop.Name, prop.GetValue(valIndex));
+                shift *= prop.NumValues;
                 i++;
             }
             return vals;

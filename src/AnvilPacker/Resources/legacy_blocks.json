@@ -1,7 +1,3 @@
-//TODO: fix LegacyDataGenerator
-//for [mob_spawner, slime, barrier]:
-//  flags are `Opaque|FullCube` (5) this is wrong, change to `FullCube` (4)
-//  barrier: 7 -> 6
 {
   "version": "1.12.2",
   "worldVersion": 1343,
@@ -14,7 +10,7 @@
       "material": "air",
       "properties": [],
       "states": {
-        "flags": 130,
+        "flags": 2,
         "light": 0,
         "states": []
       }
@@ -33,7 +29,7 @@
         }
       ],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 15,
         "states": ["stone", "granite", "smooth_granite", "diorite", "smooth_diorite", "andesite", "smooth_andesite", null, null, null, null, null, null, null, null, null]
       }
@@ -50,7 +46,7 @@
         }
       ],
       "states": {
-        "flags": 29,
+        "flags": 21,
         "light": 15,
         "states": ["false", null, null, null, null, null, null, null, null, null, null, null, null, null, null, null]
       }
@@ -73,7 +69,7 @@
         }
       ],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 15,
         "states": ["false,dirt", "false,coarse_dirt", "false,podzol", null, null, null, null, null, null, null, null, null, null, null, null, null]
       }
@@ -85,7 +81,7 @@
       "material": "stone",
       "properties": [],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 15,
         "states": []
       }
@@ -104,7 +100,7 @@
         }
       ],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 15,
         "states": ["oak", "spruce", "birch", "jungle", "acacia", "dark_oak", null, null, null, null, null, null, null, null, null, null]
       }
@@ -141,7 +137,7 @@
       "material": "stone",
       "properties": [],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 15,
         "states": []
       }
@@ -236,7 +232,7 @@
         }
       ],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 15,
         "states": ["sand", "red_sand", null, null, null, null, null, null, null, null, null, null, null, null, null, null]
       }
@@ -248,7 +244,7 @@
       "material": "sand",
       "properties": [],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 15,
         "states": []
       }
@@ -260,7 +256,7 @@
       "material": "stone",
       "properties": [],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 15,
         "states": []
       }
@@ -272,7 +268,7 @@
       "material": "stone",
       "properties": [],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 15,
         "states": []
       }
@@ -284,7 +280,7 @@
       "material": "stone",
       "properties": [],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 15,
         "states": []
       }
@@ -309,7 +305,7 @@
         }
       ],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 15,
         "states": ["y,oak", "y,spruce", "y,birch", "y,jungle", "x,oak", "x,spruce", "x,birch", "x,jungle", "z,oak", "z,spruce", "z,birch", "z,jungle", "none,oak", "none,spruce", "none,birch", "none,jungle"]
       }
@@ -336,7 +332,7 @@
         }
       ],
       "states": {
-        "flags": 28,
+        "flags": 20,
         "light": 1,
         "states": ["false,true,oak", "false,true,spruce", "false,true,birch", "false,true,jungle", "false,false,oak", "false,false,spruce", "false,false,birch", "false,false,jungle", "true,true,oak", "true,true,spruce", "true,true,birch", "true,true,jungle", "true,false,oak", "true,false,spruce", "true,false,birch", "true,false,jungle"]
       }
@@ -353,7 +349,7 @@
         }
       ],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 15,
         "states": ["false", "true", null, null, null, null, null, null, null, null, null, null, null, null, null, null]
       }
@@ -377,7 +373,7 @@
       "material": "stone",
       "properties": [],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 15,
         "states": []
       }
@@ -389,7 +385,7 @@
       "material": "metal",
       "properties": [],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 15,
         "states": []
       }
@@ -412,7 +408,7 @@
         }
       ],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 15,
         "states": ["down,false", "up,false", "north,false", "south,false", "west,false", "east,false", null, null, "down,true", "up,true", "north,true", "south,true", "west,true", "east,true", null, null]
       }
@@ -431,7 +427,7 @@
         }
       ],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 15,
         "states": ["sandstone", "chiseled_sandstone", "smooth_sandstone", null, null, null, null, null, null, null, null, null, null, null, null, null]
       }
@@ -443,7 +439,7 @@
       "material": "wood",
       "properties": [],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 15,
         "states": []
       }
@@ -655,7 +651,7 @@
         }
       ],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 15,
         "states": ["white", "orange", "magenta", "light_blue", "yellow", "lime", "pink", "gray", "silver", "cyan", "purple", "blue", "brown", "green", "red", "black"]
       }
@@ -754,7 +750,7 @@
       "material": "metal",
       "properties": [],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 15,
         "states": []
       }
@@ -766,7 +762,7 @@
       "material": "metal",
       "properties": [],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 15,
         "states": []
       }
@@ -789,7 +785,7 @@
         }
       ],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 15,
         "states": ["false,stone", "false,sandstone", "false,wood_old", "false,cobblestone", "false,brick", "false,stone_brick", "false,nether_brick", "false,quartz", "true,stone", "true,sandstone", "true,wood_old", "true,cobblestone", "true,brick", "true,stone_brick", "true,nether_brick", "true,quartz"]
       }
@@ -826,7 +822,7 @@
       "material": "stone",
       "properties": [],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 15,
         "states": []
       }
@@ -843,7 +839,7 @@
         }
       ],
       "states": {
-        "flags": 12,
+        "flags": 4,
         "light": 15,
         "states": ["false", "true", null, null, null, null, null, null, null, null, null, null, null, null, null, null]
       }
@@ -855,7 +851,7 @@
       "material": "wood",
       "properties": [],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 15,
         "states": []
       }
@@ -867,7 +863,7 @@
       "material": "stone",
       "properties": [],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 15,
         "states": []
       }
@@ -879,7 +875,7 @@
       "material": "stone",
       "properties": [],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 15,
         "states": []
       }
@@ -1054,7 +1050,7 @@
       "material": "stone",
       "properties": [],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 15,
         "states": []
       }
@@ -1066,7 +1062,7 @@
       "material": "metal",
       "properties": [],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 15,
         "states": []
       }
@@ -1078,7 +1074,7 @@
       "material": "wood",
       "properties": [],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 15,
         "states": []
       }
@@ -1135,7 +1131,7 @@
         }
       ],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 15,
         "states": [null, null, "north", "south", "west", "east", null, null, null, null, null, null, null, null, null, null]
       }
@@ -1154,7 +1150,7 @@
         }
       ],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 223,
         "states": [null, null, "north", "south", "west", "east", null, null, null, null, null, null, null, null, null, null]
       }
@@ -1408,7 +1404,7 @@
       "material": "stone",
       "properties": [],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 15,
         "states": []
       }
@@ -1420,7 +1416,7 @@
       "material": "stone",
       "properties": [],
       "states": {
-        "flags": 29,
+        "flags": 21,
         "light": 159,
         "states": []
       }
@@ -1524,7 +1520,7 @@
       "material": "snow_block",
       "properties": [],
       "states": {
-        "flags": 29,
+        "flags": 21,
         "light": 15,
         "states": []
       }
@@ -1555,7 +1551,7 @@
       "material": "clay",
       "properties": [],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 15,
         "states": []
       }
@@ -1591,7 +1587,7 @@
         }
       ],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 15,
         "states": ["false", "true", null, null, null, null, null, null, null, null, null, null, null, null, null, null]
       }
@@ -1639,7 +1635,7 @@
         }
       ],
       "states": {
-        "flags": 29,
+        "flags": 21,
         "light": 15,
         "states": ["south", "west", "north", "east", null, null, null, null, null, null, null, null, null, null, null, null]
       }
@@ -1651,7 +1647,7 @@
       "material": "stone",
       "properties": [],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 15,
         "states": []
       }
@@ -1663,7 +1659,7 @@
       "material": "sand",
       "properties": [],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 15,
         "states": []
       }
@@ -1675,7 +1671,7 @@
       "material": "glass",
       "properties": [],
       "states": {
-        "flags": 12,
+        "flags": 4,
         "light": 255,
         "states": []
       }
@@ -1713,7 +1709,7 @@
         }
       ],
       "states": {
-        "flags": 29,
+        "flags": 21,
         "light": 255,
         "states": ["south", "west", "north", "east", null, null, null, null, null, null, null, null, null, null, null, null]
       }
@@ -1857,7 +1853,7 @@
         }
       ],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 15,
         "states": ["stone", "cobblestone", "stone_brick", "mossy_brick", "cracked_brick", "chiseled_brick", null, null, null, null, null, null, null, null, null, null]
       }
@@ -1876,7 +1872,7 @@
         }
       ],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 15,
         "states": ["stonebrick", "mossy_stonebrick", "cracked_stonebrick", "chiseled_stonebrick", null, null, null, null, null, null, null, null, null, null, null, null]
       }
@@ -1895,7 +1891,7 @@
         }
       ],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 15,
         "states": ["all_inside", "north_west", "north", "north_east", "west", "center", "east", "south_west", "south", "south_east", "stem", null, null, null, "all_outside", "all_stem"]
       }
@@ -1914,7 +1910,7 @@
         }
       ],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 15,
         "states": ["all_inside", "north_west", "north", "north_east", "west", "center", "east", "south_west", "south", "south_east", "stem", null, null, null, "all_outside", "all_stem"]
       }
@@ -1984,7 +1980,7 @@
       "material": "vegetable",
       "properties": [],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 15,
         "states": []
       }
@@ -2177,7 +2173,7 @@
         }
       ],
       "states": {
-        "flags": 29,
+        "flags": 21,
         "light": 15,
         "states": ["false", null, null, null, null, null, null, null, null, null, null, null, null, null, null, null]
       }
@@ -2201,7 +2197,7 @@
       "material": "stone",
       "properties": [],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 15,
         "states": []
       }
@@ -2383,7 +2379,7 @@
       "material": "stone",
       "properties": [],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 15,
         "states": []
       }
@@ -2407,7 +2403,7 @@
       "material": "redstone_lamp",
       "properties": [],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 15,
         "states": []
       }
@@ -2419,7 +2415,7 @@
       "material": "redstone_lamp",
       "properties": [],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 255,
         "states": []
       }
@@ -2438,7 +2434,7 @@
         }
       ],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 15,
         "states": ["oak", "spruce", "birch", "jungle", "acacia", "dark_oak", null, null, null, null, null, null, null, null, null, null]
       }
@@ -2531,7 +2527,7 @@
       "material": "stone",
       "properties": [],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 15,
         "states": []
       }
@@ -2630,7 +2626,7 @@
       "material": "metal",
       "properties": [],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 15,
         "states": []
       }
@@ -2746,7 +2742,7 @@
         }
       ],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 15,
         "states": ["false,down", "false,up", "false,north", "false,south", "false,west", "false,east", null, null, "true,down", "true,up", "true,north", "true,south", "true,west", "true,east", null, null]
       }
@@ -3077,7 +3073,7 @@
       "material": "metal",
       "properties": [],
       "states": {
-        "flags": 45,
+        "flags": 37,
         "light": 15,
         "states": []
       }
@@ -3089,7 +3085,7 @@
       "material": "stone",
       "properties": [],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 15,
         "states": []
       }
@@ -3131,7 +3127,7 @@
         }
       ],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 15,
         "states": ["default", "chiseled", "lines_y", "lines_x", "lines_z", null, null, null, null, null, null, null, null, null, null, null]
       }
@@ -3208,7 +3204,7 @@
         }
       ],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 15,
         "states": ["down,false", "up,false", "north,false", "south,false", "west,false", "east,false", null, null, "down,true", "up,true", "north,true", "south,true", "west,true", "east,true", null, null]
       }
@@ -3227,7 +3223,7 @@
         }
       ],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 15,
         "states": ["white", "orange", "magenta", "light_blue", "yellow", "lime", "pink", "gray", "silver", "cyan", "purple", "blue", "brown", "green", "red", "black"]
       }
@@ -3289,7 +3285,7 @@
         }
       ],
       "states": {
-        "flags": 28,
+        "flags": 20,
         "light": 1,
         "states": ["false,true,acacia", "false,true,dark_oak", null, null, "false,false,acacia", "false,false,dark_oak", null, null, "true,true,acacia", "true,true,dark_oak", null, null, "true,false,acacia", "true,false,dark_oak", null, null]
       }
@@ -3314,7 +3310,7 @@
         }
       ],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 15,
         "states": ["y,acacia", "y,dark_oak", null, null, "x,acacia", "x,dark_oak", null, null, "z,acacia", "z,dark_oak", null, null, "none,acacia", "none,dark_oak", null, null]
       }
@@ -3448,7 +3444,7 @@
         }
       ],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 15,
         "states": ["prismarine", "prismarine_bricks", "dark_prismarine", null, null, null, null, null, null, null, null, null, null, null, null, null]
       }
@@ -3460,7 +3456,7 @@
       "material": "glass",
       "properties": [],
       "states": {
-        "flags": 12,
+        "flags": 4,
         "light": 255,
         "states": []
       }
@@ -3479,7 +3475,7 @@
         }
       ],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 15,
         "states": ["y", null, null, null, "x", null, null, null, "z", null, null, null, null, null, null, null]
       }
@@ -3510,7 +3506,7 @@
       "material": "stone",
       "properties": [],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 15,
         "states": []
       }
@@ -3522,7 +3518,7 @@
       "material": "stone",
       "properties": [],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 15,
         "states": []
       }
@@ -3534,7 +3530,7 @@
       "material": "dense_ice",
       "properties": [],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 15,
         "states": []
       }
@@ -3641,7 +3637,7 @@
         }
       ],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 15,
         "states": ["red_sandstone", "chiseled_red_sandstone", "smooth_red_sandstone", null, null, null, null, null, null, null, null, null, null, null, null, null]
       }
@@ -3695,7 +3691,7 @@
         }
       ],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 15,
         "states": ["false,red_sandstone", null, null, null, null, null, null, null, "true,red_sandstone", null, null, null, null, null, null, null]
       }
@@ -4302,7 +4298,7 @@
       "material": "stone",
       "properties": [],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 15,
         "states": []
       }
@@ -4321,7 +4317,7 @@
         }
       ],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 15,
         "states": ["y", null, null, null, "x", null, null, null, "z", null, null, null, null, null, null, null]
       }
@@ -4371,7 +4367,7 @@
         }
       ],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 15,
         "states": ["default", null, null, null, null, null, null, null, null, null, null, null, null, null, null, null]
       }
@@ -4408,7 +4404,7 @@
       "material": "stone",
       "properties": [],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 15,
         "states": []
       }
@@ -4474,7 +4470,7 @@
         }
       ],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 15,
         "states": ["false,down", "false,up", "false,north", "false,south", "false,west", "false,east", null, null, "true,down", "true,up", "true,north", "true,south", "true,west", "true,east", null, null]
       }
@@ -4497,7 +4493,7 @@
         }
       ],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 15,
         "states": ["false,down", "false,up", "false,north", "false,south", "false,west", "false,east", null, null, "true,down", "true,up", "true,north", "true,south", "true,west", "true,east", null, null]
       }
@@ -4528,7 +4524,7 @@
       "material": "stone",
       "properties": [],
       "states": {
-        "flags": 29,
+        "flags": 21,
         "light": 63,
         "states": []
       }
@@ -4540,7 +4536,7 @@
       "material": "grass",
       "properties": [],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 15,
         "states": []
       }
@@ -4552,7 +4548,7 @@
       "material": "stone",
       "properties": [],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 15,
         "states": []
       }
@@ -4571,7 +4567,7 @@
         }
       ],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 15,
         "states": ["y", null, null, null, "x", null, null, null, "z", null, null, null, null, null, null, null]
       }
@@ -4606,7 +4602,7 @@
         }
       ],
       "states": {
-        "flags": 45,
+        "flags": 37,
         "light": 15,
         "states": ["down,false", "up,false", "north,false", "south,false", "west,false", "east,false", null, null, "down,true", "up,true", "north,true", "south,true", "west,true", "east,true", null, null]
       }
@@ -4929,7 +4925,7 @@
         }
       ],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 15,
         "states": ["south", "west", "north", "east", null, null, null, null, null, null, null, null, null, null, null, null]
       }
@@ -4948,7 +4944,7 @@
         }
       ],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 15,
         "states": ["south", "west", "north", "east", null, null, null, null, null, null, null, null, null, null, null, null]
       }
@@ -4967,7 +4963,7 @@
         }
       ],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 15,
         "states": ["south", "west", "north", "east", null, null, null, null, null, null, null, null, null, null, null, null]
       }
@@ -4986,7 +4982,7 @@
         }
       ],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 15,
         "states": ["south", "west", "north", "east", null, null, null, null, null, null, null, null, null, null, null, null]
       }
@@ -5005,7 +5001,7 @@
         }
       ],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 15,
         "states": ["south", "west", "north", "east", null, null, null, null, null, null, null, null, null, null, null, null]
       }
@@ -5024,7 +5020,7 @@
         }
       ],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 15,
         "states": ["south", "west", "north", "east", null, null, null, null, null, null, null, null, null, null, null, null]
       }
@@ -5043,7 +5039,7 @@
         }
       ],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 15,
         "states": ["south", "west", "north", "east", null, null, null, null, null, null, null, null, null, null, null, null]
       }
@@ -5062,7 +5058,7 @@
         }
       ],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 15,
         "states": ["south", "west", "north", "east", null, null, null, null, null, null, null, null, null, null, null, null]
       }
@@ -5081,7 +5077,7 @@
         }
       ],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 15,
         "states": ["south", "west", "north", "east", null, null, null, null, null, null, null, null, null, null, null, null]
       }
@@ -5100,7 +5096,7 @@
         }
       ],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 15,
         "states": ["south", "west", "north", "east", null, null, null, null, null, null, null, null, null, null, null, null]
       }
@@ -5119,7 +5115,7 @@
         }
       ],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 15,
         "states": ["south", "west", "north", "east", null, null, null, null, null, null, null, null, null, null, null, null]
       }
@@ -5138,7 +5134,7 @@
         }
       ],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 15,
         "states": ["south", "west", "north", "east", null, null, null, null, null, null, null, null, null, null, null, null]
       }
@@ -5157,7 +5153,7 @@
         }
       ],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 15,
         "states": ["south", "west", "north", "east", null, null, null, null, null, null, null, null, null, null, null, null]
       }
@@ -5176,7 +5172,7 @@
         }
       ],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 15,
         "states": ["south", "west", "north", "east", null, null, null, null, null, null, null, null, null, null, null, null]
       }
@@ -5195,7 +5191,7 @@
         }
       ],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 15,
         "states": ["south", "west", "north", "east", null, null, null, null, null, null, null, null, null, null, null, null]
       }
@@ -5214,7 +5210,7 @@
         }
       ],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 15,
         "states": ["south", "west", "north", "east", null, null, null, null, null, null, null, null, null, null, null, null]
       }
@@ -5233,7 +5229,7 @@
         }
       ],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 15,
         "states": ["white", "orange", "magenta", "light_blue", "yellow", "lime", "pink", "gray", "silver", "cyan", "purple", "blue", "brown", "green", "red", "black"]
       }
@@ -5252,7 +5248,7 @@
         }
       ],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 15,
         "states": ["white", "orange", "magenta", "light_blue", "yellow", "lime", "pink", "gray", "silver", "cyan", "purple", "blue", "brown", "green", "red", "black"]
       }
@@ -5271,7 +5267,7 @@
         }
       ],
       "states": {
-        "flags": 13,
+        "flags": 5,
         "light": 15,
         "states": ["save", "load", "corner", "data", null, null, null, null, null, null, null, null, null, null, null, null]
       }
