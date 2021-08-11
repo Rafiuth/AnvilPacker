@@ -29,8 +29,8 @@ namespace AnvilPacker.Container
         protected readonly ILogger _logger = LogManager.GetCurrentClassLogger();
         protected static readonly JsonSerializer _metaJsonSerializer = CreateMetaJsonSerializer();
 
-        internal readonly IArchiveReader _inArchive;
-        internal readonly IArchiveWriter _outArchive;
+        protected readonly IArchiveReader _inArchive;
+        protected readonly IArchiveWriter _outArchive;
         private readonly AsyncAutoResetEvent _outEntryAvailEvent = new(true);
 
         internal WorldInfo _world = null!;
@@ -224,7 +224,7 @@ namespace AnvilPacker.Container
     public class PackerTaskProgress
     {
         public string Name = "";
-        public double ProcessedItems = 0;
+        public double ProcessedItems;
         public int TotalItems = 0;
 
         internal void AddItem()

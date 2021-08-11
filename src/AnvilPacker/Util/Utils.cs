@@ -9,17 +9,17 @@ namespace AnvilPacker.Util
 {
     public static class Utils
     {
-        public static double InterlockedAdd(ref double location1, double value)
+        public static double InterlockedAdd(ref double ptr, double value)
         {
-            //https://stackoverflow.com/a/16893641
-            double newCurrentValue = Volatile.Read(ref location1);
+            double curr = Volatile.Read(ref ptr);
+
             while (true) {
-                double currentValue = newCurrentValue;
-                double newValue = currentValue + value;
-                newCurrentValue = Interlocked.CompareExchange(ref location1, newValue, currentValue);
-                if (newCurrentValue == currentValue) {
-                    return newValue;
+                double next = curr + value;
+                double prev = Interlocked.CompareExchange(ref ptr, next, curr);
+                if (prev == curr) {
+                    return next;
                 }
+                curr = prev;
             }
         }
 

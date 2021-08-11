@@ -119,6 +119,7 @@ namespace AnvilPacker.Level
 
         public void PutChunk(Chunk chunk)
         {
+            Ensure.That(IsChunkInside(chunk), "Chunk coord must be inside region");
             int x = chunk.X & 31;
             int z = chunk.Z & 31;
             Chunks[x + z * Size] = chunk;
@@ -127,6 +128,24 @@ namespace AnvilPacker.Level
         public ChunkSection? GetSection(int x, int y, int z)
         {
             return GetChunk(x, z)?.GetSection(y);
+        }
+
+        public bool IsChunkInside(Chunk chunk)
+        {
+            return IsChunkInside(chunk.X, chunk.Z);
+        }
+        public bool IsChunkInside(int cx, int cz)
+        {
+            return (cx & ~31) == X && (cz & ~31) == Z;
+        }
+        /// <summary> Returns the region chunk index of the specified chunk (after applying modulo 32). Index = `(cx mod 32) + (cz mod 32) * 32`</summary>
+        public static int GetChunkIndex(Chunk chunk)
+        {
+            return GetChunkIndex(chunk.X, chunk.Z);
+        }
+        public static int GetChunkIndex(int cx, int cz)
+        {
+            return (cx & 31) + (cz & 31) * 32;
         }
 
         public override string ToString()

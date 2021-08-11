@@ -15,7 +15,7 @@ using Newtonsoft.Json;
 
 namespace AnvilPacker.Container
 {
-    public partial class WorldPacker : PackProcessor
+    public class WorldPacker : PackProcessor
     {
         readonly WorldPackerSettings _settings;
 

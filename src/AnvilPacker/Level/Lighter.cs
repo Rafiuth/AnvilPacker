@@ -16,14 +16,14 @@ namespace AnvilPacker.Level
         //https://github.com/Tuinity/Starlight/blob/fabric/TECHNICAL_DETAILS.md
         //https://github.com/coderbot16/flashcube/tree/trunk/lumis
 
-        readonly RegionBuffer _region;
-        readonly BlockLightInfo[] _lightAttribs;
-        readonly Heightmap[] _heightmaps = new Heightmap[32 * 32];
-        readonly short[] _emptyHeights = new short[16 * 16]; //all values set to lowest
-        readonly bool _enqueueBorders;
-
-        LightNode[] _queue = new LightNode[32768];
-        SectionCache _cache = new SectionCache(0);
+        private readonly RegionBuffer _region;
+        private readonly BlockLightInfo[] _lightAttribs;
+        private readonly Heightmap[] _heightmaps = new Heightmap[32 * 32];
+        private readonly short[] _emptyHeights = new short[16 * 16]; //all values set to lowest
+        private readonly bool _enqueueBorders;
+ 
+        private LightNode[] _queue = new LightNode[32768];
+        private SectionCache _cache = new SectionCache(0);
 
         public Lighter(RegionBuffer region, BlockLightInfo[] blockAttribs, bool enqueueBorders = false)
         {
@@ -46,15 +46,15 @@ namespace AnvilPacker.Level
         {
             var opacityMap = _lightAttribs.Select(a => a.Opacity > 0).ToArray();
             foreach (var chunk in _region.ExistingChunks) {
-                var heightmap = _heightmaps[(chunk.X & 31) + (chunk.Z & 31) * 32] ??= new();
+                var heightmap = _heightmaps[RegionBuffer.GetChunkIndex(chunk)] ??= new();
                 heightmap.Compute(chunk, opacityMap);
             }
         }
         private short[] GetHeights(int cx, int cz)
         {
             Heightmap heightmap = null;
-            if ((cx & ~31) == _region.X && (cz & ~31) == _region.Z) {
-                heightmap = _heightmaps[(cx & 31) + (cz & 31) * 32];
+            if (_region.IsChunkInside(cx, cz)) {
+                heightmap = _heightmaps[RegionBuffer.GetChunkIndex(cx, cz)];
             }
             return heightmap?.Values ?? _emptyHeights;
         }

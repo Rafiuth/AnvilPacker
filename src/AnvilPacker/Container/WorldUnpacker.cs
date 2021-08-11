@@ -14,7 +14,7 @@ using Newtonsoft.Json;
 
 namespace AnvilPacker.Container
 {
-    public partial class WorldUnpacker : PackProcessor
+    public class WorldUnpacker : PackProcessor
     {
         readonly RegionDecoderSettings _decoderSettings;
 

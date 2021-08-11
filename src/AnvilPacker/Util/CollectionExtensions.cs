@@ -34,7 +34,7 @@ namespace AnvilPacker.Util
         }
 
         /// <summary> Performs a binary search over the specified list, using a custom comparer. </summary>
-        /// <param name="compare">A delegate in the form `int compare(T elem, int elemIndex)` which the difference from the value being searched. (less than 0, 0 for equal, greater than 0). </param>
+        /// <param name="compare">A delegate in the form `int compare(T elem, int elemIndex)` which will compare the argument with the value being searched. </param>
         /// <returns>The index of the element, or, if the element was not found, a negative value, which is the bitwise complement value indicating where the first value would be.</returns>
         public static int BinarySearch<T>(this List<T> list, Func<T, int, int> compare)
         {
