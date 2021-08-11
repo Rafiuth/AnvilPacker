@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 
 using System;
 using System.Collections.Generic;
@@ -23,6 +23,7 @@ namespace AnvilPacker.Encoder
 
         private BlockCodec _blockCodec;
         private RegionEncoderSettings _settings;
+        private RepDataEncMode _heightmapMode, _lightingMode;
 
         public RegionEncoder(RegionBuffer region, RegionEncoderSettings settings)
         {
@@ -30,6 +31,22 @@ namespace AnvilPacker.Encoder
             _settings = settings;
 
             _blockCodec = settings.BlockCodec.Create(region);
+
+            _heightmapMode = settings.HeightmapEncMode;
+            _lightingMode = settings.LightEncMode;
+            UpdateAutoRepDataMode();
+        }
+        private void UpdateAutoRepDataMode()
+        {
+            bool allBlocksKnown = _region.Palette.All(b => b.Block.IsKnown);
+            var mode = allBlocksKnown ? RepDataEncMode.Strip : RepDataEncMode.Keep;
+
+            if (_heightmapMode == RepDataEncMode.Auto) {
+                _heightmapMode = mode;
+            }
+            if (_lightingMode == RepDataEncMode.Auto) {
+                _lightingMode = mode;
+            }
         }
 
         public void Encode(DataWriter stream, IProgress<double>? progress = null)
@@ -44,10 +61,10 @@ namespace AnvilPacker.Encoder
                 _blockCodec.Encode(dw, CodecProgressListener.MaybeCreate(_blockCount, progress));
             });
 
-            if (_settings.HeightmapEncMode != RepDataEncMode.Strip) {
+            if (_heightmapMode != RepDataEncMode.Strip) {
                 WritePart(stream, "Heightmaps", true, WriteHeightmaps);
             }
-            if (_settings.LightEncMode != RepDataEncMode.Strip) {
+            if (_lightingMode != RepDataEncMode.Strip) {
                 WritePart(stream, "Lighting", true, WriteLightData);
             } else {
                 WritePart(stream, "LightBorders", true, WriteLightBorders);
@@ -68,22 +85,22 @@ namespace AnvilPacker.Encoder
         {
             WriteSyncTag(stream, "Header", 0);
 
-            //Note: this is an arithmetic shift, using a div here would give wrong values.
+            //Note: arithmetic shift gives different results from div when the dividend is negative.
             //regionX = floorDiv(chunkX / 32) = x >> 5
             stream.WriteVarInt(_region.X >> 5);
             stream.WriteVarInt(_region.Z >> 5);
-            stream.WriteByte((byte)_settings.HeightmapEncMode);
-            stream.WriteByte((byte)_settings.LightEncMode);
+            stream.WriteByte((byte)_heightmapMode);
+            stream.WriteByte((byte)_lightingMode);
 
             //no deps
             WritePalette(stream);
             WriteChunkBitmap(stream);
 
             //depends on palette & header fields above
-            if (_settings.HeightmapEncMode != RepDataEncMode.Keep) {
+            if (_heightmapMode != RepDataEncMode.Keep) {
                 WriteHeightmapAttribs(stream);
             }
-            if (_settings.LightEncMode != RepDataEncMode.Keep) {
+            if (_lightingMode != RepDataEncMode.Keep) {
                 WriteLightAttribs(stream);
             }
             //no deps
@@ -195,7 +212,7 @@ namespace AnvilPacker.Encoder
 
             var types = new Dictionary<string, (int Mask, bool[]? IsBlockOpaque)>();
             var predHeightmap = new Heightmap();
-            bool deltaEnc = _settings.HeightmapEncMode == RepDataEncMode.Delta;
+            bool deltaEnc = _heightmapMode == RepDataEncMode.Delta;
 
             //Find existing heightmap types
             foreach (var chunk in _region.ExistingChunks) {
@@ -246,7 +263,7 @@ namespace AnvilPacker.Encoder
         {
             WriteSyncTag(stream, "Lighting", 0);
 
-            bool deltaEnc = _settings.LightEncMode == RepDataEncMode.Delta;
+            bool deltaEnc = _lightingMode == RepDataEncMode.Delta;
             var preds = new Dictionary<ChunkSection, (NibbleArray? BlockLight, NibbleArray? SkyLight)>();
 
             if (deltaEnc) {

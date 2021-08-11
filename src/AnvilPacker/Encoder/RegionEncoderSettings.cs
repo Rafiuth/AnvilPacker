@@ -26,9 +26,12 @@ namespace AnvilPacker.Encoder
     /// <summary> Specifies how to encode reproducible data such as lighting and heightmaps. </summary>
     public enum RepDataEncMode
     {
-        Strip,  //Don't encode
-        Keep,   //Encode as is
-        Delta   //Encode the differences from the reproduced values
+        //Values are encoded, do not change
+        Strip = 0, //Don't encode
+        Keep  = 1, //Encode as is
+        Delta = 2, //Encode the differences from the reproduced values
+
+        Auto = -1, //Strip if no estimation is required (all blocks are known), otherwise, keep.
     }
     public abstract class BlockCodecSettings
     {
