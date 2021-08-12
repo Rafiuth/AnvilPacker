@@ -4,6 +4,8 @@ import com.google.common.base.*;
 import com.google.common.collect.*;
 import com.google.common.io.*;
 import com.google.gson.*;
+import com.google.gson.reflect.*;
+import com.google.gson.stream.*;
 import com.mojang.bridge.game.*;
 import net.minecraft.*;
 import net.minecraft.block.*;
@@ -22,6 +24,8 @@ import java.util.stream.*;
 
 public class Main
 {
+    private static XData data = new XData();
+    
     public static void main(String[] args) throws Throwable
     {
         SharedConstants.createGameVersion();
@@ -31,7 +35,6 @@ public class Main
 
         System.out.println("Extracting data...");
 
-        XData data = new XData();
         data.version = version.getName();
         data.worldVersion = version.getWorldVersion();
         data.numBlockStates = 0;
@@ -49,16 +52,31 @@ public class Main
             data.numBlockStates += xblock.numStates;
         }
 
-        data.blocks.addAll(blocks.keySet());
+        data.shapes = data.shapeCache.keySet().stream().map(boxes -> {
+            return boxes.stream().flatMapToInt(bb -> {
+                return IntStream.of(
+                    (int)Math.round(bb.minX * 16), 
+                    (int)Math.round(bb.minY * 16), 
+                    (int)Math.round(bb.minZ * 16),
+                    (int)Math.round(bb.maxX * 16), 
+                    (int)Math.round(bb.maxY * 16), 
+                    (int)Math.round(bb.maxZ * 16)
+                );
+            }).toArray();
+        }).collect(Collectors.toList());
 
+        data.blocks.addAll(blocks.keySet());
+        
         var gson = new GsonBuilder()
             .setPrettyPrinting()
             .disableHtmlEscaping()
             .create();
         String json = gson.toJson(data);
-
-        //int arrays \[\s*(?:\d+\s*,\s*)*\s*\d+\s*\]
-        json = minify(json, "\\[\\s*(?:\\d+\\s*,\\s*)*\\s*\\d+\\s*\\]");
+        
+        //Note: this shitty regex will crash the shitty java regex engine with a stackoverflow.
+        //Launch with -Xss64m as an workaround
+        //int arrays \[\s*(?:-?\d+\s*,\s*)*\s*-?\d+\s*\]
+        json = minify(json, "\\[\\s*(?:-?\\d+\\s*,\\s*)*\\s*-?\\d+\\s*\\]");
         //string arrays \[\s*(?:\"[A-Za-z0-9 ,_\-:$]*\"\s*,\s*)*\s*\"[A-Za-z0-9 ,_\-:$]*\"\s*\]
         json = minify(json, "\\[\\s*(?:\\\"[A-Za-z0-9 ,_\\-:$]*\\\"\\s*,\\s*)*\\s*\\\"[A-Za-z0-9 ,_\\-:$]*\\\"\\s*\\]");
 
@@ -86,6 +104,15 @@ public class Main
 
         public List<XBlock> blocks = new ArrayList<>();
         public Collection<XMaterial> materials = XMaterial.known.values();
+
+        public transient Map<List<Box>, Integer> shapeCache = new LinkedHashMap<>();
+        public List<int[]> shapes;
+
+        public int getShapeId(VoxelShape shape)
+        {
+            var bbs = shape.getBoundingBoxes();
+            return shapeCache.computeIfAbsent(bbs, k -> shapeCache.size());
+        }
     }
     static class XBlock
     {
@@ -175,10 +202,7 @@ public class Main
     {
         public Object/* int|List<int> */ flags;
         public Object/* int|List<int> */ light;
-
-        //Bit set indicating whether light passes throught direction [Y- Y+ Z- Z+ X- X+]
-        //Only present if any state has the flag "HasSidedTransparency"
-        public Object/* int|List<int> */ transparentSides;
+        public Object/* int|List<int> */ occlusionShapes;
 
         private static final BlockView emptyView = EmptyBlockView.INSTANCE;
         private static final BlockPos zeroPos = BlockPos.ORIGIN;
@@ -187,22 +211,16 @@ public class Main
         {
             var flags = new ArrayList<Integer>();
             var light = new ArrayList<Integer>();
-            var transparentSides = new ArrayList<Integer>();
-            boolean hasAnyTransparentSide = false;
+            var occlusionShapes = new ArrayList<Integer>();
 
             for (BlockState state : states) {
                 flags.add(getFlags(state));
                 light.add(state.getLuminance() << 4 | state.getOpacity(emptyView, zeroPos));
-                if (state.hasSidedTransparency()) {
-                    transparentSides.add(getTransparentSides(state));
-                    hasAnyTransparentSide = true;
-                } else {
-                    transparentSides.add(0);
-                }
+                occlusionShapes.add(data.getShapeId(state.getCullingShape(emptyView, zeroPos)));
             }
             this.flags = deduplicate(flags);
             this.light = deduplicate(light);
-            this.transparentSides = hasAnyTransparentSide ? deduplicate(transparentSides) : null;
+            this.occlusionShapes = deduplicate(occlusionShapes);
         }
 
         private static Object deduplicate(List<Integer> arr)
@@ -238,19 +256,10 @@ public class Main
             if (!bs.getFluidState().isEmpty())
                 flags |= 1 << 6; //IsImmerse
 
-            return flags;
-        }
+            if (bs.getBlock().hasDynamicBounds())
+                flags |= 1 << 7;
 
-        private int getTransparentSides(BlockState bs)
-        {
-            int mask = 0;
-            for (int i = 0; i < 6; i++) {
-                var faceShape = bs.getCullingFace(emptyView, zeroPos, Direction.byId(i));
-                if (!VoxelShapes.unionCoversFullCube(faceShape, VoxelShapes.empty())) {
-                    mask |= 1 << i;
-                }
-            }
-            return mask;
+            return flags;
         }
 
         @Override
@@ -259,7 +268,7 @@ public class Main
             return obj instanceof XBlockStates o && 
                    o.flags.equals(flags) && 
                    o.light.equals(light) &&
-                   Objects.equals(o.transparentSides, transparentSides);
+                   Objects.equals(o.occlusionShapes, occlusionShapes);
         }
         @Override
         public int hashCode()
