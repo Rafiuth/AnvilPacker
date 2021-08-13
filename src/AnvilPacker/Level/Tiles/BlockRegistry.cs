@@ -17,6 +17,8 @@ namespace AnvilPacker.Level
         private static BlockPropertyValue[] _emptyPropVals => Array.Empty<BlockPropertyValue>();
         private static int _nextBlockId = 0, _nextStateId = 0;
 
+        public const DataVersion LatestVersion = (DataVersion)int.MaxValue;
+
         public static Dictionary<ResourceName, Block> KnownBlocks { get; } = new(1024);
         public static DictionarySlim<int, Block> KnownLegacyBlocks { get; } = new(256);
         /// <summary> Map of blocks that depends on version. The lists are sorted by version, in ascending order. </summary>
@@ -29,7 +31,7 @@ namespace AnvilPacker.Level
         internal static int NextBlockId() => _nextBlockId++;
         internal static int NextStateId() => _nextStateId++;
 
-        public static Block GetBlock(ResourceName name, DataVersion version = (DataVersion)int.MaxValue)
+        public static Block GetBlock(ResourceName name, DataVersion version = LatestVersion)
         {
             return TryGetBlock(name, version) ?? 
                    CreateState(name, _emptyPropVals).Block;
@@ -55,12 +57,12 @@ namespace AnvilPacker.Level
 
         /// <summary> Gets or creates the state for the given block and properties. </summary>
         /// <param name="props">The block state property values. Note that the block state will take the ownership of this array. Do not change it after calling this method. </param>
-        public static BlockState GetState(ResourceName blockName, BlockPropertyValue[] props, DataVersion version = 0)
+        public static BlockState GetState(ResourceName blockName, BlockPropertyValue[] props, DataVersion version = LatestVersion)
         {
             return FindState(blockName, props, version) ?? 
                    CreateState(blockName, props);
         }
-        private static BlockState? FindState(ResourceName blockName, BlockPropertyValue[] props, DataVersion version = 0)
+        private static BlockState? FindState(ResourceName blockName, BlockPropertyValue[] props, DataVersion version = LatestVersion)
         {
             var block = GetBlock(blockName, version);
             if (block == null) {

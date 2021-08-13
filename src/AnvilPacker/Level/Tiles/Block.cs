@@ -45,7 +45,8 @@ namespace AnvilPacker.Level
                     Properties = oldState.Properties,
                     Attributes = oldState.Attributes,
                     LightOpacity = oldState.LightOpacity,
-                    LightEmission = oldState.LightEmission
+                    LightEmission = oldState.LightEmission,
+                    OcclusionShape = oldState.OcclusionShape
                 };
             }
             newBlock.DefaultState = states[DefaultState.Id - States[0].Id];
@@ -86,6 +87,7 @@ namespace AnvilPacker.Level
         HasRandomTicks      = 1 << 4,
         EmitsRedstonePower  = 1 << 5, //fabric: emitsRedstonePower(), mojang: isSignalSource()
         HasFluid            = 1 << 6, // !state.getFluidState().isEmpty()
+        HasDynamicShape     = 1 << 7,
         
         //Internal
         Legacy              = 1 << 28,

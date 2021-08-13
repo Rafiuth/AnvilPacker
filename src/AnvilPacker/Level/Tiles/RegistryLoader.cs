@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 using AnvilPacker.Data;
+using AnvilPacker.Level.Physics;
 using AnvilPacker.Util;
 using NLog;
 
@@ -40,12 +41,14 @@ namespace AnvilPacker.Level
         private static void LoadBlocks()
         {
             using var json = LoadJson("blocks.json");
-            var jArr = json.RootElement.GetProperty("blocks");
+            var jBlocks = json.RootElement.GetProperty("blocks");
+            var jShapes = json.RootElement.GetProperty("shapes");
 
             var propCache = new HashSet<BlockProperty>();
+            var shapes = ParseShapes(jShapes);
 
-            foreach (var jb in jArr.EnumerateArray()) {
-                DeserializeBlocks(jb, propCache, block => {
+            foreach (var jb in jBlocks.EnumerateArray()) {
+                ParseBlocks(jb, propCache, shapes, block => {
                     BlockRegistry.KnownBlocks.Add(block.Name, block);
                 });
             }
@@ -97,12 +100,15 @@ namespace AnvilPacker.Level
         private static void LoadVersionedBlocks()
         {
             using var json = LoadJson("blocks_versioned.jsonc");
+            var jBlocks = json.RootElement.GetProperty("blocks");
+            var jShapes = json.RootElement.GetProperty("shapes");
 
             var propCache = new HashSet<BlockProperty>();
+            var shapes = ParseShapes(jShapes);
 
-            foreach (var jb in json.RootElement.EnumerateArray()) {
+            foreach (var jb in jBlocks.EnumerateArray()) {
                 var version = (DataVersion)jb.GetInt("version_removed") - 1;
-                DeserializeBlocks(jb, propCache, block => {
+                ParseBlocks(jb, propCache, shapes, block => {
                     var entry = (version, block);
 
                     var dict = BlockRegistry.KnownVersionedBlocks;
@@ -131,7 +137,7 @@ namespace AnvilPacker.Level
                 });
             }
         }
-        private static void DeserializeBlocks(JsonElement jb, HashSet<BlockProperty> propCache, Action<Block> consume)
+        private static void ParseBlocks(JsonElement jb, HashSet<BlockProperty> propCache, List<VoxelShape> shapes, Action<Block> consume)
         {
             var jNames = jb.GetProperty("names");
             int numStates = jb.GetInt("numStates");
@@ -142,11 +148,11 @@ namespace AnvilPacker.Level
             var jStates = jb.GetProperty("states");
             var jFlags = jStates.GetProperty("flags");
             var jLight = jStates.GetProperty("light"); //packed light info, luminance << 4 | opacity
-            bool jTransSideExists = jStates.TryGetProperty("transparentSides", out var jTransSides);
+            var jOcclShapes = jStates.GetProperty("occlusionShapes");
 
             bool jFlagsIsArr = jFlags.ValueKind == JsonValueKind.Array;
             bool jLightIsArr = jLight.ValueKind == JsonValueKind.Array;
-            bool jTransSideIsArr = jTransSides.ValueKind == JsonValueKind.Array;
+            bool jOcclShapesIsArr = jOcclShapes.ValueKind == JsonValueKind.Array;
 
             foreach (var jname in jNames.EnumerateArray()) {
                 var states = new BlockState[numStates];
@@ -161,7 +167,7 @@ namespace AnvilPacker.Level
                 for (int id = 0; id < numStates; id++) {
                     int flags = (jFlagsIsArr ? jFlags[id] : jFlags).GetInt32();
                     int light = (jLightIsArr ? jLight[id] : jLight).GetInt32();
-                    int transSides = !jTransSideExists ? 0 : (jTransSideIsArr ? jTransSides[id] : jTransSides).GetInt32();
+                    var occlShapeId = (jOcclShapesIsArr ? jOcclShapes[id] : jOcclShapes).GetInt32();
 
                     states[id] = new BlockState() {
                         Id = BlockRegistry.NextStateId(),
@@ -169,13 +175,32 @@ namespace AnvilPacker.Level
                         Attributes = (BlockAttributes)flags,
                         LightOpacity = (byte)(light & 15),
                         LightEmission = (byte)(light >> 4),
-                        TransparentSides = Directions.FromVanillaMask(transSides),
+                        OcclusionShape = shapes[occlShapeId],
                         Properties = CreatePropertyValues(props, id)
                     };
                 }
                 block.DefaultState = states[defaultStateId];
                 consume(block);
             }
+        }
+        private static List<VoxelShape> ParseShapes(JsonElement ja)
+        {
+            var list = new List<VoxelShape>();
+            foreach (var jshape in ja.EnumerateArray()) {
+                var boxes = new Box8[jshape.GetArrayLength() / 6];
+                for (int i = 0; i < boxes.Length; i++) {
+                    boxes[i] = new Box8(
+                        jshape[i * 6 + 0].GetSByte(),
+                        jshape[i * 6 + 1].GetSByte(),
+                        jshape[i * 6 + 2].GetSByte(),
+                        jshape[i * 6 + 3].GetSByte(),
+                        jshape[i * 6 + 4].GetSByte(),
+                        jshape[i * 6 + 5].GetSByte()
+                    );
+                }
+                list.Add(new VoxelShape(boxes));
+            }
+            return list;
         }
 
         private static void LoadLegacyBlocks()

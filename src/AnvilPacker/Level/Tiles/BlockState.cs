@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using AnvilPacker.Level.Physics;
 
 namespace AnvilPacker.Level
 {
@@ -23,10 +24,9 @@ namespace AnvilPacker.Level
         /// <summary> Amount of light this block emits. [0..15] </summary>
         public byte LightEmission { get; set; }
 
-        /// <summary> Sides that let light pass through. <see cref="Direction.None" /> if the attribute <see cref="BlockAttributes.HasSidedTransparency"/> is not set. </summary>
-        public Direction TransparentSides { get; set; } = Direction.None;
-
         public BlockMaterial Material => Block.Material;
+
+        public VoxelShape OcclusionShape { get; set; } = VoxelShape.Cube;
 
         public bool HasAttrib(BlockAttributes attribs)
         {
