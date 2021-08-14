@@ -262,7 +262,7 @@
       "material": "wood",
       "properties": [
         {
-          "enumType": "Instrument",
+          "enumType": "NoteBlockInstrument",
           "values": ["harp", "basedrum", "snare", "hat", "bass", "flute", "bell", "guitar", "chime", "xylophone", "iron_xylophone", "cow_bell", "didgeridoo", "bit", "banjo", "pling"],
           "name": "instrument",
           "type": "enum"
@@ -671,13 +671,13 @@
           "type": "enum"
         },
         {
-          "enumType": "BlockHalf",
+          "enumType": "Half",
           "values": ["top", "bottom"],
           "name": "half",
           "type": "enum"
         },
         {
-          "enumType": "StairShape",
+          "enumType": "StairsShape",
           "values": ["straight", "inner_left", "inner_right", "outer_left", "outer_right"],
           "name": "shape",
           "type": "enum"
@@ -729,13 +729,13 @@
       "material": "decoration",
       "properties": [
         {
-          "enumType": "WireConnection",
+          "enumType": "RedstoneSide",
           "values": ["up", "side", "none"],
           "name": "east",
           "type": "enum"
         },
         {
-          "enumType": "WireConnection",
+          "enumType": "RedstoneSide",
           "values": ["up", "side", "none"],
           "name": "north",
           "type": "enum"
@@ -747,13 +747,13 @@
           "type": "int"
         },
         {
-          "enumType": "WireConnection",
+          "enumType": "RedstoneSide",
           "values": ["up", "side", "none"],
           "name": "south",
           "type": "enum"
         },
         {
-          "enumType": "WireConnection",
+          "enumType": "RedstoneSide",
           "values": ["up", "side", "none"],
           "name": "west",
           "type": "enum"
@@ -868,7 +868,7 @@
           "type": "enum"
         },
         {
-          "enumType": "DoorHinge",
+          "enumType": "DoorHingeSide",
           "values": ["left", "right"],
           "name": "hinge",
           "type": "enum"
@@ -947,13 +947,13 @@
           "type": "enum"
         },
         {
-          "enumType": "BlockHalf",
+          "enumType": "Half",
           "values": ["top", "bottom"],
           "name": "half",
           "type": "enum"
         },
         {
-          "enumType": "StairShape",
+          "enumType": "StairsShape",
           "values": ["straight", "inner_left", "inner_right", "outer_left", "outer_right"],
           "name": "shape",
           "type": "enum"
@@ -999,7 +999,7 @@
       "material": "decoration",
       "properties": [
         {
-          "enumType": "WallMountLocation",
+          "enumType": "AttachFace",
           "values": ["floor", "wall", "ceiling"],
           "name": "face",
           "type": "enum"
@@ -1057,7 +1057,7 @@
           "type": "enum"
         },
         {
-          "enumType": "DoorHinge",
+          "enumType": "DoorHingeSide",
           "values": ["left", "right"],
           "name": "hinge",
           "type": "enum"
@@ -1158,7 +1158,7 @@
       "material": "decoration",
       "properties": [
         {
-          "enumType": "WallMountLocation",
+          "enumType": "AttachFace",
           "values": ["floor", "wall", "ceiling"],
           "name": "face",
           "type": "enum"
@@ -1531,7 +1531,7 @@
           "type": "enum"
         },
         {
-          "enumType": "BlockHalf",
+          "enumType": "Half",
           "values": ["top", "bottom"],
           "name": "half",
           "type": "enum"
@@ -2190,19 +2190,19 @@
       "material": "stone",
       "properties": [
         {
-          "enumType": "WallShape",
+          "enumType": "WallSide",
           "values": ["none", "low", "tall"],
           "name": "east",
           "type": "enum"
         },
         {
-          "enumType": "WallShape",
+          "enumType": "WallSide",
           "values": ["none", "low", "tall"],
           "name": "north",
           "type": "enum"
         },
         {
-          "enumType": "WallShape",
+          "enumType": "WallSide",
           "values": ["none", "low", "tall"],
           "name": "south",
           "type": "enum"
@@ -2216,7 +2216,7 @@
           "type": "bool"
         },
         {
-          "enumType": "WallShape",
+          "enumType": "WallSide",
           "values": ["none", "low", "tall"],
           "name": "west",
           "type": "enum"
@@ -2511,7 +2511,7 @@
           "type": "enum"
         },
         {
-          "enumType": "BlockHalf",
+          "enumType": "Half",
           "values": ["top", "bottom"],
           "name": "half",
           "type": "enum"
@@ -3261,7 +3261,7 @@
       "material": "repair_station",
       "properties": [
         {
-          "enumType": "WallMountLocation",
+          "enumType": "AttachFace",
           "values": ["floor", "wall", "ceiling"],
           "name": "face",
           "type": "enum"
@@ -3332,7 +3332,7 @@
       "material": "metal",
       "properties": [
         {
-          "enumType": "Attachment",
+          "enumType": "BellAttachType",
           "values": ["floor", "ceiling", "single_wall", "double_wall"],
           "name": "attachment",
           "type": "enum"
@@ -3716,7 +3716,7 @@
           "type": "enum"
         },
         {
-          "enumType": "BlockHalf",
+          "enumType": "Half",
           "values": ["top", "bottom"],
           "name": "half",
           "type": "enum"
@@ -3784,13 +3784,13 @@
           "type": "enum"
         },
         {
-          "enumType": "BlockHalf",
+          "enumType": "Half",
           "values": ["top", "bottom"],
           "name": "half",
           "type": "enum"
         },
         {
-          "enumType": "StairShape",
+          "enumType": "StairsShape",
           "values": ["straight", "inner_left", "inner_right", "outer_left", "outer_right"],
           "name": "shape",
           "type": "enum"
@@ -3825,7 +3825,7 @@
           "type": "enum"
         },
         {
-          "enumType": "DoorHinge",
+          "enumType": "DoorHingeSide",
           "values": ["left", "right"],
           "name": "hinge",
           "type": "enum"
@@ -3898,7 +3898,7 @@
       "material": "metal",
       "properties": [
         {
-          "enumType": "StructureBlockMode",
+          "enumType": "StructureMode",
           "values": ["save", "load", "corner", "data"],
           "name": "mode",
           "type": "enum"
@@ -3917,7 +3917,7 @@
       "material": "metal",
       "properties": [
         {
-          "enumType": "JigsawOrientation",
+          "enumType": "FrontAndTop",
           "values": ["down_east", "down_north", "down_south", "down_west", "up_east", "up_north", "up_south", "up_west", "west_up", "east_up", "north_up", "south_up"],
           "name": "orientation",
           "type": "enum"
@@ -4285,13 +4285,13 @@
           "type": "enum"
         },
         {
-          "enumType": "BlockHalf",
+          "enumType": "Half",
           "values": ["top", "bottom"],
           "name": "half",
           "type": "enum"
         },
         {
-          "enumType": "StairShape",
+          "enumType": "StairsShape",
           "values": ["straight", "inner_left", "inner_right", "outer_left", "outer_right"],
           "name": "shape",
           "type": "enum"
@@ -4320,13 +4320,13 @@
           "type": "enum"
         },
         {
-          "enumType": "BlockHalf",
+          "enumType": "Half",
           "values": ["top", "bottom"],
           "name": "half",
           "type": "enum"
         },
         {
-          "enumType": "StairShape",
+          "enumType": "StairsShape",
           "values": ["straight", "inner_left", "inner_right", "outer_left", "outer_right"],
           "name": "shape",
           "type": "enum"
@@ -4422,7 +4422,7 @@
       "material": "stone",
       "properties": [
         {
-          "enumType": "Thickness",
+          "enumType": "DripstoneThickness",
           "values": ["tip_merge", "tip", "frustum", "middle", "base"],
           "name": "thickness",
           "type": "enum"
@@ -4524,7 +4524,7 @@
       "names": ["moss_block"],
       "numStates": 1,
       "defaultStateId": 0,
-      "material": "coral",
+      "material": "moss",
       "properties": [],
       "states": {
         "flags": 5,
@@ -4852,7 +4852,7 @@
       "mapColor": 11
     },
     {
-      "name": "coral",
+      "name": "moss",
       "attribs": 41,
       "mapColor": 7
     },

@@ -52,7 +52,7 @@ namespace AnvilPacker.Level
         public static BlockMaterial RepairStation    { get; } = Reg("repair_station", MapColor.Metal, BM | SB | S);
         public static BlockMaterial Barrier          { get; } = Reg("barrier", MapColor.Air, BM | SB | S);
         public static BlockMaterial Piston           { get; } = Reg("piston", MapColor.Stone, BM | SB | S);
-        public static BlockMaterial Coral            { get; } = Reg("coral", MapColor.Plant, BM | SB | S);
+        public static BlockMaterial Moss             { get; } = Reg("moss", MapColor.Plant, BM | SB | S);
         public static BlockMaterial Vegetable        { get; } = Reg("vegetable", MapColor.Plant, BM | SB | S);
         public static BlockMaterial Egg              { get; } = Reg("egg", MapColor.Plant, BM | SB | S);
         public static BlockMaterial Cake             { get; } = Reg("cake", MapColor.Air, BM | SB | S);

@@ -4,17 +4,18 @@ import com.google.common.base.*;
 import com.google.common.collect.*;
 import com.google.common.io.*;
 import com.google.gson.*;
-import com.google.gson.reflect.*;
-import com.google.gson.stream.*;
 import com.mojang.bridge.game.*;
 import net.minecraft.*;
-import net.minecraft.block.*;
-import net.minecraft.state.property.*;
-import net.minecraft.util.*;
-import net.minecraft.util.math.*;
-import net.minecraft.util.registry.*;
-import net.minecraft.util.shape.*;
-import net.minecraft.world.*;
+import net.minecraft.core.*;
+import net.minecraft.resources.*;
+import net.minecraft.server.*;
+import net.minecraft.world.level.*;
+import net.minecraft.world.level.block.*;
+import net.minecraft.world.level.block.state.*;
+import net.minecraft.world.level.block.state.properties.*;
+import net.minecraft.world.level.material.*;
+import net.minecraft.world.phys.*;
+import net.minecraft.world.phys.shapes.*;
 
 import java.io.*;
 import java.util.*;
@@ -28,10 +29,10 @@ public class Main
     
     public static void main(String[] args) throws Throwable
     {
-        SharedConstants.createGameVersion();
-        GameVersion version = SharedConstants.getGameVersion();
+        SharedConstants.tryDetectVersion();
+        GameVersion version = SharedConstants.getCurrentVersion();
         System.out.println("Initializing Minecraft " + version.getName() + " registries...");
-        Bootstrap.initialize();
+        Bootstrap.bootStrap();
 
         System.out.println("Extracting data...");
 
@@ -42,7 +43,7 @@ public class Main
         var blocks = new LinkedHashMap<XBlock, XBlock>();
         
         for (Block block : Registry.BLOCK) {
-            Identifier key = Registry.BLOCK.getId(block);
+            ResourceLocation key = Registry.BLOCK.getKey(block);
             var xblock = new XBlock(key, block, data);
             blocks.compute(xblock, (k, prev) -> {
                 if (prev == null) return k;
@@ -105,12 +106,12 @@ public class Main
         public List<XBlock> blocks = new ArrayList<>();
         public Collection<XMaterial> materials = XMaterial.known.values();
 
-        public transient Map<List<Box>, Integer> shapeCache = new LinkedHashMap<>();
+        public transient Map<List<AABB>, Integer> shapeCache = new LinkedHashMap<>();
         public List<int[]> shapes;
 
         public int getShapeId(VoxelShape shape)
         {
-            var bbs = shape.getBoundingBoxes();
+            var bbs = shape.toAabbs();
             return shapeCache.computeIfAbsent(bbs, k -> shapeCache.size());
         }
     }
@@ -123,7 +124,7 @@ public class Main
         public List<XBlockProperty> properties = new ArrayList<>();
         public XBlockStates states;
 
-        public XBlock(Identifier key, Block block, XData data)
+        public XBlock(ResourceLocation key, Block block, XData data)
         {
             var name = key.getPath();
             if (!key.getNamespace().equals("minecraft")) {
@@ -131,19 +132,19 @@ public class Main
             }
             names.add(name);
 
-            var stateMgr = block.getStateManager();
+            var stateDef = block.getStateDefinition();
             var sortedStates = ImmutableList.sortedCopyOf(
                 Comparator.comparingInt(XBlock::getStateIndex), 
-                stateMgr.getStates()
+                stateDef.getPossibleStates()
             );
 
             numStates = sortedStates.size();
             states = new XBlockStates(block, sortedStates);
-            var defaultState = block.getDefaultState();
+            var defaultState = block.defaultBlockState();
 
             defaultStateId = getStateIndex(defaultState);
 
-            for (Property<?> prop : block.getStateManager().getProperties()) {
+            for (Property<?> prop : block.getStateDefinition().getProperties()) {
                 properties.add(XBlockProperty.create(prop));
             }
 
@@ -157,11 +158,11 @@ public class Main
             int id = 0;
             int shift = 1;
 
-            var props = state.getBlock().getStateManager().getProperties();
+            var props = state.getBlock().getStateDefinition().getProperties();
 
             for (Property<?> prop : props) {
                 id += getValueIndex(state, prop) * shift;
-                shift *= prop.getValues().size();
+                shift *= prop.getPossibleValues().size();
             }
             return id;
         }
@@ -169,8 +170,8 @@ public class Main
         {
             int index = 0;
 
-            Object value = state.get(prop);
-            for (Object possValue : prop.getValues()) {
+            Object value = state.getValue(prop);
+            for (Object possValue : prop.getPossibleValues()) {
                 if (value.equals(possValue)) {
                     return index;
                 }
@@ -204,8 +205,8 @@ public class Main
         public Object/* int|List<int> */ light;
         public Object/* int|List<int> */ occlusionShapes;
 
-        private static final BlockView emptyView = EmptyBlockView.INSTANCE;
-        private static final BlockPos zeroPos = BlockPos.ORIGIN;
+        private static final BlockGetter emptyView = EmptyBlockGetter.INSTANCE;
+        private static final BlockPos zeroPos = BlockPos.ZERO;
 
         public XBlockStates(Block block, List<BlockState> states)
         {
@@ -215,8 +216,9 @@ public class Main
 
             for (BlockState state : states) {
                 flags.add(getFlags(state));
-                light.add(state.getLuminance() << 4 | state.getOpacity(emptyView, zeroPos));
-                occlusionShapes.add(data.getShapeId(state.getCullingShape(emptyView, zeroPos)));
+                //emission << 4 | opacity
+                light.add(state.getLightEmission() << 4 | state.getLightBlock(emptyView, zeroPos));
+                occlusionShapes.add(data.getShapeId(state.getOcclusionShape(emptyView, zeroPos)));
             }
             this.flags = deduplicate(flags);
             this.light = deduplicate(light);
@@ -235,28 +237,28 @@ public class Main
         {
             int flags = 0;
 
-            if (bs.isOpaque())
+            if (bs.canOcclude()) //isOpaque
                 flags |= 1 << 0;
 
-            if (bs.isTranslucent(emptyView, zeroPos))
+            if (bs.propagatesSkylightDown(emptyView, zeroPos)) //isTranslucent
                 flags |= 1 << 1;
 
-            if (bs.isFullCube(emptyView, zeroPos))
+            if (bs.isCollisionShapeFullBlock(emptyView, zeroPos)) //isFullCube
                 flags |= 1 << 2;
 
-            if (bs.hasSidedTransparency())
+            if (bs.useShapeForLightOcclusion())
                 flags |= 1 << 3;
 
-            if (bs.hasRandomTicks())
+            if (bs.isRandomlyTicking())
                 flags |= 1 << 4;
 
-            if (bs.emitsRedstonePower())
+            if (bs.isSignalSource()) // emitsRedstonePower
                 flags |= 1 << 5;
 
             if (!bs.getFluidState().isEmpty())
                 flags |= 1 << 6; //IsImmerse
 
-            if (bs.getBlock().hasDynamicBounds())
+            if (bs.getBlock().hasDynamicShape())
                 flags |= 1 << 7;
 
             return flags;
@@ -288,10 +290,10 @@ public class Main
         {
             this.name = name;
 
-            attribs |= material.blocksMovement()    ? 1 << 0 : 0;
-            attribs |= material.isBurnable()        ? 1 << 1 : 0;
+            attribs |= material.blocksMotion()      ? 1 << 0 : 0;
+            attribs |= material.isFlammable()       ? 1 << 1 : 0;
             attribs |= material.isLiquid()          ? 1 << 2 : 0;
-            attribs |= material.blocksLight()       ? 1 << 3 : 0;
+            attribs |= material.isSolidBlocking()   ? 1 << 3 : 0; //Light blocking?
             attribs |= material.isReplaceable()     ? 1 << 4 : 0;
             attribs |= material.isSolid()           ? 1 << 5 : 0;
 
@@ -302,47 +304,47 @@ public class Main
 
         static {
             reg(Material.AIR                , "air");
-            reg(Material.STRUCTURE_VOID     , "structural_air");
+            reg(Material.STRUCTURAL_AIR     , "structural_air");
             reg(Material.PORTAL             , "portal");
-            reg(Material.CARPET             , "carpet");
+            reg(Material.CLOTH_DECORATION   , "carpet");
             reg(Material.PLANT              , "plant");
-            reg(Material.UNDERWATER_PLANT   , "water_plant");
+            reg(Material.WATER_PLANT        , "water_plant");
             reg(Material.REPLACEABLE_PLANT  , "replaceable_plant");
-            reg(Material.NETHER_SHOOTS      , "replaceable_fireproof_plant");
-            reg(Material.REPLACEABLE_UNDERWATER_PLANT, "replaceable_water_plant");
+            reg(Material.REPLACEABLE_FIREPROOF_PLANT, "replaceable_fireproof_plant");
+            reg(Material.REPLACEABLE_WATER_PLANT, "replaceable_water_plant");
             reg(Material.WATER              , "water");
             reg(Material.BUBBLE_COLUMN      , "bubble_column");
             reg(Material.LAVA               , "lava");
-            reg(Material.SNOW_LAYER         , "snow_layer");
+            reg(Material.TOP_SNOW           , "snow_layer");
             reg(Material.FIRE               , "fire");
             reg(Material.DECORATION         , "decoration");
-            reg(Material.COBWEB             , "cobweb");
-            reg(Material.REDSTONE_LAMP      , "redstone_lamp");
-            reg(Material.ORGANIC_PRODUCT    , "clay");
-            reg(Material.SOIL               , "dirt");
-            reg(Material.SOLID_ORGANIC      , "grass");
-            reg(Material.DENSE_ICE          , "dense_ice");
-            reg(Material.AGGREGATE          , "sand");
+            reg(Material.WEB                , "cobweb");
+            reg(Material.BUILDABLE_GLASS    , "redstone_lamp");
+            reg(Material.CLAY               , "clay");
+            reg(Material.DIRT               , "dirt");
+            reg(Material.GRASS              , "grass");
+            reg(Material.ICE_SOLID          , "dense_ice");
+            reg(Material.SAND               , "sand");
             reg(Material.SPONGE             , "sponge");
-            reg(Material.SHULKER_BOX        , "shulker_box");
+            reg(Material.SHULKER_SHELL      , "shulker_box");
             reg(Material.WOOD               , "wood");
             reg(Material.NETHER_WOOD        , "nether_wood");
             reg(Material.BAMBOO_SAPLING     , "bamboo_sapling");
             reg(Material.BAMBOO             , "bamboo");
             reg(Material.WOOL               , "wool");
-            reg(Material.TNT                , "tnt");
+            reg(Material.EXPLOSIVE          , "tnt");
             reg(Material.LEAVES             , "leaves");
             reg(Material.GLASS              , "glass");
             reg(Material.ICE                , "ice");
             reg(Material.CACTUS             , "cactus");
             reg(Material.STONE              , "stone");
             reg(Material.METAL              , "metal");
-            reg(Material.SNOW_BLOCK         , "snow_block");
-            reg(Material.REPAIR_STATION     , "repair_station");
+            reg(Material.SNOW               , "snow_block");
+            reg(Material.HEAVY_METAL        , "repair_station");
             reg(Material.BARRIER            , "barrier");
             reg(Material.PISTON             , "piston");
-            reg(Material.MOSS_BLOCK         , "coral");
-            reg(Material.GOURD              , "vegetable");
+            reg(Material.MOSS               , "moss");
+            reg(Material.VEGETABLE          , "vegetable");
             reg(Material.EGG                , "egg");
             reg(Material.CAKE               , "cake");
             reg(Material.AMETHYST           , "amethyst");
@@ -379,8 +381,8 @@ public class Main
         {
             if (prop instanceof BooleanProperty) {
                 return new XPropBool((BooleanProperty) prop);
-            } else if (prop instanceof IntProperty) {
-                return new XPropInt((IntProperty) prop);
+            } else if (prop instanceof IntegerProperty) {
+                return new XPropInt((IntegerProperty) prop);
             } else {
                 return new XPropEnum((EnumProperty<?>) prop);
             }
@@ -395,16 +397,16 @@ public class Main
         {
             public int min, max;
 
-            public XPropInt(IntProperty prop)
+            public XPropInt(IntegerProperty prop)
             {
                 super(prop.getName(), "int");
 
-                min = prop.getValues().stream().min(Integer::compareTo).get();
-                max = prop.getValues().stream().max(Integer::compareTo).get();
+                min = prop.getPossibleValues().stream().min(Integer::compareTo).get();
+                max = prop.getPossibleValues().stream().max(Integer::compareTo).get();
                 
                 //assert values order, expected to be [min, ..., max]
                 int i = min;
-                for (Integer val : prop.getValues()) {
+                for (Integer val : prop.getPossibleValues()) {
                     if (val != i++) {
                         throw new IllegalStateException("IntProperty unordered");
                     }
@@ -427,7 +429,7 @@ public class Main
             {
                 super(prop.getName(), "bool");
 
-                if (prop.getValues().stream().findFirst().get() != true) {
+                if (prop.getPossibleValues().stream().findFirst().get() != true) {
                     //values are expected to be [true, false]
                     throw new IllegalStateException("BoolProperty unordered");
                 }
@@ -448,10 +450,10 @@ public class Main
             public XPropEnum(EnumProperty<? extends Enum<?>> prop)
             {
                 super(prop.getName(), "enum");
-                this.enumType = getEnumName(prop.getType());
-                this.values = prop.getValues()
+                this.enumType = getEnumName(prop.getValueClass());
+                this.values = prop.getPossibleValues()
                                   .stream()
-                                  .map(v -> v.asString())
+                                  .map(v -> v.getSerializedName())
                                   .collect(Collectors.toList());
             }
 
