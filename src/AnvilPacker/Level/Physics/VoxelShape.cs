@@ -1,4 +1,7 @@
 using System;
+using System.Runtime.CompilerServices;
+using System.Runtime.Intrinsics;
+using System.Runtime.Intrinsics.X86;
 using AnvilPacker.Util;
 
 namespace AnvilPacker.Level.Physics
@@ -14,6 +17,99 @@ namespace AnvilPacker.Level.Physics
         public VoxelShape(Box8[] boxes)
         {
             Boxes = boxes;
+        }
+
+        public static unsafe bool MergedFacesOccludes(VoxelShape a, VoxelShape b, Direction dir)
+        {
+            //return Intersect(Face(FullCube, dir), Union(Face(a, dir), Face(b, opposite(dir)))) == Empty
+            //This rasterization method is probably faster than sweep-plane, since it's only 16x16 pixels and it can be easily vectorized.
+            //(Minecraft seems to use a similar approach btw)
+            //https://stackoverflow.com/questions/50656051/multiple-bounding-boxes-containment-detection-algorithm
+
+            var bmp = stackalloc ushort[16];
+            Unsafe.InitBlock(bmp, 0, 16);
+            
+            Rasterize(a, bmp, dir);
+            Rasterize(b, bmp, dir.Opposite());
+
+            return AllBitsSet(bmp);
+
+            static void Rasterize(VoxelShape shape, ushort* bmp, Direction dir)
+            {
+                foreach (var box in shape.Boxes) {
+                    //check if the box touches the face
+                    var axis = dir.Axis();
+                    if (dir.AnyNeg() ? box.Min(axis) > 0 : box.Max(axis) < 16) {
+                        continue;
+                    }
+                    //pick plane coords
+                    var (x1, y1, x2, y2) = axis switch {
+                        Axis.X => (box.MinZ, box.MinY, box.MaxZ, box.MaxY),
+                        Axis.Y => (box.MinX, box.MinZ, box.MaxX, box.MaxZ),
+                        Axis.Z => (box.MinX, box.MinY, box.MaxX, box.MaxY),
+                        _ => throw new InvalidOperationException()
+                    };
+                    x1 = Clamp16(x1);
+                    y1 = Clamp16(y1);
+                    x2 = Clamp16(x2);
+                    y2 = Clamp16(y2);
+
+                    var rowMask = (ushort)CreateRangeMask(x1, x2);
+                    if (Avx2.IsSupported) {
+                        RasterizeFace_AVX2(bmp, y1, y2, rowMask);
+                    } else {
+                        RasterizeFace(bmp, y1, y2, rowMask);
+                    }
+                }
+            }
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            static void RasterizeFace(ushort* bmp, int y1, int y2, ushort rowMask)
+            {
+                while (y2 - y1 >= 4) {
+                    *(ulong*)&bmp[y1] |= (ulong)rowMask * 0x0001_0001_0001_0001ul;
+                    y1 += 4;
+                }
+                while (y1 < y2) {
+                    bmp[y1++] |= rowMask;
+                }
+            }
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            static void RasterizeFace_AVX2(ushort* bmp, int y1, int y2, ushort rowMask)
+            {
+                //colMask = set ~0 words in range [y1..y2]
+                //&bmp[0] |= broadcast((ushort)rowMask) & colMask;
+                var colIdx = Vector256.Create(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
+                var colMask = Avx2.AndNot(
+                    Avx2.CompareGreaterThan(Vector256.Create((short)y1), colIdx),
+                    Avx2.CompareGreaterThan(Vector256.Create((short)y2), colIdx)
+                ).AsUInt16();
+
+                var col = Avx2.LoadVector256(&bmp[0]);
+                var row = Vector256.Create(rowMask);
+                col = Avx2.Or(col, Avx2.And(row, colMask));
+                Avx2.Store(&bmp[0], col);
+            }
+            static bool AllBitsSet(ushort* bmp)
+            {
+                if (Avx.IsSupported) {
+                    var v = Avx.LoadVector256(bmp);
+                    return Avx.TestC(v, Vector256<ushort>.AllBitsSet); //(~v & ~0) == 0
+                }
+                var bmp64 = (ulong*)bmp;
+                return (bmp64[0] & bmp64[1] & bmp64[2] & bmp64[3]) == ~0ul;
+            }
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            static sbyte Clamp16(sbyte x)
+            {
+                return (sbyte)(x < 0 ? 0 : x > 16 ? 16 : x);
+            }
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            static int CreateRangeMask(int start, int end)
+            {
+                int count = end - start;
+                int mask = (1 << count) - 1;
+                return mask << start;
+            }
         }
 
         public bool Equals(VoxelShape other)

@@ -10,7 +10,8 @@ namespace AnvilPacker.Level.Physics
         public readonly sbyte 
             MinX, MinY, MinZ,
             MaxX, MaxY, MaxZ;
-            
+
+#pragma warning disable CS0414 //unused field
         private readonly ushort _pad;
 
         private ulong _bits => Unsafe.As<Box8, ulong>(ref Unsafe.AsRef(in this));
@@ -23,6 +24,9 @@ namespace AnvilPacker.Level.Physics
                 return Unsafe.Add(ref Unsafe.AsRef(in MinX), index);
             }
         }
+
+        public sbyte Min(Axis axis) => this[(int)axis + 0];
+        public sbyte Max(Axis axis) => this[(int)axis + 3];
 
         public Box8(
             sbyte minX, sbyte minY, sbyte minZ, 
