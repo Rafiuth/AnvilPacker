@@ -28,20 +28,21 @@ namespace AnvilPacker.Level.Physics
         public sbyte Min(Axis axis) => this[(int)axis + 0];
         public sbyte Max(Axis axis) => this[(int)axis + 3];
 
+        /// <remarks> Note: All parameters are truncated to sbyte. </remarks>
         public Box8(
-            sbyte minX, sbyte minY, sbyte minZ, 
-            sbyte maxX, sbyte maxY, sbyte maxZ
+            int minX, int minY, int minZ,
+            int maxX, int maxY, int maxZ
         )
         {
-            (MinX, MinY, MinZ) = (minX, minY, minZ);
-            (MaxX, MaxY, MaxZ) = (maxX, maxY, maxZ);
-            _pad = 0;
+            (MinX, MinY, MinZ) = ((sbyte)minX, (sbyte)minY, (sbyte)minZ);
+            (MaxX, MaxY, MaxZ) = ((sbyte)maxX, (sbyte)maxY, (sbyte)maxZ);
+            Unsafe.SkipInit(out _pad);
         }
         public Box8(ReadOnlySpan<sbyte> coords)
         {
             (MinX, MinY, MinZ) = (coords[0], coords[1], coords[2]);
             (MaxX, MaxY, MaxZ) = (coords[3], coords[4], coords[5]);
-            _pad = 0;
+            Unsafe.SkipInit(out _pad);
         }
 
         public bool Equals(Box8 other)

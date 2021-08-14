@@ -1,8 +1,12 @@
+#nullable enable
+
 using System;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using AnvilPacker.Data;
+using AnvilPacker.Level.Physics;
 using AnvilPacker.Util;
 
 namespace AnvilPacker.Level
@@ -21,9 +25,9 @@ namespace AnvilPacker.Level
         private readonly Heightmap[] _heightmaps = new Heightmap[32 * 32];
         private readonly short[] _emptyHeights = new short[16 * 16]; //all values set to lowest
         private readonly bool _enqueueBorders;
- 
-        private LightNode[] _queue = new LightNode[32768];
-        private SectionCache _cache = new SectionCache(0);
+
+        private LightQueue _queue = new();
+        private SectionCache _cache = new(0);
 
         public Lighter(RegionBuffer region, BlockLightInfo[] blockAttribs, bool enqueueBorders = false)
         {
@@ -52,7 +56,7 @@ namespace AnvilPacker.Level
         }
         private short[] GetHeights(int cx, int cz)
         {
-            Heightmap heightmap = null;
+            Heightmap? heightmap = null;
             if (_region.IsChunkInside(cx, cz)) {
                 heightmap = _heightmaps[RegionBuffer.GetChunkIndex(cx, cz)];
             }
@@ -61,7 +65,6 @@ namespace AnvilPacker.Level
 
         private void ComputeBlockLight(Chunk chunk)
         {
-            var queue = _queue;
             var attrs = _lightAttribs;
             var cache = _cache;
 
@@ -69,13 +72,15 @@ namespace AnvilPacker.Level
                 var blocks = section.Blocks;
                 var levels = section.GetOrCreateLightData(LightLayer.Block);
                 int sy = section.Y * 16;
-                int queueTail = 0;
+                var queue = _queue.Cleared();
 
                 for (int i = 0; i < blocks.Length; i++) {
-                    int emission = attrs[blocks[i]].Emission;
+                    var blockId = blocks[i];
+                    int emission = attrs[blockId].Emission;
+
                     if (emission > 0) {
                         levels[i] = emission;
-                        queue[queueTail++].Set(
+                        queue.Enqueue(
                             x: i >> 0 & 15,
                             z: i >> 4 & 15,
                             y: sy + (i >> 8 & 15),
@@ -85,11 +90,11 @@ namespace AnvilPacker.Level
                 }
 
                 if (IsRegionBorder(section.X, section.Z)) {
-                    queueTail = EnqueueBorders(queueTail, section, LightLayer.Block);
+                    EnqueueBorders(section, queue, LightLayer.Block);
                 }
-                if (queueTail > 0) {
+                if (!queue.IsEmpty) {
                     cache.SetOrigin(_region, section, LightLayer.Block);
-                    PropagateLight(cache, queueTail);
+                    PropagateLight(cache, queue);
                 }
             }
         }
@@ -104,8 +109,7 @@ namespace AnvilPacker.Level
 
             int maxHeight = chunk.MaxSectionY * 16 + 15;
 
-            var queue = _queue;
-            var queueTail = 0;
+            var queue = _queue.Cleared();
             int minY = int.MaxValue, maxY = int.MinValue;
 
             for (int z = 0; z < 16; z++) {
@@ -141,7 +145,7 @@ namespace AnvilPacker.Level
                         //It causes a significant performance drop, and results were the same in my tests.
 
                         Debug.Assert(sides != 0); //we are wasting time if sides == 0
-                        queue[queueTail++].Set(x, y, z, 15, sides);
+                        queue.Enqueue(x, y, z, 15, sides);
                     }
                     FillVisibleSkyColumn(chunk, x, z, h, maxHeight);
                     minY = Math.Min(minY, h);
@@ -149,11 +153,11 @@ namespace AnvilPacker.Level
                 }
             }
             if (IsRegionBorder(chunk.X, chunk.Z)) {
-                queueTail = EnqueueBorders(queueTail, chunk, LightLayer.Sky);
+                EnqueueBorders(chunk, queue, LightLayer.Sky);
             }
-            if (queueTail > 0) {
+            if (!queue.IsEmpty) {
                 _cache.SetOrigin(_region, chunk, LightLayer.Sky, minY >> 4, maxY >> 4);
-                PropagateLight(_cache, queueTail);
+                PropagateLight(_cache, queue);
             }
 
             //Fills the sky light column from minY to maxY (inclusive) with 15
@@ -194,9 +198,8 @@ namespace AnvilPacker.Level
             }
         }
 
-        private int EnqueueBorders(int queueTail, ChunkSection section, LightLayer layer)
+        private void EnqueueBorders(ChunkSection section, LightQueue queue, LightLayer layer)
         {
-            var queue = _queue;
             var data = section.GetLightData(layer);
             int sy = section.Y * 16;
 
@@ -204,20 +207,19 @@ namespace AnvilPacker.Level
                 int sx = section.X & 31;
                 int sz = section.Z & 31;
 
-                if (sx ==  0) EnqueuePlaneX(0,  Direction.XPos);
+                if (sx ==  0) EnqueuePlaneX( 0, Direction.XPos);
                 if (sx == 31) EnqueuePlaneX(15, Direction.XNeg);
-                if (sz ==  0) EnqueuePlaneZ(0,  Direction.ZPos);
+                if (sz ==  0) EnqueuePlaneZ( 0, Direction.ZPos);
                 if (sz == 31) EnqueuePlaneZ(15, Direction.ZNeg);
             }
-            return queueTail;
-            
+
             void EnqueuePlaneX(int xo, Direction sides)
             {
                 for (int by = 0; by < 16; by++) {
                     for (int bz = 0; bz < 16; bz++) {
                         int level = data[ChunkSection.GetIndex(xo, by, bz)];
                         if (level > 0) {
-                            queue[queueTail++].Set(xo, sy + by, bz, level, sides);
+                            queue.Enqueue(xo, sy + by, bz, level, sides);
                         }
                     }
                 }
@@ -228,36 +230,32 @@ namespace AnvilPacker.Level
                     for (int bx = 0; bx < 16; bx++) {
                         int level = data[ChunkSection.GetIndex(bx, by, zo)];
                         if (level > 0) {
-                            queue[queueTail++].Set(bx, sy + by, zo, level, sides);
+                            queue.Enqueue(bx, sy + by, zo, level, sides);
                         }
                     }
                 }
             }
         }
-        private int EnqueueBorders(int queueTail, Chunk chunk, LightLayer layer)
+        private void EnqueueBorders(Chunk chunk, LightQueue queue, LightLayer layer)
         {
             foreach (var section in chunk.Sections) {
                 if (section != null) {
-                    queueTail = EnqueueBorders(queueTail, section, layer);
+                    EnqueueBorders(section, queue, layer);
                 }
             }
-            return queueTail;
         }
         private bool IsRegionBorder(int cx, int cz)
         {
             return _enqueueBorders && (cx == 0 || cx == 31 || cz == 0 || cz == 31);
         }
 
-        private void PropagateLight(SectionCache cache, int queueTail)
+        private void PropagateLight(SectionCache cache, LightQueue queue)
         {
-            var queue = _queue;
             var attrs = _lightAttribs;
             var sides = Directions.Normals;
 
-            int queueHead = 0;
-
-            while (queueHead < queueTail) {
-                ref var node = ref queue[queueHead++];
+            while (!queue.IsEmpty) {
+                ref var node = ref queue.Dequeue();
 
                 for (int i = 0; i < sides.Length; i++) {
                     if ((node.Dirs & (Direction)(1 << i)) == 0) continue;
@@ -279,31 +277,86 @@ namespace AnvilPacker.Level
 
                     if (newLevel > currLevel) {
                         NibbleArray.Set(levels, index, newLevel);
-                        queue[queueTail++].Set(sx, sy, sz, newLevel);
+                        queue.Enqueue(sx, sy, sz, newLevel);
                     }
-                }
-                if (queueTail + 8 > queue.Length) {
-                    ShiftQueue(ref queueHead, ref queueTail);
-                    queue = _queue;
                 }
             }
         }
 
-        private void ShiftQueue(ref int queueHead, ref int queueTail)
+        //Perf notes:
+        //- Using a priority queue (so that highest levels are propagated first) 
+        //only saved about 0.0016%-0.28% iterations in my tests.
+        //- Class is slightly faster than struct.
+        private class LightQueue
         {
-            var newQueue = _queue;
-            int count = queueTail - queueHead;
+            private LightNode[] _arr = new LightNode[32768];
+            private int _head, _tail;
 
-            if (count > _queue.Length / 2) {
-                //Expand a bit if we can't get away with just a shift.
-                //This should be very rare, if it ever happens at all.
-                newQueue = new LightNode[_queue.Length + 4096];
+            public bool IsEmpty => _head >= _tail;
+
+            /// <summary> Adds a new node at the head of the queue. </summary>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Enqueue(int x, int y, int z, int level, Direction dirs = Direction.All)
+            {
+                _arr[_tail++].Set(x, y, z, level, dirs);
             }
-            Array.Copy(_queue, queueHead, newQueue, 0, count);
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public ref LightNode Dequeue()
+            {
+                //Checking if we need to shift here instead
+                //of Enqueue() will save up to 6 checks
+                if (_tail + 8 > _arr.Length) {
+                    Shift();
+                }
+                return ref _arr[_head++];
+            }
 
-            _queue = newQueue;
-            queueHead = 0;
-            queueTail = count;
+            public LightQueue Cleared()
+            {
+                _head = _tail = 0;
+                return this;
+            }
+
+            private void Shift()
+            {
+                var newArr = _arr;
+                int count = _tail - _head;
+
+                if (count > _arr.Length - 4096) {
+                    //Expand a bit if we can't get away with just a shift.
+                    //This should be very rare, if it even happens at all.
+                    //This array will be discarded once the queue is copied again (we're a struct)
+                    newArr = new LightNode[_arr.Length + 4096];
+                }
+                Array.Copy(_arr, _head, newArr, 0, count);
+
+                _arr = newArr;
+                _head = 0;
+                _tail = count;
+            }
+        }
+
+        [StructLayout(LayoutKind.Sequential, Size = 8)]
+        private struct LightNode
+        {
+            public sbyte X, Z;  //Relative to the origin chunk
+            public short Y;     //Absolute
+            public byte Level;
+            public Direction Dirs;
+
+            //Not using ctors because jit will create a copy before the array store
+            public void Set(int x, int y, int z, int level, Direction dirs = Direction.All)
+            {
+                X = (sbyte)x;
+                Y = (short)y;
+                Z = (sbyte)z;
+                Level = (byte)level;
+                Dirs = dirs;
+
+                Debug.Assert(X == x && Y == y && Z == z, "LightNode too far from origin chunk");
+            }
+
+            public override string ToString() => $"Pos=[{X} {Y} {Z}] Level={Level} Dirs={Dirs} ";
         }
 
         private struct SectionCache
@@ -354,7 +407,7 @@ namespace AnvilPacker.Level
                 }
             }
 
-            private ChunkSection GetSection(RegionBuffer region, int x, int y, int z)
+            private ChunkSection? GetSection(RegionBuffer region, int x, int y, int z)
             {
                 return region.GetChunkAbsCoords(x, z)?.GetSection(y);
             }
@@ -372,28 +425,6 @@ namespace AnvilPacker.Level
                 z >>= 4;
                 return (y * 3 + z) * 3 + x + ((SECTION_Y_OFFSET * 3 + 1) * 3 + 1);
             }
-        }
-
-        private struct LightNode
-        {
-            public sbyte X, Z;  //Relative to the origin chunk
-            public short Y;     //Absolute
-            public byte Level;
-            public Direction Dirs;
-
-            //Not using ctors because jit will create a copy before the array store
-            public void Set(int x, int y, int z, int level, Direction dirs = Direction.All)
-            {
-                X = (sbyte)x;
-                Y = (short)y;
-                Z = (sbyte)z;
-                Level = (byte)level;
-                Dirs = dirs;
-
-                Debug.Assert(X == x && Y == y && Z == z, "LightNode too far from origin chunk");
-            }
-
-            public override string ToString() => $"Pos=[{X} {Y} {Z}] Level={Level} Dirs={Dirs} ";
         }
     }
 

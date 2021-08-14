@@ -12,7 +12,7 @@ namespace AnvilPacker.Level
     {
         /// <summary> 
         /// Unique ID for this block state, or -1 if the block is unknown. <br/>
-        /// When <see cref="BlockAttributes.HasSidedTransparency"/> is set, this value represents the numeric block ID.
+        /// When <see cref="BlockAttributes.Legacy"/> is set, this value represents the numeric block ID.
         /// </summary>
         public int Id { get; set; }
         public Block Block { get; set; }

@@ -105,12 +105,12 @@ namespace AnvilPacker.Tests
                 var boxes = new Box8[coords.Length / 6];
                 for (int i = 0; i < boxes.Length; i++) {
                     boxes[i] = new Box8(
-                        (sbyte)coords[i * 6 + 0],
-                        (sbyte)coords[i * 6 + 1],
-                        (sbyte)coords[i * 6 + 2],
-                        (sbyte)coords[i * 6 + 3],
-                        (sbyte)coords[i * 6 + 4],
-                        (sbyte)coords[i * 6 + 5]
+                        coords[i * 6 + 0],
+                        coords[i * 6 + 1],
+                        coords[i * 6 + 2],
+                        coords[i * 6 + 3],
+                        coords[i * 6 + 4],
+                        coords[i * 6 + 5]
                     );
                 }
                 return new VoxelShape(boxes);
