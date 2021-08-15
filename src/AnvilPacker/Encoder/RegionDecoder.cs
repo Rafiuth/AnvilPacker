@@ -173,11 +173,12 @@ namespace AnvilPacker.Encoder
             var palette = new BlockPalette(count);
 
             for (int i = 0; i < count; i++) {
-                var flags = (BlockFlags)stream.ReadVarUInt();
+                int flags = stream.ReadVarUInt();
+                bool isLegacy = (flags & 0x01) != 0;
 
                 BlockState block;
 
-                if (flags.HasFlag(BlockFlags.Legacy)) {
+                if (isLegacy) {
                     int id = stream.ReadVarUInt();
                     block = BlockRegistry.GetLegacyState(id);
                 } else {

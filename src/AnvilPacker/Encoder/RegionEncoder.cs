@@ -149,10 +149,13 @@ namespace AnvilPacker.Encoder
             stream.WriteVarUInt(palette.Count);
 
             foreach (var state in palette) {
-                var flags = BlockFlagsEx.FromState(state);
-                stream.WriteVarUInt((int)flags);
+                bool isLegacy = state.HasAttrib(BlockAttributes.Legacy);
 
-                if (flags.HasFlag(BlockFlags.Legacy)) {
+                stream.WriteVarUInt(
+                    isLegacy ? 0x01 : 0
+                );
+
+                if (isLegacy) {
                     stream.WriteVarUInt(state.Id);
                 } else {
                     stream.WriteNulString(state.ToString());
