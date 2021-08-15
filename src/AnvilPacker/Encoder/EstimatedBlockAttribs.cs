@@ -2,12 +2,11 @@ using System;
 using System.Linq;
 using System.Collections.Generic;
 using AnvilPacker.Level;
-using AnvilPacker.Util;
 using NLog;
 using System.Diagnostics;
-using System.Text;
 using System.Runtime.InteropServices;
 using System.Runtime.CompilerServices;
+using AnvilPacker.Level.Physics;
 
 namespace AnvilPacker.Encoder
 {
@@ -40,7 +39,7 @@ namespace AnvilPacker.Encoder
         private bool[] CreateOpacityMap(string type)
         {
             var isOpaque = new bool[Palette.Count];
-            if (OpacityPredicates.TryGetValue(type, out var pred)) {
+            if (DefaultPredicates.TryGetValue(type, out var pred)) {
                 for (int i = 0; i < isOpaque.Length; i++) {
                     var state = Palette.GetState((BlockId)i);
                     isOpaque[i] = state.Block.IsKnown && pred(state);
@@ -66,7 +65,7 @@ namespace AnvilPacker.Encoder
             }
         }
 
-        private static readonly Dictionary<string, Predicate<BlockState>> OpacityPredicates = new() {
+        private static readonly Dictionary<string, Predicate<BlockState>> DefaultPredicates = new() {
             { Heightmap.TYPE_LEGACY,        b => b.LightOpacity > 0 },
             { "LIGHT_BLOCKING",             b => b.LightOpacity > 0 },
             { "WORLD_SURFACE_WG",           b => b.Material != BlockMaterial.Air },
@@ -88,24 +87,27 @@ namespace AnvilPacker.Encoder
 
         public BlockPalette Palette;
         public BlockLightInfo[] LightAttribs;
+        public VoxelShape[] OcclusionShapes;
 
         public void Estimate(RegionBuffer region)
         {
             Palette = region.Palette;
             LightAttribs = new BlockLightInfo[Palette.Count];
+            OcclusionShapes = new VoxelShape[Palette.Count];
 
             bool hasDynamicBlocks = false;
 
             foreach (var (state, id) in Palette.BlocksAndIds()) {
                 if (state.Block.IsKnown) {
                     LightAttribs[id] = new BlockLightInfo(state);
+                    OcclusionShapes[id] = state.OcclusionShape;
                 } else {
                     hasDynamicBlocks = true;
                 }
             }
 
             if (hasDynamicBlocks) {
-                _logger.Info($"Found unknown blocks in {region}, estimating light attributes...");
+                _logger.Warn($"Found unknown blocks in {region}; estimating light attributes...");
                 EstimateFromData(region);
             }
         }
@@ -124,7 +126,9 @@ namespace AnvilPacker.Encoder
                     var block = Palette.GetState((BlockId)i);
                     int opacity = opacityHist[i].CalcEstimatedOpacity();
                     int emission = emissionHist[i].CalcEstimatedEmission();
-                    LightAttribs[i] = new BlockLightInfo(opacity, emission);
+
+                    LightAttribs[i] = new BlockLightInfo(opacity, emission, false);
+                    OcclusionShapes[i] = VoxelShape.Empty;
 
                     if (_logger.IsDebugEnabled) {
                         _logger.Debug("Estimated opacity  for {0}: {1} hist={{{2}}}", block, opacity, opacityHist[i]);

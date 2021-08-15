@@ -21,20 +21,37 @@ namespace AnvilPacker.Level
         //https://github.com/coderbot16/flashcube/tree/trunk/lumis
 
         private readonly RegionBuffer _region;
-        private readonly BlockLightInfo[] _lightAttribs;
+        private readonly BlockLightInfo[] _blockAttribs;
+        private readonly VoxelShape[] _occlusionShapes;
         private readonly Heightmap[] _heightmaps = new Heightmap[32 * 32];
         private readonly short[] _emptyHeights = new short[16 * 16]; //all values set to lowest
         private readonly bool _enqueueBorders;
 
         private LightQueue _queue = new();
-        private SectionCache _cache = new(0);
+        private SectionCache _sectionCache = new(0);
 
-        public Lighter(RegionBuffer region, BlockLightInfo[] blockAttribs, bool enqueueBorders = false)
+        public Lighter(RegionBuffer region, Encoder.EstimatedLightAttribs estimAttribs, bool enqueueBorders = false)
+            : this(region, estimAttribs.LightAttribs, null, enqueueBorders)
         {
+        }
+        public Lighter(RegionBuffer region, BlockLightInfo[] lightAttribs, VoxelShape[]? occlusionShapes = null, bool enqueueBorders = false)
+        {
+            int paletteLen = region.Palette.Count;
+            Ensure.That(lightAttribs.Length == paletteLen);
+            Ensure.That(occlusionShapes == null || occlusionShapes.Length == paletteLen);
+
             _emptyHeights.Fill(short.MinValue);
             _region = region;
-            _lightAttribs = blockAttribs;
+            _blockAttribs = lightAttribs;
+            _occlusionShapes = occlusionShapes ?? CreateDefaultShapes(paletteLen);
             _enqueueBorders = enqueueBorders;
+        }
+
+        private VoxelShape[] CreateDefaultShapes(int count)
+        {
+            var arr = new VoxelShape[count];
+            arr.Fill(VoxelShape.Empty);
+            return arr;
         }
 
         public void Compute()
@@ -48,7 +65,7 @@ namespace AnvilPacker.Level
         }
         private void ComputeHeightmaps()
         {
-            var opacityMap = _lightAttribs.Select(a => a.Opacity > 0).ToArray();
+            var opacityMap = _blockAttribs.Select(a => a.Opacity > 0).ToArray();
             foreach (var chunk in _region.ExistingChunks) {
                 var heightmap = _heightmaps[RegionBuffer.GetChunkIndex(chunk)] ??= new();
                 heightmap.Compute(chunk, opacityMap);
@@ -65,8 +82,7 @@ namespace AnvilPacker.Level
 
         private void ComputeBlockLight(Chunk chunk)
         {
-            var attrs = _lightAttribs;
-            var cache = _cache;
+            var blockAttribs = _blockAttribs;
 
             foreach (var section in chunk.Sections.ExceptNull()) {
                 var blocks = section.Blocks;
@@ -76,25 +92,26 @@ namespace AnvilPacker.Level
 
                 for (int i = 0; i < blocks.Length; i++) {
                     var blockId = blocks[i];
-                    int emission = attrs[blockId].Emission;
+                    var attribs = blockAttribs[blockId];
 
-                    if (emission > 0) {
-                        levels[i] = emission;
-                        queue.Enqueue(
-                            x: i >> 0 & 15,
-                            z: i >> 4 & 15,
-                            y: sy + (i >> 8 & 15),
-                            level: emission
-                        );
-                    }
+                    if (attribs.Emission <= 0) continue;
+
+                    levels[i] = attribs.Emission;
+                    queue.Enqueue(
+                        x: i >> 0 & 15,
+                        z: i >> 4 & 15,
+                        y: sy + (i >> 8 & 15),
+                        level: attribs.Emission,
+                        useShapeForOcclusion: attribs.UseShapeForOcclusion,
+                        block: blockId
+                    );
                 }
-
                 if (IsRegionBorder(section.X, section.Z)) {
-                    EnqueueBorders(section, queue, LightLayer.Block);
+                    EnqueueBorders(section, LightLayer.Block);
                 }
                 if (!queue.IsEmpty) {
-                    cache.SetOrigin(_region, section, LightLayer.Block);
-                    PropagateLight(cache, queue);
+                    _sectionCache.SetOrigin(_region, section, LightLayer.Block);
+                    PropagateLight();
                 }
             }
         }
@@ -153,11 +170,11 @@ namespace AnvilPacker.Level
                 }
             }
             if (IsRegionBorder(chunk.X, chunk.Z)) {
-                EnqueueBorders(chunk, queue, LightLayer.Sky);
+                EnqueueBorders(chunk, LightLayer.Sky);
             }
             if (!queue.IsEmpty) {
-                _cache.SetOrigin(_region, chunk, LightLayer.Sky, minY >> 4, maxY >> 4);
-                PropagateLight(_cache, queue);
+                _sectionCache.SetOrigin(_region, chunk, LightLayer.Sky, minY >> 4, maxY >> 4);
+                PropagateLight();
             }
 
             //Fills the sky light column from minY to maxY (inclusive) with 15
@@ -198,49 +215,52 @@ namespace AnvilPacker.Level
             }
         }
 
-        private void EnqueueBorders(ChunkSection section, LightQueue queue, LightLayer layer)
+        private void EnqueueBorders(ChunkSection section, LightLayer layer)
         {
+            var queue = _queue;
+            var attribs = _blockAttribs;
             var data = section.GetLightData(layer);
+            var blocks = section.Blocks;
             int sy = section.Y * 16;
 
             if (data != null) {
                 int sx = section.X & 31;
                 int sz = section.Z & 31;
 
-                if (sx ==  0) EnqueuePlaneX( 0, Direction.XPos);
-                if (sx == 31) EnqueuePlaneX(15, Direction.XNeg);
-                if (sz ==  0) EnqueuePlaneZ( 0, Direction.ZPos);
-                if (sz == 31) EnqueuePlaneZ(15, Direction.ZNeg);
+                if (sx ==  0) EnqueuePlane(Direction.XPos, true,  0, 0);
+                if (sx == 31) EnqueuePlane(Direction.XNeg, true,  15, 0);
+                if (sz ==  0) EnqueuePlane(Direction.ZPos, false, 0, 0);
+                if (sz == 31) EnqueuePlane(Direction.ZNeg, false, 0, 15);
             }
 
-            void EnqueuePlaneX(int xo, Direction sides)
+            [MethodImpl(MethodImplOptions.AggressiveInlining)] //const prop
+            void EnqueuePlane(Direction side, bool axisX, int xo, int zo)
             {
                 for (int by = 0; by < 16; by++) {
-                    for (int bz = 0; bz < 16; bz++) {
-                        int level = data[ChunkSection.GetIndex(xo, by, bz)];
-                        if (level > 0) {
-                            queue.Enqueue(xo, sy + by, bz, level, sides);
-                        }
-                    }
-                }
-            }
-            void EnqueuePlaneZ(int zo, Direction sides)
-            {
-                for (int by = 0; by < 16; by++) {
-                    for (int bx = 0; bx < 16; bx++) {
-                        int level = data[ChunkSection.GetIndex(bx, by, zo)];
-                        if (level > 0) {
-                            queue.Enqueue(bx, sy + by, zo, level, sides);
-                        }
+                    for (int bh = 0; bh < 16; bh++) {
+                        int x = axisX ? xo : bh;
+                        int z = axisX ? bh : zo;
+
+                        int index = ChunkSection.GetIndex(x, by, z);
+                        int level = data[index];
+                        if (level <= 0) continue;
+
+                        var blockId = blocks[index];
+                        queue.Enqueue(
+                            x, sy + by, z,
+                            level, side,
+                            attribs[blockId].UseShapeForOcclusion,
+                            blockId
+                        );
                     }
                 }
             }
         }
-        private void EnqueueBorders(Chunk chunk, LightQueue queue, LightLayer layer)
+        private void EnqueueBorders(Chunk chunk, LightLayer layer)
         {
             foreach (var section in chunk.Sections) {
                 if (section != null) {
-                    EnqueueBorders(section, queue, layer);
+                    EnqueueBorders(section, layer);
                 }
             }
         }
@@ -249,36 +269,56 @@ namespace AnvilPacker.Level
             return _enqueueBorders && (cx == 0 || cx == 31 || cz == 0 || cz == 31);
         }
 
-        private void PropagateLight(SectionCache cache, LightQueue queue)
+        private void PropagateLight()
         {
-            var attrs = _lightAttribs;
+            var queue = _queue;
+            var sectionCache = _sectionCache;
+            var blockAttribs = _blockAttribs;
+            var occlusionShapes = _occlusionShapes;
             var sides = Directions.Normals;
 
             while (!queue.IsEmpty) {
                 ref var node = ref queue.Dequeue();
 
                 for (int i = 0; i < sides.Length; i++) {
-                    if ((node.Dirs & (Direction)(1 << i)) == 0) continue;
+                    var dir = (Direction)(1 << i);
+                    if (!node.HasDir(dir)) continue;
 
                     int sx = node.X + sides[i].X;
                     int sy = node.Y + sides[i].Y;
                     int sz = node.Z + sides[i].Z;
 
-                    int ci = SectionCache.Index(sx, sy, sz);
-                    var (blocks, levels) = cache.Entries[ci];
-                    if (blocks == null) continue;
+                    var (blocks, levels) = sectionCache.GetEntry(sx, sy, sz);
+                    if (blocks == null) continue; //empty section
 
                     int index = ChunkSection.GetIndex(sx & 15, sy & 15, sz & 15);
                     int currLevel = NibbleArray.Get(levels, index);
+
+                    //avoid block access if the level is already 
+                    //greater than what we could have set
                     if (currLevel >= node.Level - 1) continue;
 
-                    int opacity = attrs[blocks[index]].Opacity;
-                    int newLevel = node.Level - Math.Max(1, opacity);
+                    var blockId = blocks[index];
+                    var attrs = blockAttribs[blockId];
+                    int newLevel = node.Level - Math.Max(1, attrs.Opacity);
+                    if (newLevel <= currLevel) continue;
 
-                    if (newLevel > currLevel) {
-                        NibbleArray.Set(levels, index, newLevel);
-                        queue.Enqueue(sx, sy, sz, newLevel);
+                    if (attrs.UseShapeForOcclusion || node.UseShapeForOcclusion) {
+                        var shapeFrom = occlusionShapes[node.Block];
+                        var shapeTo = occlusionShapes[blockId];
+                        if (VoxelShape.MergedFacesOccludes(shapeFrom, shapeTo, dir)) continue;
                     }
+
+                    NibbleArray.Set(levels, index, newLevel);
+                    //only enqueue if it can propagate further
+                    if (newLevel <= 1) continue;
+
+                    queue.Enqueue(
+                        sx, sy, sz, newLevel,
+                        Direction.All & ~dir.Opposite(),
+                        attrs.UseShapeForOcclusion,
+                        blockId
+                    );
                 }
             }
         }
@@ -296,15 +336,17 @@ namespace AnvilPacker.Level
 
             /// <summary> Adds a new node at the head of the queue. </summary>
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void Enqueue(int x, int y, int z, int level, Direction dirs = Direction.All)
+            public void Enqueue(int x, int y, int z, int level, Direction dirs = Direction.All, bool useShapeForOcclusion = false, BlockId block = default)
             {
-                _arr[_tail++].Set(x, y, z, level, dirs);
+                _arr[_tail++].Set(x, y, z, level, dirs, useShapeForOcclusion, block);
             }
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public ref LightNode Dequeue()
             {
                 //Checking if we need to shift here instead
-                //of Enqueue() will save up to 6 checks
+                //of Enqueue() will save up to 6 checks.
+                //The queue is large enough so that this is rare,
+                //but it could be worth using a normal circular buffer...
                 if (_tail + 8 > _arr.Length) {
                     Shift();
                 }
@@ -336,27 +378,43 @@ namespace AnvilPacker.Level
             }
         }
 
-        [StructLayout(LayoutKind.Sequential, Size = 8)]
         private struct LightNode
         {
             public sbyte X, Z;  //Relative to the origin chunk
             public short Y;     //Absolute
             public byte Level;
-            public Direction Dirs;
+            public byte Flags; //[0..5]: Dirs, 6: HasSidedTransparencys
+            public BlockId Block;
+            //Size = 8 bytes
 
-            //Not using ctors because jit will create a copy before the array store
-            public void Set(int x, int y, int z, int level, Direction dirs = Direction.All)
+            public bool UseShapeForOcclusion => (Flags & (1 << 6)) != 0;
+            public bool HasDir(Direction dir)
+            {
+                return (Flags & (int)dir) != 0;
+            }
+
+            //Not using ctors because jit won't eliminate the copy before the array store
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Set(int x, int y, int z, int level, Direction dirs = Direction.All, bool useShapeForOcclusion = false, BlockId block = default)
             {
                 X = (sbyte)x;
                 Y = (short)y;
                 Z = (sbyte)z;
                 Level = (byte)level;
-                Dirs = dirs;
-
+                Flags = (byte)(
+                    (int)dirs | 
+                    (Unsafe.As<bool, byte>(ref useShapeForOcclusion) << 6)
+                );
+                Block = block;
                 Debug.Assert(X == x && Y == y && Z == z, "LightNode too far from origin chunk");
             }
 
-            public override string ToString() => $"Pos=[{X} {Y} {Z}] Level={Level} Dirs={Dirs} ";
+            public override string ToString()
+            {
+                return $"Pos=[{X} {Y} {Z}] Level={Level} " +
+                       $"Dirs={(Direction)(Flags & (int)Direction.All)}" +
+                       $"Flags={(Flags >> 6).ToString("X")}";
+            }
         }
 
         private struct SectionCache
@@ -375,55 +433,52 @@ namespace AnvilPacker.Level
             public void SetOrigin(RegionBuffer region, ChunkSection origin, LightLayer layer)
             {
                 for (int y = -1; y <= 1; y++) {
-                    for (int z = -1; z <= 1; z++) {
-                        for (int x = -1; x <= 1; x++) {
-                            var section = GetSection(region, origin.X + x, origin.Y + y, origin.Z + z);
-                            int ci = Index(x << 4, (origin.Y + y) << 4, z << 4);
-
-                            Entries[ci] = section == null
-                                ? default
-                                : (section.Blocks, section.GetOrCreateLightData(layer).Data);
-
-                        }
-                    }
+                    UpdateChunkLayer(region, layer, origin.X, origin.Z, origin.Y + y);
                 }
             }
             public void SetOrigin(RegionBuffer region, Chunk chunk, LightLayer layer, int minY, int maxY)
             {
                 Debug.Assert(chunk.MinSectionY >= -32 && chunk.MaxSectionY <= 31);
 
-                minY--; maxY++; //include +1 chunk on top and bottom
-                for (int y = minY; y <= maxY; y++) {
-                    for (int z = -1; z <= 1; z++) {
-                        for (int x = -1; x <= 1; x++) {
-                            var section = GetSection(region, chunk.X + x, y, chunk.Z + z);
-                            int ci = Index(x << 4, y << 4, z << 4);
+                for (int y = minY - 1; y <= maxY + 1; y++) {
+                    UpdateChunkLayer(region, layer, chunk.X, chunk.Z, y);
+                }
+            }
 
-                            Entries[ci] = section == null
-                                ? default
-                                : (section.Blocks, section.GetOrCreateLightData(layer).Data);
+            private void UpdateChunkLayer(RegionBuffer region, LightLayer lightLayer, int ox, int oz, int y)
+            {
+                for (int z = -1; z <= 1; z++) {
+                    for (int x = -1; x <= 1; x++) {
+                        var section = region.GetChunkAbsCoords(ox + x, oz + z)
+                                            ?.GetSection(y);
+
+                        ref var entry = ref GetEntry(x << 4, y << 4, z << 4);
+
+                        if (section != null) {
+                            var blocks = section.Blocks;
+                            var lightData = section.GetOrCreateLightData(lightLayer).Data;
+                            entry = (blocks, lightData);
+                        } else {
+                            entry = default;
                         }
                     }
                 }
             }
 
-            private ChunkSection? GetSection(RegionBuffer region, int x, int y, int z)
-            {
-                return region.GetChunkAbsCoords(x, z)?.GetSection(y);
-            }
-
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public static int Index(int x, int y, int z)
+            public ref (BlockId[] Blocks, byte[] Light) GetEntry(int x, int y, int z)
             {
                 Debug.Assert(x >= -16 && y >= -512 && z >= -16 && x <= 31 && y <= 511 && z <= 31);
                 //x = (x >> 4) + 1;
                 //y = (y >> 4) + SECTION_Y_OFFSET;
                 //z = (z >> 4) + 1;
-                //return (z * 3 + y) * 3 + x;
+                //int index = (z * 3 + y) * 3 + x;
                 x >>= 4;
                 y >>= 4;
                 z >>= 4;
-                return (y * 3 + z) * 3 + x + ((SECTION_Y_OFFSET * 3 + 1) * 3 + 1);
+                const int CENTER_OFFSET = ((SECTION_Y_OFFSET * 3 + 1) * 3 + 1);
+                int index = (y * 3 + z) * 3 + x + CENTER_OFFSET;
+                return ref Entries[index];
             }
         }
     }
@@ -434,26 +489,30 @@ namespace AnvilPacker.Level
     }
     public struct BlockLightInfo
     {
-        /// <summary> Values packed as <c>Opacity | Emission &lt;&lt; 4</c> </summary>
-        public readonly byte Data;
+        /// <summary> Values packed as <c>Opacity | Emission &lt;&lt; 12 | UseShapeForOcclusion &lt;&lt; 4 </c> </summary>
+        public readonly ushort Data;
 
         public int Opacity => Data & 15;
-        public int Emission => Data >> 4;
+        public int Emission => Data >> 12;
+        public bool UseShapeForOcclusion => (Data & 0x10) != 0;
 
-        public BlockLightInfo(byte data)
-        {
-            Data = data;
-        }
-        public BlockLightInfo(int opacity, int emission)
+        public BlockLightInfo(int opacity, int emission, bool useShapeForOcclusion)
         {
             Debug.Assert(opacity is >= 0 and <= 15 && emission is >= 0 and <= 15);
-            Data = (byte)(opacity | emission << 4);
+            Data = (ushort)(opacity | emission << 12 | (useShapeForOcclusion ? 0x10 : 0));
         }
         public BlockLightInfo(BlockState block)
-            : this(block.LightOpacity, block.LightEmission)
+            : this(
+                block.LightOpacity, 
+                block.LightEmission,
+                block.HasAttrib(BlockAttributes.Opaque | BlockAttributes.HasSidedTransparency)
+            )
         {
         }
-
-        public override string ToString() => $"Opacity={Opacity} Emission={Emission}";
+        public override string ToString() 
+        {
+            return $"Opacity={Opacity} Emission={Emission}" +
+                   (UseShapeForOcclusion ?" (shape aware)" : "");
+        }
     }
 }

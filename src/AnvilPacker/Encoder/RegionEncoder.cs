@@ -9,6 +9,7 @@ using AnvilPacker.Data;
 using AnvilPacker.Level;
 using AnvilPacker.Util;
 using NLog;
+using AnvilPacker.Level.Physics;
 
 namespace AnvilPacker.Encoder
 {
@@ -197,15 +198,43 @@ namespace AnvilPacker.Encoder
         }
         private void WriteLightAttribs(DataWriter stream)
         {
-            WriteSyncTag(stream, "LightAttribs", 0);
+            //TODO: use v1 only if necessary
+            WriteSyncTag(stream, "LightAttribs", 1);
 
             var attribs = _estimLightAttribs;
             attribs.Estimate(_region);
 
-            Ensure.That(attribs.LightAttribs.Length == _region.Palette.Count);
+            int paletteLen = _region.Palette.Count;
+            var blockAttribs = attribs.LightAttribs;
+            var blockShapes = attribs.OcclusionShapes;
+            var shapeCache = new Dictionary<VoxelShape, int>();
 
-            foreach (var block in attribs.LightAttribs) {
-                stream.WriteByte(block.Data);
+            Ensure.That(blockAttribs.Length == paletteLen && blockShapes.Length == paletteLen);
+
+            for (int i = 0; i < paletteLen; i++) {
+                var attrib = blockAttribs[i];
+                stream.WriteByte(attrib.Emission << 4 | attrib.Opacity);
+                stream.WriteByte(attrib.UseShapeForOcclusion ? 0x01 : 0);
+
+                if (attrib.UseShapeForOcclusion) {
+                    WriteShape(i);
+                }
+            }
+
+            void WriteShape(int currId)
+            {
+                var shape = blockShapes[currId];
+                if (shapeCache.TryGetValue(shape, out int id)) {
+                    stream.WriteVarUInt(id + 1);
+                } else {
+                    shapeCache.Add(shape, currId);
+
+                    stream.WriteVarUInt(0);
+                    stream.WriteVarUInt(shape.Boxes.Length);
+                    foreach (var box in shape.Boxes) {
+                        stream.WriteBytes(box.UnsafeDataSpan);
+                    }
+                }
             }
         }
 
@@ -281,7 +310,7 @@ namespace AnvilPacker.Encoder
                         section.BlockLight = new NibbleArray(4096);
                     }
                 }
-                new Lighter(_region, _estimLightAttribs.LightAttribs).Compute();
+                new Lighter(_region, _estimLightAttribs).Compute();
 
                 //Restore original data and store the computed light in the dictionary.
                 foreach (var section in ChunkIterator.GetSections(_region)) {

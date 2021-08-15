@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.IO;
 using AnvilPacker.Data;
 using AnvilPacker.Level;
+using AnvilPacker.Level.Physics;
 using AnvilPacker.Util;
 using NLog;
 
@@ -105,8 +106,14 @@ namespace AnvilPacker.Encoder
                     }
                 }
             }
+            if (_settings.DontLit && !skipLighting) {
+                _logger.Warn(
+                    "DontLit option is enabled, but chunks with version older than 1.14.2-pre4 were found;" + 
+                    "Dirty flag will be set, but light will be computed anyway."
+                );
+            }
             if (!skipLighting) {
-                new Lighter(_region, _estimLightAttribs.LightAttribs, true).Compute();
+                new Lighter(_region, _estimLightAttribs, true).Compute();
             }
         }
 
@@ -225,17 +232,50 @@ namespace AnvilPacker.Encoder
         }
         private void ReadLightAttribs(DataReader stream)
         {
-            int version = ReadSyncTag(stream, "LightAttribs", 0);
+            int version = ReadSyncTag(stream, "LightAttribs", 1);
 
-            var blockAttribs = new BlockLightInfo[_region.Palette.Count];
-            for (int i = 0; i < blockAttribs.Length; i++) {
-                blockAttribs[i] = new BlockLightInfo(stream.ReadByte());
+            int paletteLen = _region.Palette.Count;
+            var blockAttribs = new BlockLightInfo[paletteLen];
+            var blockShapes = new VoxelShape[paletteLen];
+
+            for (int i = 0; i < paletteLen; i++) {
+                int light = stream.ReadByte();
+                int flags = version >= 1 ? stream.ReadByte() : 0;
+                bool useShapeForOcclusion = (flags & 0x01) != 0;
+
+                blockShapes[i] = 
+                    useShapeForOcclusion 
+                        ? ReadShape(i) 
+                        : VoxelShape.Empty;
+
+                blockAttribs[i] = new BlockLightInfo(
+                    opacity: light & 15, 
+                    emission: light >> 4, 
+                    useShapeForOcclusion
+                );
             }
-
             _estimLightAttribs = new EstimatedLightAttribs() {
                 Palette = _region.Palette,
-                LightAttribs = blockAttribs
+                LightAttribs = blockAttribs,
+                OcclusionShapes = blockShapes
             };
+
+            VoxelShape ReadShape(int currId)
+            {
+                int id = stream.ReadVarUInt();
+                if (id > 0) {
+                    id--;
+                    Ensure.That(id < currId, "Bad light occlusion shape id: Referenced block id has not been decoded yet.");
+                    return blockShapes[id];
+                } else {
+                    var boxes = new Box8[stream.ReadVarUInt()];
+
+                    for (int bi = 0; bi < boxes.Length; bi++) {
+                        stream.ReadBytes(boxes[bi].UnsafeDataSpan);
+                    }
+                    return new VoxelShape(boxes);
+                }
+            }
         }
 
         private void ReadHeightmaps(DataReader stream)
@@ -318,7 +358,7 @@ namespace AnvilPacker.Encoder
                         section.BlockLight = new NibbleArray(4096);
                     }
                 }
-                new Lighter(_region, _estimLightAttribs.LightAttribs).Compute();
+                new Lighter(_region, _estimLightAttribs).Compute();
 
                 //Restore original data and store the computed light in the dictionary.
                 foreach (var section in ChunkIterator.GetSections(_region)) {

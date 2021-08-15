@@ -1,5 +1,6 @@
 using System;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using AnvilPacker.Util;
 
 namespace AnvilPacker.Level.Physics
@@ -15,6 +16,11 @@ namespace AnvilPacker.Level.Physics
         private readonly ushort _pad;
 
         private ulong _bits => Unsafe.As<Box8, ulong>(ref Unsafe.AsRef(in this));
+
+        /// <summary> Returns a span contanining [MinX, MinY, MinZ, MaxX, MaxY, MaxZ]. </summary>
+        /// <remarks> The returned span is backed directly by this struct's reference. Never return it from a method if this struct is a local variable.  </remarks>
+        public Span<byte> UnsafeDataSpan
+            => MemoryMarshal.CreateSpan(ref Unsafe.As<sbyte, byte>(ref Unsafe.AsRef(in MinX)), 6);
 
         /// <summary> Gets/sets the coord at the specified index, in the order of [MinX, MinY, MinZ, MaxX, MaxY, MaxZ] </summary>
         public sbyte this[int index]
