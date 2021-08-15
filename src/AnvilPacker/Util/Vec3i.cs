@@ -19,7 +19,7 @@ namespace AnvilPacker.Util
             (x, y, z) = (X, Y, Z);
         }
         public bool Equals(Vec3i other) => other.X == X && other.Y == Y && other.Z == Z;
-        public override bool Equals(object obj) => obj is Vec3i other && Equals(other);
+        public override bool Equals(object? obj) => obj is Vec3i other && Equals(other);
         public override int GetHashCode() => HashCode.Combine(X, Y, Z);
         public override string ToString() => $"Vec3i({X}, {Y}, {Z})";
 

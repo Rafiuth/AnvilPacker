@@ -51,7 +51,7 @@ namespace AnvilPacker.Util
         [MethodImpl(Inline)]
         public static ref byte GetByteRef(Array array)
         {
-            Debug.Assert(array.Rank == 1 && array.GetType().GetElementType().IsPrimitive);
+            Debug.Assert(array.Rank == 1 && array.GetType().GetElementType()!.IsPrimitive);
             // return &arr.data + byteOffset
             return ref MemoryMarshal.GetArrayDataReference(Unsafe.As<byte[]>(array));
         }
@@ -384,18 +384,19 @@ namespace AnvilPacker.Util
         /// <remarks>The returned pointer should be released with <see cref="Free{T}(T*)"/> when it is no longer needed.</remarks>
         public static T* Alloc<T>(nint count) where T : unmanaged
         {
-            return (T*)Marshal.AllocHGlobal(sizeof(T) * count);
+            nuint numBytes = checked((nuint)(count * sizeof(T)));
+            return (T*)NativeMemory.Alloc(numBytes);
         }
         /// <summary> Frees a memory block allocated by <see cref="Alloc{T}(nint)"/>. </summary>
         /// <remarks>This method does nothing if <paramref name="ptr"/> is null.</remarks>
-        public static void Free<T>(T* ptr) where T : unmanaged
+        public static void Free(void* ptr)
         {
-            Marshal.FreeHGlobal((IntPtr)ptr);
+            NativeMemory.Free(ptr);
         }
 
         /// <summary> Allocates a unmanaged memory block of <paramref name="count"/> <typeparamref name="T"/> elements from the heap, then fills it with the default <typeparamref name="T"/> value. </summary>
         /// <remarks>The returned pointer should be released with <see cref="Free{T}(T*)"/> when it is no longer needed.</remarks>
-        public static T* ZeroAlloc<T>(nint count) where T : unmanaged
+        public static T* AllocZeroed<T>(nint count) where T : unmanaged
         {
             T* ptr = Alloc<T>(count);
             Clear(ptr, count);

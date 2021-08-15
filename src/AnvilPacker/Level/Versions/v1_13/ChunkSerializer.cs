@@ -23,7 +23,7 @@ namespace AnvilPacker.Level.Versions.v1_13
             chunk.Opaque = rootTag;
             chunk.DataVersion = version;
 
-            if (tag.TryGet("Sections", out ListTag sectList)) {
+            if (tag.TryGet("Sections", out ListTag? sectList)) {
                 for (int i = 0; i < sectList.Count; i++) {
                     var sectTag = sectList.Get<CompoundTag>(i);
                     DeserializeSection(chunk, sectTag);
@@ -67,7 +67,7 @@ namespace AnvilPacker.Level.Versions.v1_13
                 section.BlockLight = new NibbleArray(blockLight);
             }
         }
-        private static BlockId[] DeserializePalette(ListTag list, Chunk chunk)
+        private static BlockId[]? DeserializePalette(ListTag? list, Chunk chunk)
         {
             if (list == null) return null;
 
@@ -83,7 +83,7 @@ namespace AnvilPacker.Level.Versions.v1_13
             }
             return palette;
         }
-        private void DeserializeHeightmaps(Chunk chunk, CompoundTag tag)
+        private void DeserializeHeightmaps(Chunk chunk, CompoundTag? tag)
         {
             if (tag == null) return;
 
@@ -201,7 +201,7 @@ namespace AnvilPacker.Level.Versions.v1_13
             return storage.Data;
         }
         
-        private static IBitStorage CreateStorage(Chunk chunk, int count, int bits, long[] data = null)
+        private static IBitStorage CreateStorage(Chunk chunk, int count, int bits, long[]? data = null)
         {
             if (chunk.DataVersion >= DataVersion.v1_16_s13) {
                 return new SparseBitStorage(count, bits, data);

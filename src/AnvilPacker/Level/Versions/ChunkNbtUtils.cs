@@ -14,9 +14,9 @@ namespace AnvilPacker.Level.Versions
             tag.Remove(name);
             return value;
         }
-        public static T PopMaybe<T>(this CompoundTag tag, string name)
+        public static T? PopMaybe<T>(this CompoundTag tag, string name)
         {
-            if (tag.TryGet(name, out T value)) {
+            if (tag.TryGet(name, out T? value)) {
                 tag.Remove(name);
                 return value;
             }
@@ -63,7 +63,7 @@ namespace AnvilPacker.Level.Versions
         private static void MergeSections(ListTag src, ListTag dst)
         {
             foreach (CompoundTag srcSection in src) {
-                CompoundTag dstSection = FindSection(dst, srcSection.GetByte("Y"));
+                var dstSection = FindSection(dst, srcSection.GetByte("Y"));
                 if (dstSection == null) {
                     dst.Add(srcSection);
                 } else {
@@ -71,7 +71,7 @@ namespace AnvilPacker.Level.Versions
                 }
             }
         }
-        private static CompoundTag FindSection(ListTag list, int y)
+        private static CompoundTag? FindSection(ListTag list, int y)
         {
             foreach (CompoundTag sect in list) {
                 if (sect.GetByte("Y") == y) {

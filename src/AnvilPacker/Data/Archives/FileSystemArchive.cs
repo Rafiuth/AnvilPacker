@@ -82,7 +82,7 @@ namespace AnvilPacker.Data.Archives
             if (!Utils.IsSubPath(_root, path)) {
                 throw new ArgumentException($"Entry '{name}' tried to escape root path");
             }
-            Directory.CreateDirectory(Path.GetDirectoryName(path));
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
             return File.Create(path);
         }
 

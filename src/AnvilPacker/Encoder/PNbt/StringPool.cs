@@ -9,8 +9,8 @@ namespace AnvilPacker.Encoder.PNbt
     public class StringPool
     {
         private Dictionary<string, int> _freq = new();
-        private Dictionary<string, int> _indices = null;
-        private string[] _values = null;
+        private Dictionary<string, int>? _indices = null;
+        private string[]? _values = null;
 
         public void Add(string str)
         {
@@ -51,7 +51,7 @@ namespace AnvilPacker.Encoder.PNbt
 
         public void Write(DataWriter dw, string str)
         {
-            if (_indices.TryGetValue(str, out int index)) {
+            if (_indices!.TryGetValue(str, out int index)) {
                 dw.WriteVarUInt(index << 1 | 1);
                 return;
             }
@@ -61,7 +61,7 @@ namespace AnvilPacker.Encoder.PNbt
         {
             int len = dr.ReadVarUInt();
             if ((len & 1) != 0) {
-                return _values[len >> 1];
+                return _values![len >> 1];
             }
             return dr.ReadString(len >> 1);
         }

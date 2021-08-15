@@ -8,7 +8,7 @@ namespace AnvilPacker.Level
     {
         public static BlockJsonConverter Instance { get; } = new();
 
-        public override Block ReadJson(JsonReader reader, Type objectType, Block existingValue, bool hasExistingValue, JsonSerializer serializer)
+        public override Block ReadJson(JsonReader reader, Type objectType, Block? existingValue, bool hasExistingValue, JsonSerializer serializer)
         {
             switch (reader.TokenType) {
                 case JsonToken.String: {
@@ -23,7 +23,7 @@ namespace AnvilPacker.Level
                 default: throw new InvalidOperationException($"Can't parse '{reader.TokenType}' to block");
             }
         }
-        public override void WriteJson(JsonWriter writer, Block value, JsonSerializer serializer)
+        public override void WriteJson(JsonWriter writer, Block? value, JsonSerializer serializer)
         {
             Ensure.That(value != null);
 

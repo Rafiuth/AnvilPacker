@@ -55,7 +55,7 @@ namespace AnvilPacker.Level.Physics
         {
             return _bits == other._bits;
         }
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
         {
             return obj is Box8 other && Equals(other);
         }

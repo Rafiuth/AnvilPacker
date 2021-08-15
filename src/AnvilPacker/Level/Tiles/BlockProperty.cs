@@ -8,8 +8,8 @@ namespace AnvilPacker.Level
 {
     public abstract class BlockProperty : IEquatable<BlockProperty>
     {
-        public string Name { get; init; }
-        public string[] Values { get; init; }
+        public string Name { get; init; } = null!;
+        public string[] Values { get; init; } = null!;
         public int NumValues => Values.Length;
 
         public virtual string GetValue(int index)
@@ -29,7 +29,7 @@ namespace AnvilPacker.Level
             return index >= 0;
         }
 
-        public abstract bool Equals(BlockProperty other);
+        public abstract bool Equals(BlockProperty? other);
         public override abstract int GetHashCode();
     }
 
@@ -41,7 +41,7 @@ namespace AnvilPacker.Level
             Values = new[] { "true", "false" }; //inverse binary, mojang logik
         }
 
-        public override bool Equals(BlockProperty other)
+        public override bool Equals(BlockProperty? other)
         {
             return other is BoolProperty p && p.Name == Name;
         }
@@ -74,7 +74,7 @@ namespace AnvilPacker.Level
             return false;
         }
 
-        public override bool Equals(BlockProperty other)
+        public override bool Equals(BlockProperty? other)
         {
             return other is IntProperty p &&
                    p.Name == Name &&
@@ -94,7 +94,7 @@ namespace AnvilPacker.Level
             Values = values;
         }
 
-        public override bool Equals(BlockProperty other)
+        public override bool Equals(BlockProperty? other)
         {
             return other is EnumProperty p &&
                    p.Name == Name &&

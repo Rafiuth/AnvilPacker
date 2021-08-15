@@ -52,7 +52,7 @@ namespace AnvilPacker.Encoder.Transforms
             }
             return (newPalette, newIndices);
         }
-        private void SortByFreq(RegionBuffer region, BlockState[] states)
+        private void SortByFreq(RegionBuffer region, BlockState?[] states)
         {
             int[] freq = new int[states.Length];
 

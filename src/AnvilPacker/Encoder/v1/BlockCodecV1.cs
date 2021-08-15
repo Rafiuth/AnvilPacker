@@ -29,7 +29,7 @@ namespace AnvilPacker.Encoder.v1
         {
         }
 
-        public override void Encode(DataWriter stream, CodecProgressListener progress = null)
+        public override void Encode(DataWriter stream, CodecProgressListener? progress = null)
         {
             var ac = new ArithmEncoder(stream);
             var contexts = new Context[1 << ContextBits];
@@ -44,7 +44,7 @@ namespace AnvilPacker.Encoder.v1
             progress?.Finish();
         }
 
-        public override void Decode(DataReader stream, CodecProgressListener progress = null)
+        public override void Decode(DataReader stream, CodecProgressListener? progress = null)
         {
             var ac = new ArithmDecoder(stream);
             var contexts = new Context[1 << ContextBits];

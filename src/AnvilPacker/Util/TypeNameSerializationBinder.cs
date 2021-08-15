@@ -31,14 +31,14 @@ namespace AnvilPacker.Util
             return this;
         }
 
-        public override void BindToName(Type serializedType, out string assemblyName, out string typeName)
+        public override void BindToName(Type serializedType, out string? assemblyName, out string? typeName)
         {
             assemblyName = null;
             typeName = _typeToName.GetValueOrDefault(serializedType);
         }
-        public override Type BindToType(string assemblyName, string typeName)
+        public override Type BindToType(string? assemblyName, string typeName)
         {
-            return _nameToType.GetValueOrDefault(typeName);
+            return _nameToType.GetValueOrDefault(typeName)!;
         }
     }
 }

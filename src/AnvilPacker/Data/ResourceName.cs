@@ -56,7 +56,7 @@ namespace AnvilPacker.Data
         }
 
         public bool Equals(ResourceName other) => Namespace == other.Namespace && Path == other.Path;
-        public override bool Equals(object obj) => obj is ResourceName other && Equals(other);
+        public override bool Equals(object? obj) => obj is ResourceName other && Equals(other);
         public override int GetHashCode() => HashCode.Combine(Namespace, Path);
 
         public static bool operator ==(ResourceName left, ResourceName right) => left.Equals(right);

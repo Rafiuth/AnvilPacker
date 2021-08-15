@@ -1,5 +1,3 @@
-#nullable enable
-
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -163,7 +161,7 @@ namespace AnvilPacker.Level
             ResourceName blockName = tag["Name"].Value<string>();
             var props = _emptyPropVals;
 
-            if (tag.TryGet("Properties", out CompoundTag propsTag)) {
+            if (tag.TryGet("Properties", out CompoundTag? propsTag)) {
                 props = new BlockPropertyValue[propsTag.Count];
                 int i = 0;
                 foreach (var (k, v) in propsTag) {

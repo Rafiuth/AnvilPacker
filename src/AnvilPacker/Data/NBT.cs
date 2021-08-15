@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO;
 using System.IO.Compression;
@@ -185,15 +186,15 @@ namespace AnvilPacker.Data
 
         /// <summary> Tries to gets a tag, or the value of a primitive tag. </summary>
         /// <returns> Whether the operation was successfull. </returns>
-        public bool TryGet<T>(string name, out T value)
+        public bool TryGet<T>(string name, [NotNullWhen(true)] out T? value)
         {
-            if (_tags.TryGetValue(name, out NbtTag tag)) {
+            if (_tags.TryGetValue(name, out NbtTag? tag)) {
                 if (typeof(NbtTag).IsAssignableFrom(typeof(T))) {
                     value = (T)(object)tag;
                     return true;
                 }
                 if (tag is PrimitiveTag prim) {
-                    value = prim.Value<T>();
+                    value = prim.Value<T>()!;
                     return true;
                 }
             }
@@ -204,7 +205,7 @@ namespace AnvilPacker.Data
         /// <param name="mode">The action to take if the tag doesn't exist. </param>
         public T Get<T>(string name, TagGetMode mode = TagGetMode.Throw)
         {
-            if (_tags.TryGetValue(name, out NbtTag tag)) {
+            if (_tags.TryGetValue(name, out NbtTag? tag)) {
                 if (typeof(NbtTag).IsAssignableFrom(typeof(T))) {
                     return (T)(object)tag;
                 }
@@ -218,12 +219,12 @@ namespace AnvilPacker.Data
                 case TagGetMode.Throw:
                     throw new KeyNotFoundException($"Tag '{name}' not found.");
                 case TagGetMode.Null: 
-                    return default;
+                    return default!;
                 case TagGetMode.Create: {
                     if (!typeof(NbtTag).IsAssignableFrom(typeof(T))) {
                         throw new InvalidOperationException("Mode cannot be 'Create' for primitive values.");
                     }
-                    var val = Activator.CreateInstance<T>();
+                    var val = Activator.CreateInstance<T>()!;
                     _tags.Add(name, (NbtTag)(object)val);
                     return val;
                 }
@@ -238,7 +239,7 @@ namespace AnvilPacker.Data
             }
 
             //try update value of existing tag to avoid allocations
-            if (_tags.TryGetValue(name, out tag) && tag is PrimitiveTag<T> prim) {
+            if (_tags.TryGetValue(name, out tag!) && tag is PrimitiveTag<T> prim) {
                 prim.Value = value;
                 return;
             }
@@ -338,7 +339,7 @@ namespace AnvilPacker.Data
             }
         }
         public ListTag() : this(4) { }
-        public ListTag(List<NbtTag> list)
+        public ListTag(List<NbtTag> list) : this(4)
         {
             foreach (var tag in list) {
                 Add(tag);
@@ -463,7 +464,10 @@ namespace AnvilPacker.Data
 
         public T Value;
 
-        public PrimitiveTag() { }
+        public PrimitiveTag()
+        {
+            Value = default!;
+        }
         public PrimitiveTag(T value)
         {
             Value = value;
@@ -471,7 +475,7 @@ namespace AnvilPacker.Data
 
         public static implicit operator T(PrimitiveTag<T> tag) => tag.Value;
 
-        public override object GetValue() => Value;
+        public override object GetValue() => Value!;
     }
 
     public enum TagType : byte

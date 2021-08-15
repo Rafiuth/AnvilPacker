@@ -1,6 +1,4 @@
-﻿#nullable enable
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 using AnvilPacker.Data;
 using AnvilPacker.Util;

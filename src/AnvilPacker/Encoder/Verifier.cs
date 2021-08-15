@@ -60,7 +60,7 @@ namespace AnvilPacker.Encoder
                        CompareData(s1.SkyLight, s2.SkyLight);
             });
 
-            static bool CompareData(NibbleArray n1, NibbleArray n2)
+            static bool CompareData(NibbleArray? n1, NibbleArray? n2)
             {
                 if (n1 == null || n2 == null) {
                     return n1 == n2;
@@ -82,7 +82,7 @@ namespace AnvilPacker.Encoder
                 }
                 if (c1 == null) continue;
                 
-                if (c1.DataVersion != c2.DataVersion) {
+                if (c1.DataVersion != c2!.DataVersion) {
                     return false;
                 }
                 if (!CompareTags(c1.Opaque, c2.Opaque)) {
@@ -103,7 +103,7 @@ namespace AnvilPacker.Encoder
                 if ((s1 == null) != (s2 == null)) {
                     return false; //r1.NumSections != r2.NumSections
                 }
-                if (s1.X != s2.X || s1.Y != s2.Y || s1.Z != s2.Z) {
+                if (s1!.X != s2!.X || s1.Y != s2.Y || s1.Z != s2.Z) {
                     return false;
                 }
                 if (!pred(s1, s2)) {
@@ -178,7 +178,7 @@ namespace AnvilPacker.Encoder
                         return false;
                     }
                     foreach (var (name, v1) in c1) {
-                        if (!c2.TryGet(name, out NbtTag v2) || !CompareTags(v1, v2)) {
+                        if (!c2.TryGet(name, out NbtTag? v2) || !CompareTags(v1, v2)) {
                             return false;
                         }
                     }

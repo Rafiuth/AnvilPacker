@@ -112,11 +112,11 @@ namespace AnvilPacker.Level.Physics
             }
         }
 
-        public bool Equals(VoxelShape other)
+        public bool Equals(VoxelShape? other)
         {
-            return Boxes.AsSpan().SequenceEqual(other.Boxes);
+            return other != null && Boxes.AsSpan().SequenceEqual(other.Boxes);
         }
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
         {
             return obj is VoxelShape other && Equals(other);
         }

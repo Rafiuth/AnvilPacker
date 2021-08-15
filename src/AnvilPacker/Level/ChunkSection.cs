@@ -1,5 +1,3 @@
-#nullable enable
-
 using System;
 using AnvilPacker.Data;
 using AnvilPacker.Util;

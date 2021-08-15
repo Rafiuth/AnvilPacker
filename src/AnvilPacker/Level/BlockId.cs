@@ -18,7 +18,7 @@ namespace AnvilPacker.Level
 
         public readonly bool Equals(BlockId other) => other.Value == Value;
         public override int GetHashCode() => Value;
-        public override bool Equals(object obj) => obj is BlockId bid && Equals(bid);
+        public override bool Equals(object? obj) => obj is BlockId bid && Equals(bid);
 
         public override string ToString() => Value.ToString();
 

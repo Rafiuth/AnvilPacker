@@ -1,6 +1,4 @@
-﻿#nullable enable
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 using AnvilPacker.Data;
 using AnvilPacker.Util;
@@ -19,7 +17,7 @@ namespace AnvilPacker.Level
         public DictionarySlim<string, Heightmap> Heightmaps = new();
 
         /// <summary> Data that the serializer doesn't know how to handle. This is the root tag from the region chunk. </summary>
-        public CompoundTag? Opaque;
+        public CompoundTag Opaque = new();
         public DataVersion DataVersion;
         public ChunkFlags Flags;
 

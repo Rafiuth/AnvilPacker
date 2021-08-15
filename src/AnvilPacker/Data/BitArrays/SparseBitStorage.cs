@@ -31,7 +31,7 @@ namespace AnvilPacker.Data
         /// <param name="count">Number of elements</param>
         /// <param name="bits">Bit count per element</param>
         /// <param name="data">Backing data array. If null, a new array will be allocated. </param>
-        public SparseBitStorage(int count, int bits, long[] data = null)
+        public SparseBitStorage(int count, int bits, long[]? data = null)
         {
             Ensure.That(bits < 32, "Bits per element must be less than 32");
             int valsPerLong = 64 / bits;

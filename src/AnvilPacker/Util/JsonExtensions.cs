@@ -6,7 +6,7 @@ namespace AnvilPacker.Util
     {
         public static string GetString(this in JsonElement je, string key)
         {
-            return je.GetProperty(key).GetString();
+            return je.GetProperty(key).GetString() ?? throw new NullReferenceException();
         }
         public static int GetInt(this in JsonElement je, string key)
         {

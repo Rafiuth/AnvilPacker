@@ -8,10 +8,10 @@ namespace AnvilPacker.Cli
     public abstract class CliOptions
     {
         [Option('i', "input", Required = true, HelpText = "Path of the input file/directory.")]
-        public string Input { get; set; }
+        public string Input { get; set; } = null!;
 
         [Option('o', "output", Required = true, HelpText = "Path of the resulting file.")]
-        public string Output { get; set; }
+        public string Output { get; set; } = null!;
 
         [Option('y', "overwrite", HelpText = "Overwrite the output file if it already exists.")]
         public bool Overwrite { get; set; } = false;
@@ -23,19 +23,19 @@ namespace AnvilPacker.Cli
         public string LogLevel { get; set; } = "info";
 
         [Option("log-file", HelpText = "Sets the path of the log file.")]
-        public string LogFile { get; set; }
+        public string? LogFile { get; set; }
     }
     [Verb("pack", HelpText = "Compresses a given world.")]
     public class PackOptions : CliOptions
     {
         [Option("preset", HelpText = "Use predefined settings.")]
-        public string Preset { get; set; }
+        public string? Preset { get; set; }
 
         [Option("transform-pipe", HelpText = "A list of transforms to apply in regions.")]
-        public string TransformPipe { get; set; }
+        public string? TransformPipe { get; set; }
 
         [Option('e', "encoder-opts", HelpText = "Sets the region encoder options.")]
-        public string EncoderOpts { get; set; }
+        public string? EncoderOpts { get; set; }
 
         [Option("no-blobs", HelpText = "Disable solid compression of small files.")]
         public bool NoBlobs { get; set; } = false;

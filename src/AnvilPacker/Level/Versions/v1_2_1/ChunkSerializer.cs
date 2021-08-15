@@ -26,7 +26,7 @@ namespace AnvilPacker.Level.Versions.v1_2_1
             chunk.Opaque = rootTag;
             chunk.DataVersion = (DataVersion)rootTag.PopMaybe<int>("DataVersion");
 
-            if (tag.TryGet("Sections", out ListTag sectList)) {
+            if (tag.TryGet("Sections", out ListTag? sectList)) {
                 var localPalette = new DictionarySlim<ushort, BlockId>(64);
 
                 for (int i = 0; i < sectList.Count; i++) {
@@ -40,7 +40,7 @@ namespace AnvilPacker.Level.Versions.v1_2_1
                     tag.Remove("Sections");
                 }
             }
-            DeserializeHeightmap(chunk, tag.PopMaybe<int[]>("HeightMap"));
+            DeserializeHeightmap(chunk, tag.Pop<int[]>("HeightMap"));
             chunk.SetFlag(ChunkFlags.LightDirty, !tag.PopMaybe<bool>("LightPopulated"));
 
             return chunk;

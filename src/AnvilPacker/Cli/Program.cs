@@ -1,5 +1,3 @@
-﻿#nullable enable
-
 using System;
 using System.IO;
 using System.Linq;
@@ -46,6 +44,7 @@ namespace AnvilPacker
                         err.Heading = "AnvilPacker v" + PackProcessor.GetInfoVersion();
                         err.AdditionalNewLineAfterOption = false;
                         err.Copyright = "";
+                        err.AddEnumValuesToHelpText = true;
                         return err;
                     }
                 );

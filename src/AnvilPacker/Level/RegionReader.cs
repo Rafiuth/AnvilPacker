@@ -56,8 +56,7 @@ namespace AnvilPacker.Level
             //Read chunks sequentially to improve perf on slow medias (HDDs/whatever)
             //Don't really know how effective this is, hard to test because of caching.
             foreach (var (loc, i) in _locations.Select((v, i) => (v, i)).OrderBy(e => e.v)) {
-                if (IsValidLocation(loc)) {
-                    var tag = Read(loc);
+                if (IsValidLocation(loc) && Read(loc) is CompoundTag tag) {
                     yield return (tag, i & 31, i >> 5);
                 }
             }
@@ -78,9 +77,12 @@ namespace AnvilPacker.Level
             return (loc & 0xFF) != 0;
         }
 
-        private CompoundTag Read(int loc)
+        private CompoundTag? Read(int loc)
         {
             var data = ReadData(loc);
+            if (data.Array == null) {
+                return null;
+            }
             var mem = new MemoryStream(data.Array, data.Offset, data.Count);
             return NbtIO.Read(mem);
         }
@@ -89,7 +91,7 @@ namespace AnvilPacker.Level
             int offset = (loc >> 8) * 4096;
             int length = (loc & 0xFF) * 4096;
             if (length == 0) {
-                return null;
+                return default;
             }
             _s.Position = offset;
             int actualLen = _s.ReadIntBE() - 1;

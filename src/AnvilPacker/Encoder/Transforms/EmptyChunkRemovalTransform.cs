@@ -62,7 +62,7 @@ namespace AnvilPacker.Encoder.Transforms
 
             bool CheckNullOrPred<TTag>(string name, Predicate<TTag> pred) where TTag : NbtTag
             {
-                var tag = level[name];
+                var tag = level![name];
                 return tag is null || (tag is TTag castedTag && pred(castedTag));
             }
         }

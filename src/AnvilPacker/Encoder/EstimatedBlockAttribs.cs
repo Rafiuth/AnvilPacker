@@ -12,8 +12,8 @@ namespace AnvilPacker.Encoder
 {
     public class EstimatedHeightmapAttribs
     {
-        public BlockPalette Palette;
-        public Dictionary<string, bool[]> OpacityMap;
+        public BlockPalette Palette = null!;
+        public Dictionary<string, bool[]> OpacityMap = null!;
 
         public void Estimate(RegionBuffer region)
         {
@@ -85,9 +85,9 @@ namespace AnvilPacker.Encoder
     {
         private static readonly Logger _logger = LogManager.GetCurrentClassLogger();
 
-        public BlockPalette Palette;
-        public BlockLightInfo[] LightAttribs;
-        public VoxelShape[] OcclusionShapes;
+        public BlockPalette Palette = null!;
+        public BlockLightInfo[] LightAttribs = null!;
+        public VoxelShape[] OcclusionShapes = null!;
 
         public void Estimate(RegionBuffer region)
         {
@@ -184,13 +184,13 @@ namespace AnvilPacker.Encoder
                 for (int z = 0; z < 16; z++) {
                     for (int x = 0; x < 16; x++) {
                         for (int sy = chunk.MaxSectionY; sy >= chunk.MinSectionY; sy--) {
-                            var section = chunk.GetSection(sy);
+                            var section = chunk.GetSection(sy)!;
                             var lights = section?.SkyLight;
 
                             if (lights == null) continue;
 
                             for (int y = 15; y >= 0; y--) {
-                                var id = section.GetBlockId(x, y, z);
+                                var id = section!.GetBlockId(x, y, z);
                                 if (!blockFilter[id]) continue;
 
                                 int br = GetLight(x, y, z);

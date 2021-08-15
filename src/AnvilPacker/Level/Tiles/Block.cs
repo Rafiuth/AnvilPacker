@@ -14,10 +14,10 @@ namespace AnvilPacker.Level
         /// </summary>
         public int Id { get; init; }
         public ResourceName Name { get; init; }
-        public BlockState DefaultState { get; set; }
-        public BlockMaterial Material { get; init; }
-        public List<BlockProperty> Properties { get; init; }
-        public BlockState[] States { get; init; }
+        public BlockState DefaultState { get; set; } = null!;
+        public BlockMaterial Material { get; init; } = null!;
+        public List<BlockProperty> Properties { get; init; } = null!;
+        public BlockState[] States { get; init; } = null!;
 
         /// <summary> Whether this block is known and has valid attributes. </summary>
         public bool IsKnown => Id >= 0;
@@ -53,15 +53,18 @@ namespace AnvilPacker.Level
             return newBlock;
         }
 
-        public bool Equals(Block other)
+        public bool Equals(Block? other)
         {
+            if (other == null) {
+                return false;
+            }
             if (IsKnown && other.IsKnown) {
                 return other.Id == Id;
             }
             return other.Name == Name && 
                    Properties.SequenceEqual(other.Properties);
         }
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
         {
             return obj is Block b && Equals(b);
         }

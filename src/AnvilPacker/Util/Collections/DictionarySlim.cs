@@ -6,6 +6,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using AnvilPacker.Util.Collections;
@@ -136,14 +137,14 @@ namespace AnvilPacker.Util
         /// <param name="key">Key to look for</param>
         /// <param name="value">Value found, otherwise default(TValue)</param>
         /// <returns>true if the key is present, otherwise false</returns>
-        public bool TryGetValue(TKey key, out TValue value)
+        public bool TryGetValue(TKey key, [NotNullWhen(true)] out TValue? value)
         {
             if (key == null) ThrowHelper.ThrowKeyArgumentNullException();
             Entry[] entries = _entries;
             int bucketIndex = key.GetHashCode() & (_buckets.Length - 1);
             for (int i = _buckets[bucketIndex] - 1; (uint)i < (uint)entries.Length; i = entries[i].next) {
                 if (key.Equals(entries[i].key)) {
-                    value = entries[i].value;
+                    value = entries[i].value!;
                     return true;
                 }
             }

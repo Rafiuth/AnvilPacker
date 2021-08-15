@@ -20,12 +20,12 @@ namespace AnvilPacker.Util
         private readonly JsonSerializer _serializer;
         private readonly Parser<char, JToken> _parser;
 
-        public SettingParser(Type rootType, IEnumerable<(string Name, Type Type)> types, IEnumerable<JsonConverter> converters = null)
+        public SettingParser(Type rootType, IEnumerable<(string Name, Type Type)> types, IEnumerable<JsonConverter>? converters = null)
             : this(rootType, types.Select(v => new KeyValuePair<string, Type>(v.Name, v.Type)), converters)
         {
 
         }
-        public SettingParser(Type rootType, IEnumerable<KeyValuePair<string, Type>> types, IEnumerable<JsonConverter> converters = null)
+        public SettingParser(Type rootType, IEnumerable<KeyValuePair<string, Type>> types, IEnumerable<JsonConverter>? converters = null)
         {
             _types = new Dictionary<string, Type>(types);
             _rootType = rootType;
@@ -247,22 +247,22 @@ namespace AnvilPacker.Util
                 }
                 return false;
             }
-            public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
+            public override object? ReadJson(JsonReader reader, Type objectType, object? existingValue, JsonSerializer serializer)
             {
                 var token = JToken.Load(reader);
 
                 var typeName = (token as JObject)?["$type"] ?? (token as JValue);
                 if (typeName != null && typeName.Type == JTokenType.String) {
-                    objectType = _types[typeName.Value<string>()];
+                    objectType = _types[typeName.Value<string>()!];
                 }
-                var obj = Activator.CreateInstance(objectType);
+                var obj = Activator.CreateInstance(objectType)!;
                 if (token is JObject json) {
                     json.Remove("$type");
                     serializer.Populate(json.CreateReader(), obj);
                 }
                 return obj;
             }
-            public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
+            public override void WriteJson(JsonWriter writer, object? value, JsonSerializer serializer)
             {
                 throw new NotImplementedException();
             }

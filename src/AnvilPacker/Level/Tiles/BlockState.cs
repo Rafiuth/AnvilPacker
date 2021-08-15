@@ -15,7 +15,7 @@ namespace AnvilPacker.Level
         /// When <see cref="BlockAttributes.Legacy"/> is set, this value represents the numeric block ID.
         /// </summary>
         public int Id { get; set; }
-        public Block Block { get; set; }
+        public Block Block { get; set; } = null!;
         public BlockPropertyValue[] Properties { get; set; } = Array.Empty<BlockPropertyValue>();
         public BlockAttributes Attributes { get; set; }
 
@@ -33,9 +33,10 @@ namespace AnvilPacker.Level
             return (Attributes & attribs) == attribs;
         }
 
-        public bool Equals(BlockState other)
+        public bool Equals(BlockState? other)
         {
-            return (Id >= 0 ? Id == other.Id : SlowEquals(other)) &&
+            return other != null &&
+                   (Id >= 0 ? Id == other.Id : SlowEquals(other)) &&
                    (Attributes & BlockAttributes.InternalMask) == (other.Attributes & BlockAttributes.InternalMask);
         }
         private bool SlowEquals(BlockState other)
@@ -43,7 +44,7 @@ namespace AnvilPacker.Level
             return Block.Name == other.Block.Name &&
                    Properties.SequenceEqual(other.Properties);
         }
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
         {
             return obj is BlockState mb && Equals(mb);
         }

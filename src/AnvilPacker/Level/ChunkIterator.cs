@@ -15,14 +15,14 @@ namespace AnvilPacker.Level
         private static readonly ChunkSection EmptySection = EmptyChunk.GetOrCreateSection(0);
 
         public RegionBuffer Region { get; init; }
-        public ChunkSection Section { get; private set; }
+        public ChunkSection Section { get; private set; } = null!;
         private ChunkSection[] _neighborCache = new ChunkSection[3 * 3 * 3];
 
         public Chunk Chunk => Section.Chunk;
         public BlockPalette Palette => Section.Palette;
         public BlockId[] Blocks => Section.Blocks;
-        public NibbleArray SkyLight => Section.SkyLight;
-        public NibbleArray BlockLight => Section.BlockLight;
+        public NibbleArray? SkyLight => Section.SkyLight;
+        public NibbleArray? BlockLight => Section.BlockLight;
         public int X => Section.X;
         public int Y => Section.Y;
         public int Z => Section.Z;

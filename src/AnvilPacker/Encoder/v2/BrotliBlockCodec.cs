@@ -30,7 +30,7 @@ namespace AnvilPacker.Encoder.v2
         {
         }
 
-        public override void Encode(DataWriter stream, CodecProgressListener progress = null)
+        public override void Encode(DataWriter stream, CodecProgressListener? progress = null)
         {
             using var encStream = Compressors.NewBrotliEncoder(stream, true, Quality, WindowSize);
             bool _8BitPalette = Region.Palette.Count <= 256;
@@ -57,7 +57,7 @@ namespace AnvilPacker.Encoder.v2
             progress?.Finish();
         }
 
-        public override void Decode(DataReader stream, CodecProgressListener progress = null)
+        public override void Decode(DataReader stream, CodecProgressListener? progress = null)
         {
             using var decStream = Compressors.NewBrotliDecoder(stream.AsStream(), true);
             bool _8BitPalette = Region.Palette.Count <= 256;

@@ -1,5 +1,3 @@
-#nullable enable
-
 using System;
 using System.Diagnostics;
 using System.Linq;
@@ -31,27 +29,20 @@ namespace AnvilPacker.Level
         private SectionCache _sectionCache = new(0);
 
         public Lighter(RegionBuffer region, Encoder.EstimatedLightAttribs estimAttribs, bool enqueueBorders = false)
-            : this(region, estimAttribs.LightAttribs, null, enqueueBorders)
+            : this(region, estimAttribs.LightAttribs, estimAttribs.OcclusionShapes, enqueueBorders)
         {
         }
-        public Lighter(RegionBuffer region, BlockLightInfo[] lightAttribs, VoxelShape[]? occlusionShapes = null, bool enqueueBorders = false)
+        public Lighter(RegionBuffer region, BlockLightInfo[] lightAttribs, VoxelShape[] occlusionShapes, bool enqueueBorders = false)
         {
             int paletteLen = region.Palette.Count;
             Ensure.That(lightAttribs.Length == paletteLen);
-            Ensure.That(occlusionShapes == null || occlusionShapes.Length == paletteLen);
+            Ensure.That(occlusionShapes.Length == paletteLen);
 
             _emptyHeights.Fill(short.MinValue);
             _region = region;
             _blockAttribs = lightAttribs;
-            _occlusionShapes = occlusionShapes ?? CreateDefaultShapes(paletteLen);
+            _occlusionShapes = occlusionShapes;
             _enqueueBorders = enqueueBorders;
-        }
-
-        private VoxelShape[] CreateDefaultShapes(int count)
-        {
-            var arr = new VoxelShape[count];
-            arr.Fill(VoxelShape.Empty);
-            return arr;
         }
 
         public void Compute()

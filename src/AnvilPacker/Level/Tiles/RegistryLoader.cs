@@ -65,7 +65,7 @@ namespace AnvilPacker.Level
 
                 foreach (var entry in jrenames.EnumerateObject()) {
                     var oldName = entry.Name;
-                    var newName = entry.Value.GetString();
+                    var newName = entry.Value.GetString()!;
                     var records = renames.GetOrAdd(oldName, () => new());
                     records.Add((version, newName));
                 }
@@ -158,7 +158,7 @@ namespace AnvilPacker.Level
                 var states = new BlockState[numStates];
                 var block = new Block() {
                     Id = BlockRegistry.NextBlockId(),
-                    Name = ResourceName.Parse(jname.GetString()),
+                    Name = ResourceName.Parse(jname.GetString()!),
                     States = states,
                     Properties = props,
                     Material = BlockMaterial.Registry[materialName]
@@ -301,7 +301,7 @@ namespace AnvilPacker.Level
                     var jvals = obj.GetProperty("values");
                     var values = new string[jvals.GetArrayLength()];
                     for (int i = 0; i < values.Length; i++) {
-                        values[i] = jvals[i].GetString();
+                        values[i] = jvals[i].GetString()!;
                     }
                     return new EnumProperty(name, values);
                 }

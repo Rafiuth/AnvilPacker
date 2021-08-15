@@ -32,7 +32,7 @@ namespace AnvilPacker.Util
 
         public void Set()
         {
-            TaskCompletionSource toRelease = null;
+            TaskCompletionSource? toRelease = null;
 
             lock (_waits) {
                 if (!_waits.TryDequeue(out toRelease)) {
