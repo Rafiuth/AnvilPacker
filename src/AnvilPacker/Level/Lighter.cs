@@ -20,13 +20,14 @@ namespace AnvilPacker.Level
 
         private readonly RegionBuffer _region;
         private readonly BlockLightInfo[] _blockAttribs;
-        private readonly VoxelShape[] _occlusionShapes;
+        private readonly VoxelShape[] _occlusionShapes;  //impl assumes that entries are set to VoxelShape.Empty when attrib.UseShapeForOcclusion == false
+        private readonly BlockId _emptyShapeId; //index of a VoxelShape.Empty in _occlusionShapes
         private readonly Heightmap[] _heightmaps = new Heightmap[32 * 32];
         private readonly short[] _emptyHeights = new short[16 * 16]; //all values set to lowest
         private readonly bool _enqueueBorders;
 
-        private LightQueue _queue = new();
-        private SectionCache _sectionCache = new(0);
+        private readonly LightQueue _queue = new();
+        private readonly SectionCache _sectionCache = new(0); //struct with a class field, fine with readonly?
 
         public Lighter(RegionBuffer region, Encoder.EstimatedLightAttribs estimAttribs, bool enqueueBorders = false)
             : this(region, estimAttribs.LightAttribs, estimAttribs.OcclusionShapes, enqueueBorders)
@@ -43,6 +44,16 @@ namespace AnvilPacker.Level
             _blockAttribs = lightAttribs;
             _occlusionShapes = occlusionShapes;
             _enqueueBorders = enqueueBorders;
+
+            int emptyShapeIdx = Array.IndexOf(_occlusionShapes, VoxelShape.Empty);
+            if (emptyShapeIdx >= 0) {
+                _emptyShapeId = (BlockId)emptyShapeIdx;
+            } else {
+                //oh shit, how did we end up here?
+                _emptyShapeId = (BlockId)_occlusionShapes.Length;
+                _occlusionShapes = _occlusionShapes.Append(VoxelShape.Empty).ToArray();
+                _blockAttribs = _blockAttribs.Append(new BlockLightInfo(0, 0, false)).ToArray();
+            }
         }
 
         public void Compute()
@@ -56,7 +67,8 @@ namespace AnvilPacker.Level
         }
         private void ComputeHeightmaps()
         {
-            var opacityMap = _blockAttribs.Select(a => a.Opacity > 0).ToArray();
+            var opacityMap = _blockAttribs.Select(a => a.Opacity > 0 || a.UseShapeForOcclusion).ToArray();
+            
             foreach (var chunk in _region.ExistingChunks) {
                 var heightmap = _heightmaps[RegionBuffer.GetChunkIndex(chunk)] ??= new();
                 heightmap.Compute(chunk, opacityMap);
@@ -93,6 +105,7 @@ namespace AnvilPacker.Level
                         z: i >> 4 & 15,
                         y: sy + (i >> 8 & 15),
                         level: attribs.Emission,
+                        dirs: Direction.All,
                         useShapeForOcclusion: attribs.UseShapeForOcclusion,
                         block: blockId
                     );
@@ -108,7 +121,15 @@ namespace AnvilPacker.Level
         }
         private void ComputeSkyLight(Chunk chunk)
         {
-            //heightmaps point to the last transparent block
+            var queue = _queue.Cleared();
+            var blockAttribs = _blockAttribs;
+            var blockShapes = _occlusionShapes;
+            var emptyShapeId = _emptyShapeId;
+
+            int minY = int.MaxValue, maxY = int.MinValue;
+
+            //heightmaps point to the last transparent or 
+            //non-shape aware (UseShapeForOcclusion == false) block.
             var heights = GetHeights(chunk.X, chunk.Z);
             var heightsXN = GetHeights(chunk.X - 1, chunk.Z);
             var heightsXP = GetHeights(chunk.X + 1, chunk.Z);
@@ -117,14 +138,9 @@ namespace AnvilPacker.Level
 
             int maxHeight = chunk.MaxSectionY * 16 + 15;
 
-            var queue = _queue.Cleared();
-            int minY = int.MaxValue, maxY = int.MinValue;
-
             for (int z = 0; z < 16; z++) {
                 for (int x = 0; x < 16; x++) {
-                    int h = heights[x + z * 16];
-
-                    //Propagate light trough column gaps, so they flow inwards like b:
+                    //Propagate light through column gaps, so they flow inwards like b:
                     // a)             b)      *--- hXN or whatever
                     // FF#######FF    FF#######FF
                     // FFCBA#ABCFF    FFEDC#CDEFF
@@ -135,6 +151,8 @@ namespace AnvilPacker.Level
                     // # = opaque block, hex char = light level
                     // a: queued only `h`.
                     // b: queued from `h..hMax-1`
+                    int h = heights[x + z * 16];
+
                     int hXN = x !=  0 ? heights[(x - 1) + (z + 0) * 16] : heightsXN[15 + z * 16];
                     int hXP = x != 15 ? heights[(x + 1) + (z + 0) * 16] : heightsXP[ 0 + z * 16];
                     int hZN = z !=  0 ? heights[(x + 0) + (z - 1) * 16] : heightsZN[x + 15 * 16];
@@ -142,18 +160,37 @@ namespace AnvilPacker.Level
 
                     int hMax = Max(h + 1, hXN, hXP, hZN, hZP);
 
-                    for (int y = h; y < hMax; y++) {
-                        var sides =
+                    var blockAtH    = chunk.GetBlockId(x, h,     z, emptyShapeId);
+                    var blockAtH_m1 = chunk.GetBlockId(x, h - 1, z, emptyShapeId);
+
+                    for (int y = hMax - 1; y >= h; y--) {
+                        var dirs =
                             (y == h  ? Direction.YNeg : 0) |
                             (y < hXN ? Direction.XNeg : 0) |
                             (y < hXP ? Direction.XPos : 0) |
                             (y < hZN ? Direction.ZNeg : 0) |
                             (y < hZP ? Direction.ZPos : 0);
-                        //TODO: do we need to enqueue up to (inclusive) the neighbor block?
+                        //TODO: should the neighbor comparasion above be inclusive?
                         //It causes a significant performance drop, and results were the same in my tests.
-
-                        Debug.Assert(sides != 0); //we are wasting time if sides == 0
-                        queue.Enqueue(x, y, z, 15, sides);
+                        queue.Enqueue(
+                            x, y, z, level: 15,
+                            dirs,
+                            useShapeForOcclusion: false,
+                            block: blockAtH //don't care about the actual block, shape just need to be empty.
+                        );
+                        Debug.Assert(dirs != 0); //we are wasting time if sides == 0
+                    }
+                    //also enqueue h-1 if light can go inside it
+                    if (blockAttribs[blockAtH_m1].UseShapeForOcclusion &&
+                        !VoxelShape.MergedFacesOccludes(VoxelShape.Empty, blockShapes[blockAtH_m1], Direction.YNeg)) 
+                    {
+                        h--;
+                        queue.Enqueue(
+                            x, h, z, level: 15,
+                            dirs: Direction.All & ~Direction.YPos,
+                            useShapeForOcclusion: true,
+                            blockAtH_m1
+                        );
                     }
                     FillVisibleSkyColumn(chunk, x, z, h, maxHeight);
                     minY = Math.Min(minY, h);
@@ -171,11 +208,11 @@ namespace AnvilPacker.Level
             //Fills the sky light column from minY to maxY (inclusive) with 15
             static void FillVisibleSkyColumn(Chunk chunk, int x, int z, int minY, int maxY)
             {
-                int sy1 = minY >> 4;
-                int sy2 = maxY >> 4;
-
                 int xzIndex = ChunkSection.GetIndex(x, 0, z);
                 int levelMask = xzIndex % 2 == 0 ? 0x0F : 0xF0;
+
+                int sy1 = minY >> 4;
+                int sy2 = maxY >> 4;
 
                 for (int sy = sy1; sy <= sy2; sy++) {
                     var section = chunk.GetSection(sy);
@@ -185,7 +222,7 @@ namespace AnvilPacker.Level
                     var rawLevels = levels.Data;
 
                     int y1 = Math.Max(minY, sy * 16) & 15;
-                    int y2 = Math.Min(maxY - sy * 16, 15) & 15;
+                    int y2 = Math.Min(maxY - sy * 16, 15);
 
                     for (int y = y1; y <= y2; y++) {
                         //int index = ChunkSection.GetIndex(x, y, z);
@@ -265,7 +302,7 @@ namespace AnvilPacker.Level
             var queue = _queue;
             var sectionCache = _sectionCache;
             var blockAttribs = _blockAttribs;
-            var occlusionShapes = _occlusionShapes;
+            var blockShapes = _occlusionShapes;
             var sides = Directions.Normals;
 
             while (!queue.IsEmpty) {
@@ -295,8 +332,8 @@ namespace AnvilPacker.Level
                     if (newLevel <= currLevel) continue;
 
                     if (attrs.UseShapeForOcclusion || node.UseShapeForOcclusion) {
-                        var shapeFrom = occlusionShapes[node.Block];
-                        var shapeTo = occlusionShapes[blockId];
+                        var shapeFrom = blockShapes[node.Block];
+                        var shapeTo = blockShapes[blockId];
                         if (VoxelShape.MergedFacesOccludes(shapeFrom, shapeTo, dir)) continue;
                     }
 
@@ -311,6 +348,7 @@ namespace AnvilPacker.Level
                         blockId
                     );
                 }
+                queue.EnsureCapacity();
             }
         }
 
@@ -327,20 +365,13 @@ namespace AnvilPacker.Level
 
             /// <summary> Adds a new node at the head of the queue. </summary>
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void Enqueue(int x, int y, int z, int level, Direction dirs = Direction.All, bool useShapeForOcclusion = false, BlockId block = default)
+            public void Enqueue(int x, int y, int z, int level, Direction dirs, bool useShapeForOcclusion, BlockId block)
             {
                 _arr[_tail++].Set(x, y, z, level, dirs, useShapeForOcclusion, block);
             }
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public ref LightNode Dequeue()
             {
-                //Checking if we need to shift here instead
-                //of Enqueue() will save up to 6 checks.
-                //The queue is large enough so that this is rare,
-                //but it could be worth using a normal circular buffer...
-                if (_tail + 8 > _arr.Length) {
-                    Shift();
-                }
                 return ref _arr[_head++];
             }
 
@@ -350,7 +381,16 @@ namespace AnvilPacker.Level
                 return this;
             }
 
-            private void Shift()
+            public void EnsureCapacity()
+            {
+                //The queue is large enough so that this is rare,
+                //but it could be worth using a normal circular buffer...
+                if (_tail + 8 > _arr.Length) {
+                    ShiftOrResize();
+                }
+            }
+
+            private void ShiftOrResize()
             {
                 var newArr = _arr;
                 int count = _tail - _head;
@@ -358,7 +398,6 @@ namespace AnvilPacker.Level
                 if (count > _arr.Length - 4096) {
                     //Expand a bit if we can't get away with just a shift.
                     //This should be very rare, if it even happens at all.
-                    //This array will be discarded once the queue is copied again (we're a struct)
                     newArr = new LightNode[_arr.Length + 4096];
                 }
                 Array.Copy(_arr, _head, newArr, 0, count);
@@ -374,8 +413,8 @@ namespace AnvilPacker.Level
             public sbyte X, Z;  //Relative to the origin chunk
             public short Y;     //Absolute
             public byte Level;
-            public byte Flags; //[0..5]: Dirs, 6: HasSidedTransparencys
-            public BlockId Block;
+            public byte Flags;  //[0..5]: Dirs, 6: UseShapeForOcclusion
+            public BlockId Block; //Only used when this or any neighbor UseShapeForOcclusion==True. 
             //Size = 8 bytes
 
             public bool UseShapeForOcclusion => (Flags & (1 << 6)) != 0;
@@ -386,7 +425,7 @@ namespace AnvilPacker.Level
 
             //Not using ctors because jit won't eliminate the copy before the array store
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void Set(int x, int y, int z, int level, Direction dirs = Direction.All, bool useShapeForOcclusion = false, BlockId block = default)
+            public void Set(int x, int y, int z, int level, Direction dirs, bool useShapeForOcclusion, BlockId block)
             {
                 X = (sbyte)x;
                 Y = (short)y;
@@ -403,7 +442,7 @@ namespace AnvilPacker.Level
             public override string ToString()
             {
                 return $"Pos=[{X} {Y} {Z}] Level={Level} " +
-                       $"Dirs={(Direction)(Flags & (int)Direction.All)}" +
+                       $"Dirs={(Direction)(Flags & (int)Direction.All)} " +
                        $"Flags={(Flags >> 6).ToString("X")}";
             }
         }
@@ -467,7 +506,7 @@ namespace AnvilPacker.Level
                 x >>= 4;
                 y >>= 4;
                 z >>= 4;
-                const int CENTER_OFFSET = ((SECTION_Y_OFFSET * 3 + 1) * 3 + 1);
+                const int CENTER_OFFSET = (SECTION_Y_OFFSET * 3 + 1) * 3 + 1;
                 int index = (y * 3 + z) * 3 + x + CENTER_OFFSET;
                 return ref Entries[index];
             }
@@ -496,7 +535,7 @@ namespace AnvilPacker.Level
             : this(
                 block.LightOpacity, 
                 block.LightEmission,
-                block.HasAttrib(BlockAttributes.Opaque | BlockAttributes.HasSidedTransparency)
+                block.HasAttrib(BlockAttributes.Opaque | BlockAttributes.UseShapeForOcclusion)
             )
         {
         }

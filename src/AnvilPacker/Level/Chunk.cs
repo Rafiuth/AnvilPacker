@@ -121,6 +121,11 @@ namespace AnvilPacker.Level
             var sect = GetSection(y >> 4);
             return sect != null ? sect.GetBlock(x, y & 15, z) : BlockRegistry.Air;
         }
+        public BlockId GetBlockId(int x, int y, int z, BlockId defaultId)
+        {
+            var sect = GetSection(y >> 4);
+            return sect != null ? sect.GetBlockId(x, y & 15, z) : defaultId;
+        }
         public void SetBlock(int x, int y, int z, BlockState block)
         {
             SetBlockId(x, y, z, Palette.GetOrAddId(block));

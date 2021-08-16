@@ -86,7 +86,7 @@ namespace AnvilPacker.Level
         Opaque              = 1 << 0, //fabric: isOpaque(), mojang: canOcclude()
         Translucent         = 1 << 1, //fabric: isTranslucent(), mojang: propagatesSkylightDown()
         FullCube            = 1 << 2, //fabric: isFullCube(), mojang: isCollisionShapeFullBlock()
-        HasSidedTransparency= 1 << 3,
+        UseShapeForOcclusion= 1 << 3,
         HasRandomTicks      = 1 << 4,
         EmitsRedstonePower  = 1 << 5, //fabric: emitsRedstonePower(), mojang: isSignalSource()
         HasFluid            = 1 << 6, // !state.getFluidState().isEmpty()

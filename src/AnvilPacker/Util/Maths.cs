@@ -29,6 +29,12 @@ namespace AnvilPacker.Util
             return (x & (x - 1)) == 0;
         }
 
+        /// <summary> Creates a mask with bits [start..end) set to 1. </summary>
+        public static int CreateRangeMask(int start, int end)
+        {
+            return (~0 << start) ^ (~0 << end);
+        }
+
         /// <summary> Rounds x to the smallest encompassing power of two. </summary>
         public static int RoundUpPow2(int x)
         {

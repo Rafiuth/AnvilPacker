@@ -6,7 +6,7 @@ using AnvilPacker.Util;
 
 namespace AnvilPacker.Level.Physics
 {
-    public class VoxelShape : IEquatable<VoxelShape>
+    public unsafe class VoxelShape : IEquatable<VoxelShape>
     {
         public static VoxelShape Empty { get; } = new(new Box8[0]);
         public static VoxelShape Cube { get; } = new(new Box8[] { new(0, 0, 0, 16, 16, 16) });
@@ -32,7 +32,7 @@ namespace AnvilPacker.Level.Physics
             Rasterize(a, bmp, dir);
             Rasterize(b, bmp, dir.Opposite());
 
-            return AllBitsSet(bmp);
+            return AllBitsSet256(bmp);
 
             static void Rasterize(VoxelShape shape, ushort* bmp, Direction dir)
             {
@@ -42,28 +42,48 @@ namespace AnvilPacker.Level.Physics
                     if (dir.AnyNeg() ? box.Min(axis) > 0 : box.Max(axis) < 16) {
                         continue;
                     }
-                    //pick plane coords
-                    var (x1, y1, x2, y2) = axis switch {
-                        Axis.X => (box.MinZ, box.MinY, box.MaxZ, box.MaxY),
-                        Axis.Y => (box.MinX, box.MinZ, box.MaxX, box.MaxZ),
-                        Axis.Z => (box.MinX, box.MinY, box.MaxX, box.MaxY),
-                        _ => throw new InvalidOperationException()
-                    };
-                    x1 = Clamp16(x1);
-                    y1 = Clamp16(y1);
-                    x2 = Clamp16(x2);
-                    y2 = Clamp16(y2);
-
-                    var rowMask = (ushort)CreateRangeMask(x1, x2);
-                    if (Avx2.IsSupported) {
-                        RasterizeFace_AVX2(bmp, y1, y2, rowMask);
-                    } else {
-                        RasterizeFace(bmp, y1, y2, rowMask);
-                    }
+                    RasterizePlane(box, bmp, axis);
                 }
             }
+        }
+
+        /// <summary> Checks whether the shape completely covers the specified axis. </summary>
+        public static bool FullyOccludesAxis(VoxelShape shape, Axis axis)
+        {
+            var bmp = stackalloc ushort[16];
+            Unsafe.InitBlock(bmp, 0, 16);
+
+            foreach (var box in shape.Boxes) {
+                RasterizePlane(box, bmp, axis);
+            }
+            return AllBitsSet256(bmp);
+        }
+        
+        /// <summary> Rasterizes the specified axis plane of the box to a 16x16 bitmap. </summary>
+        private static void RasterizePlane(Box8 box, ushort* bmp, Axis axis)
+        {
+            //pick plane coords
+            var (x1, y1, x2, y2) = axis switch {
+                Axis.X => (box.MinZ, box.MinY, box.MaxZ, box.MaxY),
+                Axis.Y => (box.MinX, box.MinZ, box.MaxX, box.MaxZ),
+                Axis.Z => (box.MinX, box.MinY, box.MaxX, box.MaxY),
+                _ => throw new InvalidOperationException()
+            };
+            x1 = Clamp16(x1);
+            y1 = Clamp16(y1);
+            x2 = Clamp16(x2);
+            y2 = Clamp16(y2);
+
+            //draw to the bitmap
+            var rowMask = (ushort)Maths.CreateRangeMask(x1, x2);
+            if (Avx2.IsSupported) {
+                Rasterize_AVX2(bmp, y1, y2, rowMask);
+            } else {
+                Rasterize_Scalar(bmp, y1, y2, rowMask);
+            }
+
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            static void RasterizeFace(ushort* bmp, int y1, int y2, ushort rowMask)
+            static void Rasterize_Scalar(ushort* bmp, int y1, int y2, ushort rowMask)
             {
                 while (y2 - y1 >= 4) {
                     *(ulong*)&bmp[y1] |= (ulong)rowMask * 0x0001_0001_0001_0001ul;
@@ -74,7 +94,7 @@ namespace AnvilPacker.Level.Physics
                 }
             }
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            static void RasterizeFace_AVX2(ushort* bmp, int y1, int y2, ushort rowMask)
+            static void Rasterize_AVX2(ushort* bmp, int y1, int y2, ushort rowMask)
             {
                 //colMask = set ~0 words in range [y1..y2]
                 //&bmp[0] |= broadcast((ushort)rowMask) & colMask;
@@ -89,27 +109,21 @@ namespace AnvilPacker.Level.Physics
                 col = Avx2.Or(col, Avx2.And(row, colMask));
                 Avx2.Store(&bmp[0], col);
             }
-            static bool AllBitsSet(ushort* bmp)
-            {
-                if (Avx.IsSupported) {
-                    var v = Avx.LoadVector256(bmp);
-                    return Avx.TestC(v, Vector256<ushort>.AllBitsSet); //(~v & ~0) == 0
-                }
-                var bmp64 = (ulong*)bmp;
-                return (bmp64[0] & bmp64[1] & bmp64[2] & bmp64[3]) == ~0ul;
-            }
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             static sbyte Clamp16(sbyte x)
             {
                 return (sbyte)(x < 0 ? 0 : x > 16 ? 16 : x);
             }
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            static int CreateRangeMask(int start, int end)
-            {
-                int count = end - start;
-                int mask = (1 << count) - 1;
-                return mask << start;
+        }
+
+        private static bool AllBitsSet256(ushort* bmp)
+        {
+            if (Avx.IsSupported) {
+                var v = Avx.LoadVector256(bmp);
+                return Avx.TestC(v, Vector256<ushort>.AllBitsSet); //(~v & ~0) == 0
             }
+            var bmp64 = (ulong*)bmp;
+            return (bmp64[0] & bmp64[1] & bmp64[2] & bmp64[3]) == ~0ul;
         }
 
         public bool Equals(VoxelShape? other)
