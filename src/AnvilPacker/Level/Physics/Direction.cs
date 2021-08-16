@@ -3,7 +3,7 @@ using System.Diagnostics;
 using System.Numerics;
 using AnvilPacker.Util;
 
-namespace AnvilPacker.Level
+namespace AnvilPacker.Level.Physics
 {
     using static Direction;
     using static Axis;
