@@ -121,7 +121,7 @@ namespace AnvilPacker.Container
                     }
                 }
             }
-            _opaqueProgress.Inc(1.0);
+            _opaqueProgress.ProcessedItems++;
             return false;
         }
         private async Task CopyToOutput(string filename, byte[] buf)
@@ -229,17 +229,23 @@ namespace AnvilPacker.Container
         {
             TotalItems++;
         }
-        internal void Inc(double delta)
-        {
-            Utils.InterlockedAdd(ref ProcessedItems, delta);
-        }
+
         internal IProgress<double> CreateProgressListener()
         {
-            double prevProgress = 0;
-            return new Progress<double>(currProgress => {
-                Inc(currProgress - prevProgress);
-                prevProgress = currProgress;
-            });
+            return new ProgressListener() { _task = this };
+        }
+
+        class ProgressListener : IProgress<double>
+        {
+            internal PackerTaskProgress _task = null!;
+            private double _prev = 0.0;
+
+            public void Report(double perc)
+            {
+                double delta = perc - _prev;
+                _prev = perc;
+                Utils.InterlockedAdd(ref _task.ProcessedItems, delta);
+            }
         }
     }
 }
