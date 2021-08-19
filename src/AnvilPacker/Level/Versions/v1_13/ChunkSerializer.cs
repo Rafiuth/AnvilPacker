@@ -38,9 +38,6 @@ namespace AnvilPacker.Level.Versions.v1_13
             DeserializeHeightmaps(chunk, tag.PopMaybe<CompoundTag>("Heightmaps"));
             chunk.SetFlag(ChunkFlags.LightDirty, version >= DataVersion.ForcedLightRecalc && !tag.PopMaybe<bool>("isLightOn"));
 
-            //Remove legacy data from upgrated worlds
-            tag.Remove("HeightMap");
-
             return chunk;
         }
 

@@ -28,6 +28,9 @@ namespace AnvilPacker.Container.Sinks
             ".mcmeta", ".yml", ".yaml", ".toml",
             //.txt left out because it could have important info
         };
+        protected static readonly string[] FILES_TO_IGNORE = {
+            "level.dat"
+        };
 
         protected DeflateHelper _deflater = new DeflateHelper(MAX_BLOB_SIZE, MAX_BLOB_SIZE);
 
@@ -64,6 +67,7 @@ namespace AnvilPacker.Container.Sinks
         public override bool Accepts(string filename, long length)
         {
             return length <= MAX_ENTRY_SIZE &&
+                   !FILES_TO_IGNORE.AsSpan().Contains(filename) &&
                    filename.EndsWithAnyIgnoreCase(FILE_EXTS);
         }
 
