@@ -264,9 +264,10 @@ namespace AnvilPacker.Data
                 }
                 if (count <= 0) return;
 
-                var buf = _buf.Length > 512 ? _buf : stackalloc byte[1024];
+                var buf = _buf.Length > 512 ? _buf : stackalloc byte[2048];
                 while (count > 0) {
-                    int bytesRead = BaseStream.Read(buf);
+                    int blockSize = Math.Min(buf.Length, count);
+                    int bytesRead = BaseStream.Read(buf[0..blockSize]);
                     if (bytesRead <= 0) {
                         throw new EndOfStreamException();
                     }

@@ -113,17 +113,18 @@ namespace AnvilPacker.Tests
                 writer.WriteIntLE(5678);
                 writer.Flush();
 
-                mem.Position = 0;
-                var reader = new DataReader(mem, true, bufSize);
-                int dataLen = (int)mem.Length - 5;
-                using (var stream = reader.AsStream(dataLen + 1)) {
-                    var buf = new byte[dataLen];
-                    int read1 = stream.Read(buf);
+                for (int i = 0; i < 2; i++) {
+                    using var reader = CreateStream(mem.ToArray(), bufSize, i == 0);
+                    int dataLen = (int)mem.Length - 5;
+                    using (var stream = reader.AsStream(dataLen + 1)) {
+                        var buf = new byte[dataLen];
+                        int read1 = stream.Read(buf);
 
-                    Assert.Equal(dataLen, read1);
-                    Assert.Equal(mem.ToArray()[0..dataLen], buf[0..dataLen]);
+                        Assert.Equal(dataLen, read1);
+                        Assert.Equal(mem.ToArray()[0..dataLen], buf[0..dataLen]);
+                    }
+                    Assert.Equal(5678, reader.ReadIntLE());
                 }
-                Assert.Equal(5678, reader.ReadIntLE());
             }
         }
 
@@ -134,26 +135,42 @@ namespace AnvilPacker.Tests
             for (int i = 0; i < data.Length; i++) {
                 data[i] = (byte)i;
             }
-            var reader = new DataReader(new MemoryStream(data));
+            for (int i = 0; i < 2; i++) {
+                using var reader = CreateStream(data, 2048, i == 0);
+                var r1 = reader.Slice(128);
+                var b1 = r1.ReadBytes(64);
+                Assert.Equal(b1, data[0..64]);
 
-            var r1 = reader.Slice(128);
-            var b1 = r1.ReadBytes(64);
-            Assert.Equal(b1, data[0..64]);
+                var r2 = r1.Slice(64);
+                var b2 = r2.ReadBytes(64);
+                Assert.Equal(b2, data[64..128]);
+                Assert.ThrowsAny<Exception>(() => r2.ReadByte());
 
-            var r2 = r1.Slice(64);
-            var b2 = r2.ReadBytes(64);
-            Assert.Equal(b2, data[64..128]);
-            Assert.ThrowsAny<Exception>(() => r2.ReadByte());
+                var r3 = reader.Slice(64);
+                var b3 = r3.ReadBytes(32);
+                Assert.Equal(b3, data[128..160]);
 
-            var r3 = reader.Slice(64);
-            var b3 = r3.ReadBytes(32);
-            Assert.Equal(b3, data[128..160]);
+                var b4 = r3.ReadBytes(32);
+                Assert.Equal(b4, data[160..192]);
 
-            var b4 = r3.ReadBytes(32);
-            Assert.Equal(b4, data[160..192]);
+                var b5 = reader.ReadBytes(64);
+                Assert.Equal(b5, data[192..256]);
+            }
+        }
 
-            var b5 = reader.ReadBytes(64);
-            Assert.Equal(b5, data[192..256]);
+        private DataReader CreateStream(byte[] data, int bufSize, bool seekable)
+        {
+            if (seekable) {
+                return new DataReader(new MemoryStream(data), false, bufSize);
+            } else {
+                //dummy compress because inheriting a stream requires changing 500 members
+                var mem = new MemoryDataWriter();
+                using (var comp = Compressors.NewBrotliEncoder(mem, true, 1, 10)) {
+                    comp.WriteBytes(data);
+                }
+                mem.Position = 0;
+                return Compressors.NewBrotliDecoder(mem.BaseStream);
+            }
         }
     }
 }
