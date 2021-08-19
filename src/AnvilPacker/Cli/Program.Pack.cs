@@ -24,12 +24,17 @@ namespace AnvilPacker
             ),
             (
                 Name: "default",
-                EncoderOpts: "block_codec=ap1,meta_brotli_quality=8,meta_brotli_window_size=22",
+                EncoderOpts: "block_codec=ap1",
+                TransformPipe: "remove_empty_chunks,simplify_upgrade_data"
+            ),
+            (
+                Name: "smaller",
+                EncoderOpts: "block_codec=ap1,light_enc_mode=strip,heightmap_enc_mode=strip",
                 TransformPipe: "remove_empty_chunks,simplify_upgrade_data"
             ),
             (
                 Name: "lossy",
-                EncoderOpts: "block_codec=ap1,meta_brotli_quality=8,meta_brotli_window_size=22",
+                EncoderOpts: "block_codec=ap1,light_enc_mode=strip,heightmap_enc_mode=strip",
                 TransformPipe: "remove_empty_chunks,simplify_upgrade_data,remove_hidden_blocks"
             )
         };
