@@ -7,15 +7,6 @@ namespace AnvilPacker.Cli
 {
     public abstract class CliOptions
     {
-        [Option('i', "input", Required = true, HelpText = "Path of the input file/directory.")]
-        public string Input { get; set; } = null!;
-
-        [Option('o', "output", Required = true, HelpText = "Path of the resulting file.")]
-        public string Output { get; set; } = null!;
-
-        [Option('y', "overwrite", HelpText = "Overwrite the output file if it already exists.")]
-        public bool Overwrite { get; set; } = false;
-
         [Option('T', "threads", HelpText = "Number of threads to use during processing. Higher values demands more memory, as one region is processed per thread.")]
         public int MaxThreads { get; set; } = Environment.ProcessorCount;
 
@@ -25,8 +16,20 @@ namespace AnvilPacker.Cli
         [Option("log-file", HelpText = "Sets the path of the log file.")]
         public string? LogFile { get; set; }
     }
+    public class IOPathOptions : CliOptions
+    {
+        [Option('i', "input", Required = true, HelpText = "Path of the input file/directory.")]
+        public string InputPath { get; set; } = null!;
+
+        [Option('o', "output", Required = true, HelpText = "Path of the resulting file.")]
+        public string OutputPath { get; set; } = null!;
+
+        [Option('y', "overwrite", HelpText = "Overwrite the output file if it already exists.")]
+        public bool Overwrite { get; set; } = false;
+    }
+
     [Verb("pack", HelpText = "Compresses a given world.")]
-    public class PackOptions : CliOptions
+    public class PackOptions : IOPathOptions
     {
         [Option("preset", HelpText = "Use predefined settings.")]
         public string? Preset { get; set; }
@@ -42,14 +45,14 @@ namespace AnvilPacker.Cli
     }
 
     [Verb("unpack", HelpText = "Decompresses a given world.")]
-    public class UnpackOptions : CliOptions
+    public class UnpackOptions : IOPathOptions
     {
         [Option("dont-lit", HelpText = "Don't precompute light data for chunks targeting version >= 1.14.4. Only affects chunks whose light was stripped.")]
         public bool DontLit { get; set; } = false;
     }
 
     [Verb("dump", HelpText = "Generates debug files for a given world.")]
-    public class DumpOptions : CliOptions
+    public class DumpOptions : IOPathOptions
     {
         [Option('t', "type", Required = true, HelpText = "Sets the output data type.")]
         public DumpType Type { get; set; }

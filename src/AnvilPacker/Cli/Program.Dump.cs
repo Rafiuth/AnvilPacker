@@ -12,23 +12,23 @@ namespace AnvilPacker
     {
         private static void RunDumper(DumpOptions opts)
         {
-            if (!File.Exists(opts.Input)) {
-                Error($"Input file '{opts.Input}' does not exist.");
+            if (!File.Exists(opts.InputPath)) {
+                Error($"Input file '{opts.InputPath}' does not exist.");
             }
-            PromptOverwrite(opts.Output, opts.Overwrite, false);
+            PromptOverwrite(opts.OutputPath, opts.Overwrite);
 
             switch (opts.Type) {
                 case DumpType.Nbt:
-                    DumpNbt(opts.Input, opts.Output);
+                    DumpNbt(opts.InputPath, opts.OutputPath);
                     break;
                 case DumpType.NbtPrint:
-                    PrintNbt(opts.Input, opts.Output);
+                    PrintNbt(opts.InputPath, opts.OutputPath);
                     break;
                 case DumpType.RawBlocks:
-                    DumpBlocks(opts.Input, opts.Output);
+                    DumpBlocks(opts.InputPath, opts.OutputPath);
                     break;
                 case DumpType.RawChunks:
-                    DumpRawChunks(opts.Input, opts.Output);
+                    DumpRawChunks(opts.InputPath, opts.OutputPath);
                     break;
                 default: throw new NotImplementedException();
             }

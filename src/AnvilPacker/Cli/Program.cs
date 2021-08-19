@@ -74,21 +74,26 @@ namespace AnvilPacker
             RegistryLoader.Load();
         }
 
-        private static void ValidatePaths(CliOptions opts, bool inIsDir, bool outIsDir)
+        private static void ValidatePaths(IOPathOptions opts)
         {
-            if (inIsDir ? !Directory.Exists(opts.Input) : !File.Exists(opts.Input)) {
-                Error($"Input {(inIsDir ? "directory" : "file")} '{opts.Input}' does not exist.");
+            bool isInDir = Directory.Exists(opts.InputPath);
+            bool isInFile = File.Exists(opts.InputPath);
+            
+            if (!isInDir && !isInFile) {
+                Error($"Input path '{opts.InputPath}' does not exist.");
             }
-            PromptOverwrite(opts.Output, opts.Overwrite, outIsDir);
+            PromptOverwrite(opts.OutputPath, opts.Overwrite);
         }
-        private static void PromptOverwrite(string path, bool forceOverwrite, bool isDir)
+        private static void PromptOverwrite(string path, bool force)
         {
-            if (isDir ? !Directory.Exists(path) : !File.Exists(path)) {
+            bool isDir = Directory.Exists(path);
+            bool isFile = File.Exists(path);
+            if (!isDir && !isFile) {
                 return;
             }
             var msg = $"The output {(isDir ? "directory" : "file")} '{path}' already exists.";
 
-            if (!forceOverwrite) {
+            if (!force) {
                 if (Console.IsOutputRedirected) {
                     Error($"{msg} Use -y to force overwrite.");
                 }

@@ -36,7 +36,7 @@ namespace AnvilPacker
 
         private static void RunPacker(PackOptions opts)
         {
-            ValidatePaths(opts, true, false);
+            ValidatePaths(opts);
 
             var presetName = opts.Preset ?? "default";
             var preset = Presets.FirstOrDefault(p => p.Name == presetName);
@@ -51,19 +51,19 @@ namespace AnvilPacker
                 EncoderSettings = RegionEncoderSettings.Parse(opts.EncoderOpts),
                 DisableBlobs = opts.NoBlobs
             };
-            using var packer = new WorldPacker(opts.Input, opts.Output, settings);
+            using var packer = new WorldPacker(opts.InputPath, opts.OutputPath, settings);
             var task = packer.Run(opts.MaxThreads);
             ShowPackerProgress(packer, task);
         }
 
         private static void RunUnpacker(UnpackOptions opts)
         {
-            ValidatePaths(opts, false, true);
+            ValidatePaths(opts);
 
             var decoderSettings = new RegionDecoderSettings() {
                 DontLit = opts.DontLit
             };
-            using var packer = new WorldUnpacker(opts.Input, opts.Output, decoderSettings);
+            using var packer = new WorldUnpacker(opts.InputPath, opts.OutputPath, decoderSettings);
             var task = packer.Run(opts.MaxThreads);
             ShowPackerProgress(packer, task);
         }
