@@ -9,6 +9,7 @@
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <ProduceReferenceAssembly>false</ProduceReferenceAssembly>
     <InvariantGlobalization>true</InvariantGlobalization>
+    <PredefinedCulturesOnly>false</PredefinedCulturesOnly>
     
     <VersionPrefix>0.9.1</VersionPrefix>
     <InformationalVersion Condition="'$(CommitHash)' != ''">$(VersionPrefix)-$(CommitHash)</InformationalVersion>
