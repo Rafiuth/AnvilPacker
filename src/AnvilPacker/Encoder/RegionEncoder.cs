@@ -33,6 +33,7 @@ namespace AnvilPacker.Encoder
 
             _heightmapMode = settings.HeightmapEncMode;
             _lightingMode = settings.LightEncMode;
+            Ensure.That(_lightingMode != RepDataEncMode.Delta, "Light data cannot be delta encoded.");
             UpdateAutoRepDataMode();
         }
         private void UpdateAutoRepDataMode()
@@ -293,31 +294,6 @@ namespace AnvilPacker.Encoder
         {
             WriteSyncTag(stream, "Lighting", 0);
 
-            bool deltaEnc = _lightingMode == RepDataEncMode.Delta;
-            var preds = new Dictionary<ChunkSection, (NibbleArray? BlockLight, NibbleArray? SkyLight)>();
-
-            if (deltaEnc) {
-                //Temporarly overwrite the region with reproduced data.
-                foreach (var section in ChunkIterator.GetSections(_region)) {
-                    preds[section] = (section.BlockLight, section.SkyLight);
-
-                    if (section.SkyLight != null) {
-                        section.SkyLight = new NibbleArray(4096);
-                    }
-                    if (section.BlockLight != null) {
-                        section.BlockLight = new NibbleArray(4096);
-                    }
-                }
-                new Lighter(_region, _estimLightAttribs).Compute();
-
-                //Restore original data and store the computed light in the dictionary.
-                foreach (var section in ChunkIterator.GetSections(_region)) {
-                    var prevData = preds[section];
-                    preds[section] = (section.BlockLight, section.SkyLight);
-                    (section.BlockLight, section.SkyLight) = prevData;
-                }
-            }
-
             //Bitmap
             foreach (var chunk in _region.ExistingChunks) {
                 foreach (var section in chunk.Sections.ExceptNull()) {
@@ -336,28 +312,12 @@ namespace AnvilPacker.Encoder
             //Payload
             foreach (var chunk in _region.ExistingChunks) {
                 foreach (var section in chunk.Sections.ExceptNull()) {
-                    var (predBlockLight, predSkyLight) = deltaEnc ? preds[section] : default;
-
-                    WriteLayer(stream, section.BlockLight, predBlockLight);
-                    WriteLayer(stream, section.SkyLight, predSkyLight);
-                }
-            }
-            static void WriteLayer(DataWriter stream, NibbleArray? vals_, NibbleArray? preds_)
-            {
-                if (vals_ == null) return;
-                if (preds_ == null) {
-                    stream.WriteBytes(vals_.Data);
-                    return;
-                }
-                var vals = vals_.Data;
-                var preds = preds_.Data;
-
-                for (int i = 0; i < 2048; i++) {
-                    byte val = vals[i];
-                    byte pred = preds[i];
-                    int a = (val & 15) - (pred & 15);
-                    int b = (val >> 4) - (pred >> 4);
-                    stream.WriteByte((a & 15) | (b & 15) << 4);
+                    if (section.BlockLight != null) {
+                        stream.WriteBytes(section.BlockLight.Data);
+                    }
+                    if (section.SkyLight != null) {
+                        stream.WriteBytes(section.SkyLight.Data);
+                    }
                 }
             }
         }

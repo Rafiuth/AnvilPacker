@@ -341,56 +341,15 @@ namespace AnvilPacker.Encoder
                 }
             }
 
-            bool deltaEnc = _lightingMode == RepDataEncMode.Delta;
-            var preds = new Dictionary<ChunkSection, (NibbleArray? BlockLight, NibbleArray? SkyLight)>();
-
-            if (deltaEnc) {
-                //Temporarly overwrite the region with reproduced data.
-                foreach (var section in ChunkIterator.GetSections(_region)) {
-                    preds[section] = (section.BlockLight, section.SkyLight);
-
-                    if (section.SkyLight != null) {
-                        section.SkyLight = new NibbleArray(4096);
-                    }
-                    if (section.BlockLight != null) {
-                        section.BlockLight = new NibbleArray(4096);
-                    }
-                }
-                new Lighter(_region, _estimLightAttribs).Compute();
-
-                //Restore original data and store the computed light in the dictionary.
-                foreach (var section in ChunkIterator.GetSections(_region)) {
-                    var prevData = preds[section];
-                    preds[section] = (section.BlockLight, section.SkyLight);
-                    (section.BlockLight, section.SkyLight) = prevData;
-                }
-            }
-
             //Payload
             foreach (var chunk in _region.ExistingChunks) {
                 foreach (var section in chunk.Sections.ExceptNull()) {
-                    var (predBlockLight, predSkyLight) = deltaEnc ? preds[section] : default;
-
-                    ReadLayer(stream, section.BlockLight, predBlockLight);
-                    ReadLayer(stream, section.SkyLight, predSkyLight);
-                }
-            }
-            static void ReadLayer(DataReader stream, NibbleArray? vals_, NibbleArray? preds_)
-            {
-                if (vals_ == null) return;
-                if (preds_ == null) {
-                    stream.ReadBytes(vals_.Data);
-                    return;
-                }
-                var vals = vals_.Data;
-                var preds = preds_.Data;
-
-                for (int i = 0; i < 2048; i++) {
-                    byte delta = stream.ReadByte();
-                    byte pred = preds[i];
-                    int a = (delta & 15) + (pred & 15);
-                    int b = (delta >> 4) + (pred >> 4);
-                    vals[i] = (byte)((a & 15) | (b & 15) << 4);
+                    if (section.BlockLight != null) {
+                        stream.ReadBytes(section.BlockLight.Data);
+                    }
+                    if (section.SkyLight != null) {
+                        stream.ReadBytes(section.SkyLight.Data);
+                    }
                 }
             }
         }

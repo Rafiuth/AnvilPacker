@@ -120,7 +120,7 @@ Fields of the object passed to `--encoder-opts`, represented using [Setting Nota
 Reproducible data (lighting and heightmaps) can be encoded in one of the following ways:
 - **strip**: Remove it completely. The decoder will attempt to reconstruct it, or leave it for the game to recompute if possible. Not recommended for modded worlds.
 - **keep**: Don't touch it, just compress it with Brotli. This is the safest option. In normal worlds, light data takes about 15-20% of the file size, and heightmaps 5-10%.
-- **delta**: Encode differences from the data the decoder would reconstruct. This may result in smaller files and is lossless, but **there is no guarantee that future versions will decode it correctly**. Use it at your own risk.
+- **delta**: *Heightmaps only* - Encode differences from the values the decoder would reconstruct. This preserves the original values, but is slightly slower.
 - **auto**: If all blocks are known, this option behaves as `strip`; otherwise, as `keep`.
 
 To recompute this data, the decoder needs to know block attributes, such as light emission/opacity, heightmap opacity, and shape for directional lighting. They are sourced from either a registry of known vanilla blocks, or estimated based on existing data, by the encoder. (estimation does not support directional lighting)
