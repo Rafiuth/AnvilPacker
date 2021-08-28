@@ -148,11 +148,18 @@ It takes roughly the same amount of time and memory to both encode and decode th
 
 | Setting       | Type | Default | Description |
 | -------       | ---- | ------- | ----------- |
-| context_bits  | int  | 13      | Number of contexts, in base 2 logarithm. |
-| neighbors     | Vec3i[]| [{x:-1},{y:-1},{z:-1}] | Relative coords of blocks to be used as the context. At most 4 coords are supported. |
+| context_bits  | int  | 13      | Number of contexts, in base 2 logarithm. Range: 1-16 |
+| neighbors     | Vec3i[]| [{x=-1},{y=-1},{z=-1}] | Relative coords of blocks to be used as the context. At most 4 coords are supported. |
 
-Memory usage is about `(172 + palette_size * 6) * 2^context_bits` bytes,
-complexity is `O(num_blocks * palette_size)` in the worst case.
+Blocks are encoded in 16x16 horizontal planes over the entire region, one Y layer at a time. Neighbors can only point to blocks that have been previously encoded, and are within 12 blocks. More specifically, it must satisfy the following predicate:
+
+```
+isValidNeighbor(x, y, z) = 
+    (abs(x) <= 12 && abs(y) <= 12 && abs(z) <= 12) &&
+    (y < 0 || (y <= 0 && (z < 0 || (x < 0 && z <= 0))))
+```
+
+Memory usage is about `(172 + palette_size * 6) * 2^context_bits` bytes.
 
 ### **brotli**
 Compresses the raw block data using the [Brotli](https://en.wikipedia.org/wiki/Brotli) algorithm.

@@ -115,7 +115,7 @@ namespace AnvilPacker.Encoder.v1
             stream.WriteByte(ContextBits);
             stream.WriteByte(Neighbors.Length);
             foreach (var (nx, ny, nz) in Neighbors) {
-                Ensure.That(ny <= 0 && (nx <= 0 || nz <= 0), "Neighbor coord must point to a block that was previously encoded."); //ensure neighbor was decoded before
+                Ensure.That(IsValidNeighbor(nx, ny, nz), "Neighbor coord must point to a block that was previously encoded.");
                 
                 stream.WriteSByte(nx);
                 stream.WriteSByte(ny);
@@ -145,6 +145,15 @@ namespace AnvilPacker.Encoder.v1
         {
             Ensure.That(ContextBits is > 0 and <= 16, "ContextBits must be between 1 and 16.");
             Ensure.That(Neighbors.Length <= 4, "Neighbors must have at most 4 elements.");
+        }
+        private static bool IsValidNeighbor(int x, int y, int z)
+        {
+            if (Math.Abs(x) > 12 || Math.Abs(y) > 12 || Math.Abs(z) > 12) {
+                return false;
+            }
+            return y < 0 || (y == 0 && 
+                     (z < 0 || (z == 0 && x < 0))
+                   );
         }
     }
 }
