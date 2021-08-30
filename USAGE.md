@@ -1,5 +1,6 @@
 # Usage
-Prebuilt binaries are available in [releases](https://github.com/Rafiuth/AnvilPacker/releases).
+Binaries are available in [releases](https://github.com/Rafiuth/AnvilPacker/releases).
+Alternatively, you can build it by running `dotnet build -c Release` on the repository directory (requires the latest [.NET SDK](https://dotnet.microsoft.com/download/dotnet)).
 
 The CLI syntax is:
 ```
@@ -12,9 +13,14 @@ Compressing a world using the default settings:
 AnvilPacker pack -i input_world/ -o compressed_world.apw
 ```
 
+Compressing a world using the default settings + automatic light/heightmap removal:
+```
+AnvilPacker pack -i input_world/ -o compressed_world.apw --preset smaller
+```
+
 Compressing a world using brotli and removing light data:
 ```
-AnvilPacker pack -i input_world/ -o compressed_world.apw -e block_codec=brotli,light_enc_mode=strip
+AnvilPacker pack -i input_world/ -o compressed_world.apw -e block_codec=brotli{quality=8},light_enc_mode=strip
 ```
 
 Decompressing a world:
@@ -45,11 +51,11 @@ Optional:
                             the specified file.
 --preset <name>             Specifies which preset to use.
 --transform-pipe <pipe>     A transform pipe string to apply in regions.
+--add-transforms <pipe>     Adds the transforms to the existing (preset) pipeline.
 -e|--encoder-opts <opts>    Specifies the encoder settings.
 --no-blobs                  Disable solid compression of small files.
 
 Planned:
---add-transforms <pipe>     Adds a transform to the existing (preset) pipeline.
 --combine-only <opts>       Compress by combining chunk tags together, 
                             without any further processing.
 --verify                    Verify that regions were encoded correctly.
@@ -98,7 +104,7 @@ Compromise between speed and size. Decompression takes about the same time as co
 ### **smaller**
 Produces smaller files (about ~15-30% than default) by removing light data and heightmaps, decompression is slower compared to `default`.
 - Transform pipe: `remove_empty_chunks,simplify_upgrade_data`
-- Encoder opts: `block_codec=ap1,light_enc_mode=strip,heightmap_enc_mode=strip`
+- Encoder opts: `block_codec=ap1,light_enc_mode=auto,heightmap_enc_mode=strip`
 
 ### **lossy**
 Produces smaller files (about ~70-250% than default) by removing light data, heightmaps and hidden blocks. Both compression and decompression are slower compared to `default`.
@@ -123,12 +129,12 @@ Reproducible data (lighting and heightmaps) can be encoded in one of the followi
 - **delta**: *Heightmaps only* - Encode differences from the values the decoder would reconstruct. This preserves the original values, but is slightly slower.
 - **auto**: If all blocks are known, this option behaves as `strip`; otherwise, as `keep`.
 
-To recompute this data, the decoder needs to know block attributes, such as light emission/opacity, heightmap opacity, and shape for directional lighting. They are sourced from either a registry of known vanilla blocks, or estimated based on existing data, by the encoder. (estimation does not support directional lighting)
+To recompute this data, the decoder needs to know certain block attributes, such as light emission/opacity, heightmap opacity, and shape for directional lighting. They are sourced from either a registry of known vanilla blocks, or estimated based on existing data, by the encoder. *The estimator does not support directional lighting.*
 
-In some cases, the estimated values will be inaccurate, which may result in wrong or glitchy lighting in the decoded world. If the target world version is 1.14.2+, the decoder can be configured to leave the light data to be recomputed by the game using `--dont-lit`. This may degrade loading speed, but will always produce correct results. In this case, [Starlight](https://github.com/Tuinity/Starlight) could be used to speedup load times.
+In some cases, the estimated values will be inaccurate, which may result in wrong or glitchy lighting in the decoded world. If the world is targetting version 1.14.2+, the switch `--dont-lit` can be used to mark light data as dirty, so the game will compute it when needed. This may degrade loading speed, but will always produce correct results. See [Starlight](https://github.com/Tuinity/Starlight) if you are interested.
 
 ## Solid Compression
-By default, some files are concatenated together, and compressed into "blobs". This can be disabled with the `--no-blobs` switch.
+By default, small files are concatenated together, and compressed into "blobs". This can be disabled with the `--no-blobs` switch.
 
 The following conditions determine whether a file will be solid compressed:
 - Must be smaller than 128KB
@@ -138,7 +144,7 @@ Compressed NBT files (or any gzipped file) are uncompressed before they are reco
 
 Notes:
 - The current implementation generates at least one blob per thread.
-- The order files are aggregated is non-deterministic; compressing the same input more than once may result in different file sizes, but the decompressed content should be the same.
+- The order files are aggregated is non-deterministic; compressing the same world more than once may result in slightly different file sizes.
 
 ## Block Codecs
 
@@ -187,7 +193,7 @@ It generally improves compression by about 1.5-3 times in normal worlds.
 | -------   | ----  | ------- | ----------- |
 | radius    | int   | 2       | Max distance for the replacement block search. |
 | samples   | int   | 8       | Number of samples to use in the replacement block search. |
-| whitelist | Block[]? | stone, dirt, ores | Specifies which blocks can be replaced. Any block will be replaced if this is `null`. |
+| whitelist | Block[]? | [stone,dirt,ores...] | Specifies which blocks can be replaced. If this is `null`, any block will be replaced. |
 | cummulative_freqs | bool  | true | This virtually expands the search radius by accumulating frequencies of replacement blocks. |
 
 Type: irreversible, lossy
