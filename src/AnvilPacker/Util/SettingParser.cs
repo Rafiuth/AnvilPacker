@@ -60,7 +60,7 @@ namespace AnvilPacker.Util
                     (>= '0' and <= '9') or
                     '_' or '-'
                 )
-                .ManyString()
+                .AtLeastOnceString()
                 .Labelled("identifier");
 
             char[] EscapeCodes = {  'n',  'r',  't', '\"', '\'', '\\' };
