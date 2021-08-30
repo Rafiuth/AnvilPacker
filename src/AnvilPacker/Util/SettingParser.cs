@@ -16,20 +16,16 @@ namespace AnvilPacker.Util
     public class SettingParser
     {
         private readonly Dictionary<string, Type> _types;
-        private readonly Type _rootType;
         private readonly JsonSerializer _serializer;
-        private readonly Parser<char, JToken> _parser;
 
-        public SettingParser(Type rootType, IEnumerable<(string Name, Type Type)> types, IEnumerable<JsonConverter>? converters = null)
-            : this(rootType, types.Select(v => new KeyValuePair<string, Type>(v.Name, v.Type)), converters)
+        public SettingParser(IEnumerable<(string Name, Type Type)> types, IEnumerable<JsonConverter>? converters = null)
+            : this(types.Select(v => new KeyValuePair<string, Type>(v.Name, v.Type)), converters)
         {
 
         }
-        public SettingParser(Type rootType, IEnumerable<KeyValuePair<string, Type>> types, IEnumerable<JsonConverter>? converters = null)
+        public SettingParser(IEnumerable<KeyValuePair<string, Type>> types, IEnumerable<JsonConverter>? converters = null)
         {
             _types = new Dictionary<string, Type>(types);
-            _rootType = rootType;
-            _parser = GetParser(rootType);
 
             var ss = new JsonSerializerSettings() {
                 ObjectCreationHandling = ObjectCreationHandling.Replace,
@@ -158,13 +154,19 @@ namespace AnvilPacker.Util
         public T Parse<T>(string str)
         {
             //FIXME: will silently fail when _rootType != null && str has braces like `{prop=x}`
-            var json = ParseRaw(str);
-            return (T)json.ToObject(_rootType ?? typeof(T), _serializer)!;
+            var json = ParseRaw(str, typeof(T));
+            return (T)json.ToObject(typeof(T), _serializer)!;
+        }
+        public void Populate<T>(string str, T obj)
+        {
+            var json = ParseRaw(str, typeof(T));
+            using var reader = json.CreateReader();
+            _serializer.Populate(reader, obj!);
         }
 
-        private JToken ParseRaw(string str)
+        private JToken ParseRaw(string str, Type rootType)
         {
-            var result = _parser.Parse(str);
+            var result = GetParser(rootType).Parse(str);
             if (!result.Success) {
                 var error = result.Error!;
                 var pos = error.ErrorPos;

@@ -13,14 +13,17 @@ namespace AnvilPacker.Encoder
 
         public BlockCodecSettings BlockCodec = new BlockCodecSettings.AP1();
 
-        public static RegionEncoderSettings Parse(string str)
-        {
-            var types = new[]{
+
+        public static SettingParser Parser { get; } = new SettingParser(
+            types: new[] {
                 ("ap1",     typeof(BlockCodecSettings.AP1)),
                 ("brotli",  typeof(BlockCodecSettings.Brotli)),
-            };
-            var parser = new SettingParser(typeof(RegionEncoderSettings), types);
-            return parser.Parse<RegionEncoderSettings>(str);
+            }
+        );
+
+        public static RegionEncoderSettings Parse(string str)
+        {
+            return Parser.Parse<RegionEncoderSettings>(str);
         }
     }
     /// <summary> Specifies how to encode reproducible data such as lighting and heightmaps. </summary>

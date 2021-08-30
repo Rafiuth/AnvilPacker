@@ -37,6 +37,9 @@ namespace AnvilPacker.Cli
         [Option("transform-pipe", HelpText = "A list of transforms to apply in regions.")]
         public string? TransformPipe { get; set; }
 
+        [Option("add-transforms", HelpText = "Additional transforms for the specified preset.")]
+        public string? AddTransforms { get; set; }
+
         [Option('e', "encoder-opts", HelpText = "Sets the region encoder options.")]
         public string? EncoderOpts { get; set; }
 

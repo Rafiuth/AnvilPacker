@@ -29,7 +29,7 @@ namespace AnvilPacker
             ),
             (
                 Name: "smaller",
-                EncoderOpts: "block_codec=ap1,light_enc_mode=strip,heightmap_enc_mode=strip",
+                EncoderOpts: "block_codec=ap1,light_enc_mode=auto,heightmap_enc_mode=strip",
                 TransformPipe: "remove_empty_chunks,simplify_upgrade_data"
             ),
             (
@@ -48,12 +48,22 @@ namespace AnvilPacker
             if (preset.Name == null) {
                 Error($"Unknown preset '{opts.Preset}'");
             }
-            opts.EncoderOpts ??= preset.EncoderOpts;
-            opts.TransformPipe ??= preset.TransformPipe;
+            var encoderOpts = RegionEncoderSettings.Parse(preset.EncoderOpts);
+            //use preset's transforms if not provided by user
+            var transforms = TransformPipe.Parse(opts.TransformPipe ?? preset.TransformPipe);
+
+            if (opts.EncoderOpts != null) {
+                //override preset opts with user's provided
+                RegionEncoderSettings.Parser.Populate(opts.EncoderOpts, encoderOpts);
+            }
+            if (opts.AddTransforms != null) {
+                var addTransforms = TransformPipe.Parse(opts.AddTransforms);
+                transforms = new TransformPipe(transforms.Concat(addTransforms));
+            }
 
             var settings = new WorldPackerSettings() {
-                Transforms = TransformPipe.Parse(opts.TransformPipe),
-                EncoderSettings = RegionEncoderSettings.Parse(opts.EncoderOpts),
+                EncoderSettings = encoderOpts,
+                Transforms = transforms,
                 DisableBlobs = opts.NoBlobs
             };
             using var packer = new WorldPacker(opts.InputPath, opts.OutputPath, settings);

@@ -21,7 +21,6 @@ namespace AnvilPacker.Encoder.Transforms
         //Example: "remove_hidden_blocks{samples=64,radius=3,cum_freqs=false,whitelist=['stone',dirt,4]},predict_upgrade_data"
         //Syntax is similar to JSON5
         private static readonly SettingParser _parser = new SettingParser(
-            rootType: typeof(TransformPipe), 
             types: KnownTransforms, 
             converters: new[] { BlockJsonConverter.Instance }
         );
