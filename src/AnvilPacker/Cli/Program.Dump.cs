@@ -19,10 +19,10 @@ namespace AnvilPacker
 
             switch (opts.Type) {
                 case DumpType.Nbt:
-                    DumpNbt(opts.InputPath, opts.OutputPath);
+                    DumpNbt(opts);
                     break;
                 case DumpType.NbtPrint:
-                    PrintNbt(opts.InputPath, opts.OutputPath);
+                    PrintNbt(opts);
                     break;
                 case DumpType.RawBlocks:
                     DumpBlocks(opts.InputPath, opts.OutputPath);
@@ -34,15 +34,16 @@ namespace AnvilPacker
             }
         }
 
-        private static void DumpNbt(string input, string output)
+        private static void DumpNbt(DumpOptions opts)
         {
-            var tag = ReadFileAsNbt(input);
+            var tag = ReadFileAsNbt(opts.InputPath, opts.ExcludeBlocks);
             var root = tag as CompoundTag;
             if (root == null) {
                 root = new CompoundTag();
                 root.Set("_root", tag);
             }
 
+            string output = opts.OutputPath;
             if (output.EndsWith(".gz")) {
                 NbtIO.WriteCompressed(root, output);
             } else {
@@ -50,9 +51,11 @@ namespace AnvilPacker
                 NbtIO.Write(root, dw);
             }
         }
-        private static void PrintNbt(string input, string output)
+        private static void PrintNbt(DumpOptions opts)
         {
-            var tag = ReadFileAsNbt(input);
+            var tag = ReadFileAsNbt(opts.InputPath, opts.ExcludeBlocks);
+
+            string output = opts.OutputPath;
             var sw = output == null ? Console.Out : new StreamWriter(output, false, Encoding.UTF8);
 
             var printer = new NbtPrinter(sw) {
@@ -126,7 +129,7 @@ namespace AnvilPacker
             }
         }
 
-        private static NbtTag ReadFileAsNbt(string path)
+        private static NbtTag ReadFileAsNbt(string path, bool excludeBlocks)
         {
             using var dr = new DataReader(File.OpenRead(path));
 
@@ -153,6 +156,17 @@ namespace AnvilPacker
                 using var region = new RegionReader(dr.BaseStream, 0, 0);
                 var tags = new ListTag();
                 foreach (var (tag, x, z) in region.ReadAll()) {
+                    if (excludeBlocks && tag["Level"]?["Sections"] is ListTag sects) {
+                        foreach (var sect in sects) {
+                            if (sect is CompoundTag c) {
+                                c.Remove("Blocks");
+                                c.Remove("Data");
+                                c.Remove("Add");
+                                c.Remove("BlockLight");
+                                c.Remove("SkyLight");
+                            }
+                        }
+                    }
                     tags.Add(tag);
                 }
                 return tags;

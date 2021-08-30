@@ -54,8 +54,11 @@ namespace AnvilPacker.Cli
     [Verb("dump", HelpText = "Generates debug files for a given world.")]
     public class DumpOptions : IOPathOptions
     {
-        [Option('t', "type", Required = true, HelpText = "Sets the output data type.")]
+        [Option('t', "type", Required = true, HelpText = "Specifies what kind of data to dump.")]
         public DumpType Type { get; set; }
+
+        [Option("exclude-blocks", HelpText = "Exclude block data from NBT dumps.")]
+        public bool ExcludeBlocks { get; set; }
     }
     public enum DumpType
     {
