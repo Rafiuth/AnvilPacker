@@ -130,9 +130,9 @@ namespace AnvilPacker.Encoder
                     LightAttribs[i] = new BlockLightInfo(opacity, emission, false);
                     OcclusionShapes[i] = VoxelShape.Empty;
 
-                    if (_logger.IsDebugEnabled) {
-                        _logger.Debug("Estimated opacity  for {0}: {1} hist={{{2}}}", block, opacity, opacityHist[i]);
-                        _logger.Debug("Estimated emission for {0}: {1} hist={{{2}}}", block, emission, emissionHist[i]);
+                    if (_logger.IsTraceEnabled) {
+                        _logger.Trace("Estimated opacity  for {0}: {1} hist={{{2}}}", block, opacity, opacityHist[i]);
+                        _logger.Trace("Estimated emission for {0}: {1} hist={{{2}}}", block, emission, emissionHist[i]);
                     }
                 }
             }

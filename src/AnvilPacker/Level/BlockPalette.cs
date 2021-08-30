@@ -24,6 +24,8 @@ namespace AnvilPacker.Level
         public BlockId Add(BlockState state)
         {
             var id = (BlockId)_stateById.Count;
+            Ensure.That(id < BlockId.Invalid, "Palette has grown bigger than the maximum allowed block ID.");
+            
             _idByState.Add(state, id);
             _stateById.Add(state);
             

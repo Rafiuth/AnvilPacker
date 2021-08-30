@@ -9,7 +9,7 @@ using AnvilPacker.Util;
 namespace AnvilPacker.Encoder.Transforms
 {
     /// <summary> Removes incomplete/empty chunks. </summary>
-    public class EmptyChunkRemovalTransform : TransformBase
+    public class RemoveEmptyChunksTransform : TransformBase
     {
         public override void Apply(RegionBuffer region)
         {
@@ -41,7 +41,7 @@ namespace AnvilPacker.Encoder.Transforms
             var status = level?["Status"]?.Value<string>();
             int statusIndex = Array.IndexOf(ChunkStatuses, status);
             if (statusIndex < 0) {
-                return chunk.Sections.All(c => c == null);
+                return false;
             }
             if (statusIndex >= ChunkStatus_Surface) {
                 return false;

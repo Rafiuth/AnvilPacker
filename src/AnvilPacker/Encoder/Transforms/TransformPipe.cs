@@ -12,7 +12,7 @@ namespace AnvilPacker.Encoder.Transforms
         public static Dictionary<string, Type> KnownTransforms { get; } = new() {
             { "remove_hidden_blocks",       typeof(HiddenBlockRemovalTransform) },
             { "simplify_upgrade_data",      typeof(UpgradeDataTransform)        },
-            { "remove_empty_chunks",        typeof(EmptyChunkRemovalTransform)  },
+            { "remove_empty_chunks",        typeof(RemoveEmptyChunksTransform)  },
             { "sort_palette",               typeof(SortPaletteTransform)        },
         };
 
