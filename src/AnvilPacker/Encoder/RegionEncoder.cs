@@ -23,6 +23,7 @@ namespace AnvilPacker.Encoder
         private BlockCodec _blockCodec;
         private RegionEncoderSettings _settings;
         private RepDataEncMode _heightmapMode, _lightingMode;
+        private bool _hasBlockData;
 
         public RegionEncoder(RegionBuffer region, RegionEncoderSettings settings)
         {
@@ -31,10 +32,14 @@ namespace AnvilPacker.Encoder
 
             _blockCodec = settings.BlockCodec.Create(region);
 
-            _heightmapMode = settings.HeightmapEncMode;
-            _lightingMode = settings.LightEncMode;
-            Ensure.That(_lightingMode != RepDataEncMode.Delta, "Light data cannot be delta encoded.");
-            UpdateAutoRepDataMode();
+            _hasBlockData = region.ExistingChunks.Any(c => !c.HasFlag(ChunkFlags.OpaqueOnly));
+
+            if (_hasBlockData) {
+                _heightmapMode = settings.HeightmapEncMode;
+                _lightingMode = settings.LightEncMode;
+                Ensure.That(_lightingMode != RepDataEncMode.Delta, "Light data cannot be delta encoded.");
+                UpdateAutoRepDataMode();
+            }
         }
         private void UpdateAutoRepDataMode()
         {
@@ -51,61 +56,67 @@ namespace AnvilPacker.Encoder
 
         public void Encode(DataWriter stream, IProgress<double>? progress = null)
         {
-            WriteSyncTag(stream, "Root", 0);
+            WriteSyncTag(stream, "Root", 1);
+            stream.WriteVarInt(_hasBlockData ? 0x01 : 0); //flags
 
             var headerStats = WritePart(stream, "Header", true, dw => {
                 WriteHeader(dw);
                 WriteMetadata(dw);
             });
-            var blockDataStats = WritePart(stream, "Blocks", false, dw => {
-                _blockCodec.Encode(dw, CodecProgressListener.MaybeCreate(_blockCount, progress));
-            });
+            if (_hasBlockData) {
+                var blockDataStats = WritePart(stream, "Blocks", false, dw => {
+                    _blockCodec.Encode(dw, CodecProgressListener.MaybeCreate(_blockCount, progress));
+                });
 
-            if (_heightmapMode != RepDataEncMode.Strip) {
-                WritePart(stream, "Heightmaps", true, WriteHeightmaps);
-            }
-            if (_lightingMode != RepDataEncMode.Strip) {
-                WritePart(stream, "Lighting", true, WriteLightData);
-            } else {
-                WritePart(stream, "LightBorders", true, WriteLightBorders);
-            }
+                if (_heightmapMode != RepDataEncMode.Strip) {
+                    WritePart(stream, "Heightmaps", true, WriteHeightmaps);
+                }
+                if (_lightingMode != RepDataEncMode.Strip) {
+                    WritePart(stream, "Lighting", true, WriteLightData);
+                } else {
+                    WritePart(stream, "LightBorders", true, WriteLightBorders);
+                }
 
-            if (_logger.IsDebugEnabled) {
-                double bitsPerBlock = blockDataStats.Length * 8.0 / _blockCount;
+                if (_logger.IsDebugEnabled) {
+                    double bitsPerBlock = blockDataStats.Length * 8.0 / _blockCount;
 
-                _logger.Debug($"Encoder stats @ {_region}");
-                _logger.Debug($" NumBlocks: {_blockCount / 1000000.0:0.0}M | PaletteSize: {_region.Palette.Count}");
-                _logger.Debug($" EncSize: {stream.Position / 1024.0:0.000}KB | Meta: {headerStats.Length / 1024.0:0.000}KB | BitsPerBlock: {bitsPerBlock:0.000}");
-                _logger.Debug($" Times: Meta: {headerStats.TimeMillis}ms | Blocks: {blockDataStats.TimeMillis}ms");
-                _logger.Debug($" Speed: {_blockCount / 1000.0 / blockDataStats.TimeMillis:0.0}M blocks/sec");
+                    _logger.Debug($"Encoder stats @ {_region}");
+                    _logger.Debug($" NumBlocks: {_blockCount / 1000000.0:0.0}M | PaletteSize: {_region.Palette.Count}");
+                    _logger.Debug($" EncSize: {stream.Position / 1024.0:0.000}KB | Meta: {headerStats.Length / 1024.0:0.000}KB | BitsPerBlock: {bitsPerBlock:0.000}");
+                    _logger.Debug($" Times: Meta: {headerStats.TimeMillis}ms | Blocks: {blockDataStats.TimeMillis}ms");
+                    _logger.Debug($" Speed: {_blockCount / 1000.0 / blockDataStats.TimeMillis:0.0}M blocks/sec");
+                }
             }
         }
 
         private void WriteHeader(DataWriter stream)
         {
-            WriteSyncTag(stream, "Header", 0);
+            WriteSyncTag(stream, "Header", 1);
 
-            //Note: arithmetic shift gives different results from div when the dividend is negative.
-            //regionX = floorDiv(chunkX / 32) = x >> 5
             stream.WriteVarInt(_region.X >> 5);
             stream.WriteVarInt(_region.Z >> 5);
-            stream.WriteByte((byte)_heightmapMode);
-            stream.WriteByte((byte)_lightingMode);
 
-            //no deps
-            WritePalette(stream);
+            if (_hasBlockData) {
+                stream.WriteByte((byte)_heightmapMode);
+                stream.WriteByte((byte)_lightingMode);
+
+                //no deps
+                WritePalette(stream);
+            }
             WriteChunkBitmap(stream);
 
-            //depends on palette & header fields above
-            if (_heightmapMode != RepDataEncMode.Keep) {
-                WriteHeightmapAttribs(stream);
+            if (_hasBlockData) {
+                //depends on palette and chunk bitmap
+                if (_heightmapMode != RepDataEncMode.Keep) {
+                    WriteHeightmapAttribs(stream);
+                }
+                if (_lightingMode != RepDataEncMode.Keep) {
+                    WriteLightAttribs(stream);
+                }
+                //may depend on all previous fields
+                stream.WriteVarUInt(_blockCodec.GetId());
+                _blockCodec.WriteHeader(stream);
             }
-            if (_lightingMode != RepDataEncMode.Keep) {
-                WriteLightAttribs(stream);
-            }
-            //no deps
-            stream.WriteVarUInt(_blockCodec.GetId());
-            _blockCodec.WriteHeader(stream);
         }
 
         private void WriteChunkBitmap(DataWriter stream)
@@ -387,7 +398,7 @@ namespace AnvilPacker.Encoder
         
         private void WriteSyncTag(DataWriter stream, string id, int version)
         {
-            //String IDs are mostly for ~possibly~ easier debugging if something goes terribly wrong
+            //String IDs are mostly for debugging if something goes terribly wrong
             for (int i = 0; i < id.Length; i++) {
                 stream.WriteByte(id[i]);
             }

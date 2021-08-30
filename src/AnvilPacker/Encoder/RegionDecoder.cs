@@ -22,6 +22,7 @@ namespace AnvilPacker.Encoder
         private RepDataEncMode _heightmapMode, _lightingMode;
 
         private RegionDecoderSettings _settings;
+        private bool _hasBlockData;
 
         public RegionDecoder(RegionBuffer region, RegionDecoderSettings settings)
         {
@@ -32,25 +33,31 @@ namespace AnvilPacker.Encoder
 
         public void Decode(DataReader stream, IProgress<double>? progress = null)
         {
-            int version = ReadSyncTag(stream, "Root", 0);
+            int version = ReadSyncTag(stream, "Root", 1);
+            int flags = version >= 1 ? stream.ReadVarUInt() : 0;
+
+            _hasBlockData = (flags & 0x01) == 0;
 
             ReadPart(stream, "Header", true, dw => {
                 ReadHeader(dw);
                 ReadMetadata(dw);
             });
-            ReadPart(stream, "Blocks", false, dw => {
-                _blockCodec.Decode(dw, CodecProgressListener.MaybeCreate(_blockCount, progress));
-            });
 
-            if (_heightmapMode != RepDataEncMode.Strip) {
-                ReadPart(stream, "Heightmaps", true, ReadHeightmaps);
+            if (version < 1 || _hasBlockData) {
+                ReadPart(stream, "Blocks", false, dw => {
+                    _blockCodec.Decode(dw, CodecProgressListener.MaybeCreate(_blockCount, progress));
+                });
+
+                if (_heightmapMode != RepDataEncMode.Strip) {
+                    ReadPart(stream, "Heightmaps", true, ReadHeightmaps);
+                }
+                if (_lightingMode != RepDataEncMode.Strip) {
+                    ReadPart(stream, "Lighting", true, ReadLightData);
+                } else {
+                    ReadPart(stream, "LightBorders", true, ReadLightBorders);
+                }
+                Prime();
             }
-            if (_lightingMode != RepDataEncMode.Strip) {
-                ReadPart(stream, "Lighting", true, ReadLightData);
-            } else {
-                ReadPart(stream, "LightBorders", true, ReadLightBorders);
-            }
-            Prime();
         }
 
         private void Prime()
@@ -97,6 +104,8 @@ namespace AnvilPacker.Encoder
                 skipLighting = true;
 
                 foreach (var chunk in _region.ExistingChunks) {
+                    if (chunk.HasFlag(ChunkFlags.OpaqueOnly)) continue;
+                    
                     if (chunk.DataVersion >= DataVersion.ForcedLightRecalc) {
                         chunk.SetFlag(ChunkFlags.LightDirty);
                     } else {
@@ -104,9 +113,10 @@ namespace AnvilPacker.Encoder
                     }
                 }
             }
+
             if (_settings.DontLit && !skipLighting) {
                 _logger.Warn(
-                    "DontLit option is enabled, but chunks with version older than 1.14.2-pre4 were found;" + 
+                    "DontLit option is enabled, but chunks with version older than 1.14.2-pre4 were found. " + 
                     "Dirty flag will be set, but light will be computed anyway."
                 );
             }
@@ -117,27 +127,30 @@ namespace AnvilPacker.Encoder
 
         private void ReadHeader(DataReader stream)
         {
-            int version = ReadSyncTag(stream, "Header", 0);
+            int version = ReadSyncTag(stream, "Header", 1);
 
             _region.X = stream.ReadVarInt() << 5;
             _region.Z = stream.ReadVarInt() << 5;
-            _heightmapMode = (RepDataEncMode)stream.ReadByte();
-            _lightingMode = (RepDataEncMode)stream.ReadByte();
 
-            //no deps
-            ReadPalette(stream);
+            if (_hasBlockData) {
+                _heightmapMode = (RepDataEncMode)stream.ReadByte();
+                _lightingMode = (RepDataEncMode)stream.ReadByte();
+
+                ReadPalette(stream);
+            }
             ReadChunkBitmap(stream);
 
-            //depends on palette & header fields above
-            if (_heightmapMode != RepDataEncMode.Keep) {
-                ReadHeightmapAttribs(stream);
+            if (_hasBlockData) {
+                if (_heightmapMode != RepDataEncMode.Keep) {
+                    ReadHeightmapAttribs(stream);
+                }
+                if (_lightingMode != RepDataEncMode.Keep) {
+                    ReadLightAttribs(stream);
+                }
+                int blockCodecId = stream.ReadVarUInt();
+                _blockCodec = BlockCodec.CreateFromId(_region, blockCodecId);
+                _blockCodec.ReadHeader(stream);
             }
-            if (_lightingMode != RepDataEncMode.Keep) {
-                ReadLightAttribs(stream);
-            }
-            int blockCodecId = stream.ReadVarUInt();
-            _blockCodec = BlockCodec.CreateFromId(_region, blockCodecId);
-            _blockCodec.ReadHeader(stream);
         }
 
         private void ReadChunkBitmap(DataReader stream)
