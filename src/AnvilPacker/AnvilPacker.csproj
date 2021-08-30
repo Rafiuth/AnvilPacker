@@ -11,19 +11,14 @@
     <InvariantGlobalization>true</InvariantGlobalization>
     <PredefinedCulturesOnly>false</PredefinedCulturesOnly>
     
-    <VersionPrefix>0.9.5</VersionPrefix>
-    <InformationalVersion Condition="'$(CommitHash)' != ''">$(VersionPrefix)-$(CommitHash)</InformationalVersion>
-  </PropertyGroup>
-  
-  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
-    <Optimize>true</Optimize>
-  </PropertyGroup>
-  
-  <PropertyGroup Condition="'$(IsPublish)' == 'True'">
     <PublishReadyToRun>false</PublishReadyToRun>
     <PublishSingleFile>true</PublishSingleFile>
     <PublishTrimmed>true</PublishTrimmed>
     <SuppressTrimAnalysisWarnings>false</SuppressTrimAnalysisWarnings>
+  </PropertyGroup>
+  
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <Optimize>true</Optimize>
   </PropertyGroup>
   
   <ItemGroup>
@@ -32,6 +27,8 @@
     <PackageReference Include="CommandLineParser" Version="2.8.0" />
     <PackageReference Include="Pidgin" Version="2.5.0" />
     <PackageReference Include="LibDeflate.NET" Version="1.9.0" />
+    
+    <TrimmableAssembly Include="NLog" />
   </ItemGroup>
 
   <ItemGroup>
