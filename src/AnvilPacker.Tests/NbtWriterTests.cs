@@ -57,7 +57,7 @@ namespace AnvilPacker.Tests
             nw.EndList();
             nw.EndCompound();
 
-            Assert.True(mem.BufferSpan.SequenceEqual(File.ReadAllBytes("Resources/NbtWriterTests/conformance1.nbt")));
+            Assert.True(mem.BufferSpan.SequenceEqual(File.ReadAllBytes("Resources/nbt/conformance1.nbt")));
         }
 
         [Fact]
