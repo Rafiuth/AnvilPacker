@@ -85,11 +85,14 @@ namespace AnvilPacker.Data
             int limit = (data.Length - 1) * 8;
 
             if (bytePos < limit) {
-                return Mem.ReadLE<ulong>(ref ptr, bytePos);
+                ptr = ref Unsafe.Add(ref ptr, bytePos);
+                return Mem.ReadLE<ulong>(ref ptr);
             }
             Debug.Assert(bytePos < data.Length * 8);
+
+            ptr = ref Unsafe.Add(ref ptr, limit);
             int shift = (bytePos & 7) * 8;
-            return Mem.ReadLE<ulong>(ref ptr, limit) >> shift;
+            return Mem.ReadLE<ulong>(ref ptr) >> shift;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -99,16 +102,19 @@ namespace AnvilPacker.Data
             int limit = (data.Length - 1) * 8;
 
             if (bytePos < limit) {
-                Mem.WriteLE<ulong>(ref ptr, bytePos, value);
+                ptr = ref Unsafe.Add(ref ptr, bytePos);
+                Mem.WriteLE<ulong>(ref ptr, value);
                 return;
             }
             Debug.Assert(bytePos < data.Length * 8);
+
+            ptr = ref Unsafe.Add(ref ptr, limit);
             int shift = (bytePos & 7) * 8;
             ulong mask = (1ul << shift) - 1;
-            ulong existingValue = Mem.ReadLE<ulong>(ref ptr, limit);
+            ulong existingValue = Mem.ReadLE<ulong>(ref ptr);
             value = value << shift | (existingValue & mask);
 
-            Mem.WriteLE<ulong>(ref ptr, limit, value);
+            Mem.WriteLE<ulong>(ref ptr, value);
         }
     }
 }

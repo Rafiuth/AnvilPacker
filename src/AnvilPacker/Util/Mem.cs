@@ -32,6 +32,8 @@ namespace AnvilPacker.Util
             return ref Unsafe.As<TSrc, TDst>(ref Unsafe.AsRef(in ptr));
         }
 
+        /// <summary> Creates a span over the specified reference. </summary>
+        /// <param name="length">Number of <typeparamref name="TSrc"/> elements in <paramref name="ptr"/>. </param>
         [MethodImpl(Inline)]
         public static Span<TDst> CreateSpan<TSrc, TDst>(ref TSrc ptr, int length)
             where TSrc : unmanaged
@@ -47,186 +49,210 @@ namespace AnvilPacker.Util
         }
 
         /// <summary> Returns a reference to the n-th byte of the array. </summary>
-        /// <remarks> This method only supports one dimensional arrays. </remarks>
         [MethodImpl(Inline)]
-        public static ref byte GetByteRef(Array array)
+        public static ref byte GetByteRef<T>(T[] array)
         {
-            Debug.Assert(array.Rank == 1 && array.GetType().GetElementType()!.IsPrimitive);
-            // return &arr.data + byteOffset
-            return ref MemoryMarshal.GetArrayDataReference(Unsafe.As<byte[]>(array));
+            return ref Unsafe.As<T, byte>(ref MemoryMarshal.GetArrayDataReference(array));
         }
         /// <summary> Returns a reference to the n-th byte of the span. </summary>
         [MethodImpl(Inline)]
         public static ref byte GetByteRef<T>(ReadOnlySpan<T> span)
         {
-            // return (byte*)&buf[0]
             return ref Unsafe.As<T, byte>(ref MemoryMarshal.GetReference(span));
         }
         /// <summary> Returns a reference to the n-th byte of the span. </summary>
         [MethodImpl(Inline)]
         public static ref byte GetByteRef<T>(Span<T> span)
         {
-            // return (byte*)&buf[0]
             return ref Unsafe.As<T, byte>(ref MemoryMarshal.GetReference(span));
         }
 
         /// <summary> Returns a reference to the n-th element of the array. </summary>
         [MethodImpl(Inline)]
-        public static ref T GetRef<T>(T[] arr, nint elemOffset = 0)
+        public static ref T GetRef<T>(T[] arr, int elemOffset = 0)
         {
-            // return &buf[bytePos]
             return ref Unsafe.Add(ref MemoryMarshal.GetArrayDataReference(arr), elemOffset);
         }
 
         /// <summary> Returns a reference to the n-th element of the span. </summary>
         [MethodImpl(Inline)]
-        public static ref T GetRef<T>(ReadOnlySpan<T> span, nint elemOffset = 0)
+        public static ref T GetRef<T>(ReadOnlySpan<T> span, int elemOffset = 0)
         {
-            // return &buf[bytePos]
             return ref Unsafe.Add(ref MemoryMarshal.GetReference(span), elemOffset);
         }
         /// <summary> Returns a reference to the n-th element of the span. </summary>
         [MethodImpl(Inline)]
-        public static ref T GetRef<T>(Span<T> span, nint elemOffset = 0)
+        public static ref T GetRef<T>(Span<T> span, int elemOffset = 0)
         {
-            // return &buf[bytePos]
             return ref Unsafe.Add(ref MemoryMarshal.GetReference(span), elemOffset);
         }
 
-        /// <summary> Reads a <typeparamref name="T"/> element from the array, in the platform's native byte order. Unaligned access is assumed. </summary>
-        [MethodImpl(Inline)]
-        public static T Read<T>(Array buf, nint bytePos) where T : unmanaged
-        {
-            return Read<T>(ref GetByteRef(buf), bytePos);
-        }
+        #region Read/Write<T> overloads
 
-        /// <summary> Reads a <typeparamref name="T"/> element from the array, in little-endian byte order. Unaligned access is assumed. </summary>
-        /// <remarks>
-        /// <typeparamref name="T"/> must be a primitive type.
-        /// This method does not perform bounds check. Use carefully. 
-        /// </remarks>
+        /// <summary> Reads a <typeparamref name="T"/> element from the array, without bounds check, in the platform's native byte order. </summary>
         [MethodImpl(Inline)]
-        public static T ReadLE<T>(Array buf, nint bytePos) where T : unmanaged
+        public static T Read<T>(byte[] buf, int bytePos) where T : unmanaged
         {
-            return ReadLE<T>(ref GetByteRef(buf), bytePos);
+            return Read<T>(ref Unsafe.Add(ref GetByteRef(buf), bytePos));
         }
-        /// <summary> Reads a <typeparamref name="T"/> element from the array, in big-endian byte order. Unaligned access is assumed. </summary>
-        /// <remarks>
-        /// <typeparamref name="T"/> must be a primitive type.
-        /// This method does not perform bounds check. Use carefully. 
-        /// </remarks>
+        /// <summary> Reads a <typeparamref name="T"/> element from the array, without bounds check, in little-endian byte order. </summary>
         [MethodImpl(Inline)]
-        public static T ReadBE<T>(Array buf, nint bytePos) where T : unmanaged
+        public static T ReadLE<T>(byte[] buf, int bytePos) where T : unmanaged
         {
-            return ReadBE<T>(ref GetByteRef(buf), bytePos);
+            return ReadLE<T>(ref Unsafe.Add(ref GetByteRef(buf), bytePos));
+        }
+        /// <summary> Reads a <typeparamref name="T"/> element from the array, without bounds check, in big-endian byte order. </summary>
+        [MethodImpl(Inline)]
+        public static T ReadBE<T>(byte[] buf, int bytePos) where T : unmanaged
+        {
+            return ReadBE<T>(ref Unsafe.Add(ref GetByteRef(buf), bytePos));
         }
 
         [MethodImpl(Inline)]
-        public static T Read<T>(byte* ptr, nint bytePos) where T : unmanaged
+        public static T Read<T>(ReadOnlySpan<byte> buf, int bytePos) where T : unmanaged
         {
-            return Unsafe.ReadUnaligned<T>(&ptr[bytePos]);
+            return Read<T>(ref Unsafe.Add(ref GetByteRef(buf), bytePos));
         }
         [MethodImpl(Inline)]
-        public static T ReadLE<T>(byte* ptr, nint bytePos) where T : unmanaged
+        public static T ReadLE<T>(ReadOnlySpan<byte> buf, int bytePos) where T : unmanaged
         {
-            return ReadLE<T>(ref Unsafe.AsRef<byte>(ptr), bytePos);
+            return ReadLE<T>(ref Unsafe.Add(ref GetByteRef(buf), bytePos));
         }
         [MethodImpl(Inline)]
-        public static T ReadBE<T>(byte* ptr, nint bytePos) where T : unmanaged
+        public static T ReadBE<T>(ReadOnlySpan<byte> buf, int bytePos) where T : unmanaged
         {
-            return ReadBE<T>(ref Unsafe.AsRef<byte>(ptr), bytePos);
+            return ReadBE<T>(ref Unsafe.Add(ref GetByteRef(buf), bytePos));
         }
 
         [MethodImpl(Inline)]
-        public static T Read<T>(ref byte ptr, nint bytePos) where T : unmanaged
+        public static T Read<T>(byte* ptr) where T : unmanaged
         {
-            return Unsafe.ReadUnaligned<T>(ref Unsafe.AddByteOffset(ref ptr, bytePos));
+            return Unsafe.ReadUnaligned<T>(ptr);
         }
         [MethodImpl(Inline)]
-        public static T ReadLE<T>(ref byte ptr, nint bytePos) where T : unmanaged
+        public static T ReadLE<T>(byte* ptr) where T : unmanaged
         {
-            var value = Read<T>(ref ptr, bytePos);
+            var value = Unsafe.ReadUnaligned<T>(ptr);
             if (!BitConverter.IsLittleEndian) {
                 return BSwap(value);
             }
             return value;
         }
         [MethodImpl(Inline)]
-        public static T ReadBE<T>(ref byte ptr, nint bytePos) where T : unmanaged
+        public static T ReadBE<T>(byte* ptr) where T : unmanaged
         {
-            var value = Read<T>(ref ptr, bytePos);
+            var value = Unsafe.ReadUnaligned<T>(ptr);
             if (BitConverter.IsLittleEndian) {
                 return BSwap(value);
             }
             return value;
         }
 
-        /// <summary> Writes a <typeparamref name="T"/> element to the primitive array, in the platform's native byte order. </summary>
         [MethodImpl(Inline)]
-        public static void Write<T>(Array arr, nint bytePos, T value) where T : unmanaged
+        public static T Read<T>(ref byte ptr) where T : unmanaged
         {
-            Write<T>(ref GetByteRef(arr), bytePos, value);
+            return Unsafe.ReadUnaligned<T>(ref ptr);
+        }
+        [MethodImpl(Inline)]
+        public static T ReadLE<T>(ref byte ptr) where T : unmanaged
+        {
+            var value = Unsafe.ReadUnaligned<T>(ref ptr);
+            if (!BitConverter.IsLittleEndian) {
+                return BSwap(value);
+            }
+            return value;
+        }
+        [MethodImpl(Inline)]
+        public static T ReadBE<T>(ref byte ptr) where T : unmanaged
+        {
+            var value = Unsafe.ReadUnaligned<T>(ref ptr);
+            if (BitConverter.IsLittleEndian) {
+                return BSwap(value);
+            }
+            return value;
         }
 
-        /// <summary> Writes a <typeparamref name="T"/> element to the array, in little-endian byte order. Unaligned access is assumed. </summary>
-        /// <remarks>
-        /// <typeparamref name="T"/> must be a primitive type.
-        /// This method does not perform bounds check. Use carefully. 
-        /// </remarks>
+        /// <summary> Writes a <typeparamref name="T"/> element to the array, without bounds check, in the platform's native byte order. </summary>
         [MethodImpl(Inline)]
-        public static void WriteLE<T>(Array buf, nint bytePos, T value) where T : unmanaged
+        public static void Write<T>(byte[] arr, int bytePos, T value) where T : unmanaged
         {
-            WriteLE<T>(ref GetByteRef(buf), bytePos, value);
+            Write<T>(ref Unsafe.Add(ref GetByteRef(arr), bytePos), value);
         }
-        /// <summary> Writes a <typeparamref name="T"/> element to the array, in big-endian byte order. Unaligned access is assumed. </summary>
-        /// <remarks>
-        /// <typeparamref name="T"/> must be a primitive type.
-        /// This method does not perform bounds check. Use carefully. 
-        /// </remarks>
+
+        /// <summary> Writes a <typeparamref name="T"/> element to the array, without bounds check, in little-endian byte order. </summary>
         [MethodImpl(Inline)]
-        public static void WriteBE<T>(Array buf, nint bytePos, T value) where T : unmanaged
+        public static void WriteLE<T>(byte[] arr, int bytePos, T value) where T : unmanaged
         {
-            WriteBE<T>(ref GetByteRef(buf), bytePos, value);
+            WriteLE<T>(ref Unsafe.Add(ref GetByteRef(arr), bytePos), value);
+        }
+        /// <summary> Writes a <typeparamref name="T"/> element to the array, without bounds check, in big-endian byte order. </summary>
+        [MethodImpl(Inline)]
+        public static void WriteBE<T>(byte[] arr, int bytePos, T value) where T : unmanaged
+        {
+            WriteBE<T>(ref Unsafe.Add(ref GetByteRef(arr), bytePos), value);
         }
 
         [MethodImpl(Inline)]
-        public static void Write<T>(byte* ptr, nint bytePos, T value) where T : unmanaged
+        public static void Write<T>(Span<byte> buf, int bytePos, T value) where T : unmanaged
         {
-            Unsafe.WriteUnaligned<T>(ptr + bytePos, value);
+            Write<T>(ref Unsafe.Add(ref GetByteRef(buf), bytePos), value);
         }
         [MethodImpl(Inline)]
-        public static void WriteLE<T>(byte* ptr, nint bytePos, T value) where T : unmanaged
+        public static void WriteLE<T>(Span<byte> buf, int bytePos, T value) where T : unmanaged
         {
-            WriteLE<T>(ref Unsafe.AsRef<byte>(ptr), bytePos, value);
+            WriteLE<T>(ref Unsafe.Add(ref GetByteRef(buf), bytePos), value);
         }
         [MethodImpl(Inline)]
-        public static void WriteBE<T>(byte* ptr, nint bytePos, T value) where T : unmanaged
+        public static void WriteBE<T>(Span<byte> buf, int bytePos, T value) where T : unmanaged
         {
-            WriteBE<T>(ref Unsafe.AsRef<byte>(ptr), bytePos, value);
+            WriteBE<T>(ref Unsafe.Add(ref GetByteRef(buf), bytePos), value);
         }
 
-
         [MethodImpl(Inline)]
-        public static void Write<T>(ref byte ptr, nint bytePos, T value) where T : unmanaged
+        public static void Write<T>(byte* ptr, T value) where T : unmanaged
         {
-            Unsafe.WriteUnaligned<T>(ref Unsafe.Add(ref ptr, bytePos), value);
+            Unsafe.WriteUnaligned<T>(ptr, value);
         }
         [MethodImpl(Inline)]
-        public static void WriteLE<T>(ref byte ptr, nint bytePos, T value) where T : unmanaged
+        public static void WriteLE<T>(byte* ptr, T value) where T : unmanaged
         {
             if (!BitConverter.IsLittleEndian) {
                 value = BSwap(value);
             }
-            Write<T>(ref ptr, bytePos, value);
+            Unsafe.WriteUnaligned<T>(ptr, value);
         }
         [MethodImpl(Inline)]
-        public static void WriteBE<T>(ref byte ptr, nint bytePos, T value) where T : unmanaged
+        public static void WriteBE<T>(byte* ptr, T value) where T : unmanaged
+        {
+            if (!BitConverter.IsLittleEndian) {
+                value = BSwap(value);
+            }
+            Unsafe.WriteUnaligned<T>(ptr, value);
+        }
+
+        [MethodImpl(Inline)]
+        public static void Write<T>(ref byte ptr, T value) where T : unmanaged
+        {
+            Unsafe.WriteUnaligned<T>(ref ptr, value);
+        }
+        [MethodImpl(Inline)]
+        public static void WriteLE<T>(ref byte ptr, T value) where T : unmanaged
+        {
+            if (!BitConverter.IsLittleEndian) {
+                value = BSwap(value);
+            }
+            Unsafe.WriteUnaligned<T>(ref ptr, value);
+        }
+        [MethodImpl(Inline)]
+        public static void WriteBE<T>(ref byte ptr, T value) where T : unmanaged
         {
             if (BitConverter.IsLittleEndian) {
                 value = BSwap(value);
             }
-            Write<T>(ref ptr, bytePos, value);
+            Unsafe.WriteUnaligned<T>(ref ptr, value);
         }
+
+        #endregion
 
         /// <summary> Reverse bytes of a primitive value. </summary>
         /// <typeparam name="T">The type of the value to reverse the bytes. Must be a blittable type with size <c>1, 2, 4, or 8</c>. </typeparam>
