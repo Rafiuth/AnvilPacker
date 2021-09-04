@@ -23,7 +23,7 @@ jobs:
           ver=${GITHUB_REF#refs/*/v}
           fn="AnvilPacker-$ver-$rt"
           
-          dotnet publish src/AnvilPacker -c Release --self-contained -r $rt -o dist/$fn -p:VersionPrefix=$ver -p:InformationalVersion=$ver-${GITHUB_SHA::8} 
+          dotnet publish src/AnvilPacker -c Release --self-contained -r $rt -o dist/$fn -p:VersionPrefix=$ver -p:InformationalVersion=$ver-${GITHUB_SHA::8} -p:PathMap="$PWD=_/"
           cd dist/ && zip -r -5 $fn.zip $fn && cd ../
         done
 
