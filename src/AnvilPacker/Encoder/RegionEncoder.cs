@@ -57,7 +57,7 @@ namespace AnvilPacker.Encoder
         public void Encode(DataWriter stream, IProgress<double>? progress = null)
         {
             WriteSyncTag(stream, "Root", 1);
-            stream.WriteVarInt(_hasBlockData ? 0x01 : 0); //flags
+            stream.WriteVarUInt(_hasBlockData ? 0x01 : 0); //flags
 
             var headerStats = WritePart(stream, "Header", true, dw => {
                 WriteHeader(dw);

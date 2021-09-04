@@ -36,14 +36,14 @@ namespace AnvilPacker.Encoder
             int version = ReadSyncTag(stream, "Root", 1);
             int flags = version >= 1 ? stream.ReadVarUInt() : 0;
 
-            _hasBlockData = (flags & 0x01) == 0;
+            _hasBlockData = version < 1 || (flags & 0x01) != 0;
 
             ReadPart(stream, "Header", true, dw => {
                 ReadHeader(dw);
                 ReadMetadata(dw);
             });
 
-            if (version < 1 || _hasBlockData) {
+            if (_hasBlockData) {
                 ReadPart(stream, "Blocks", false, dw => {
                     _blockCodec.Decode(dw, CodecProgressListener.MaybeCreate(_blockCount, progress));
                 });
