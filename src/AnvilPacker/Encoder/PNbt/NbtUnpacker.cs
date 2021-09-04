@@ -1,5 +1,6 @@
 using System;
 using AnvilPacker.Data;
+using AnvilPacker.Data.Nbt;
 using AnvilPacker.Util;
 
 namespace AnvilPacker.Encoder.PNbt

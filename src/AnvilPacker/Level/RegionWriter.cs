@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.IO;
 using AnvilPacker.Data;
+using AnvilPacker.Data.Nbt;
 using AnvilPacker.Util;
 using LibDeflate;
 

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using AnvilPacker.Data;
+using AnvilPacker.Data.Nbt;
 using AnvilPacker.Util;
 using NLog;
 

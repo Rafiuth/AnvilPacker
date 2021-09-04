@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using AnvilPacker.Data;
+using AnvilPacker.Data.Nbt;
 using AnvilPacker.Util;
 using LibDeflate;
 

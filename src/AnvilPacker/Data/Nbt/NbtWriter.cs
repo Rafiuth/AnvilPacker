@@ -1,10 +1,7 @@
 using System;
-using System.Buffers;
-using System.Collections.Generic;
-using System.Runtime.CompilerServices;
 using AnvilPacker.Util;
 
-namespace AnvilPacker.Data
+namespace AnvilPacker.Data.Nbt
 {
     public class NbtWriter : IDisposable
     {

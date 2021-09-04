@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using AnvilPacker.Data;
+using AnvilPacker.Data.Nbt;
 using AnvilPacker.Level;
 using AnvilPacker.Level.Physics;
 using AnvilPacker.Util;

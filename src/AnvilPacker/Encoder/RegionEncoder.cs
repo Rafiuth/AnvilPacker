@@ -8,6 +8,7 @@ using AnvilPacker.Level;
 using AnvilPacker.Util;
 using NLog;
 using AnvilPacker.Level.Physics;
+using AnvilPacker.Data.Nbt;
 
 namespace AnvilPacker.Encoder
 {

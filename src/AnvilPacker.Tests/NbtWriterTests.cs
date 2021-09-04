@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using AnvilPacker.Data;
+using AnvilPacker.Data.Nbt;
 using Xunit;
 
 namespace AnvilPacker.Tests

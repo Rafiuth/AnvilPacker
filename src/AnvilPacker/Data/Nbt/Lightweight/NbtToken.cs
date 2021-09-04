@@ -191,7 +191,7 @@ namespace AnvilPacker.Data.Nbt
         public string ToString(bool pretty)
         {
             var sw = new StringWriter();
-            var printer = new NbtPrinter(sw) {
+            var printer = new NbtPrinter2(sw) {
                 Pretty = pretty
             };
             printer.Print(this);

@@ -7,6 +7,7 @@ using AnvilPacker.Data;
 using AnvilPacker.Encoder.PNbt;
 using AnvilPacker.Encoder;
 using Xunit;
+using AnvilPacker.Data.Nbt;
 
 namespace AnvilPacker.Tests
 {

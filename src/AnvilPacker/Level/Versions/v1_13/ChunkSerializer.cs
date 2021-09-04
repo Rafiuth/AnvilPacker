@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using AnvilPacker.Data;
+using AnvilPacker.Data.Nbt;
 using AnvilPacker.Util;
 using NLog;
 

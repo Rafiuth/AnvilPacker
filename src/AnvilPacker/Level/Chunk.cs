@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using AnvilPacker.Data;
+using AnvilPacker.Data.Nbt;
 using AnvilPacker.Util;
 
 namespace AnvilPacker.Level

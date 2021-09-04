@@ -3,6 +3,7 @@ using System.IO;
 using System.Text;
 using AnvilPacker.Cli;
 using AnvilPacker.Data;
+using AnvilPacker.Data.Nbt;
 using AnvilPacker.Level;
 using AnvilPacker.Util;
 

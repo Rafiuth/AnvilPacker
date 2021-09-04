@@ -1,5 +1,6 @@
 using System;
 using AnvilPacker.Data;
+using AnvilPacker.Data.Nbt;
 using NLog;
 
 namespace AnvilPacker.Level.Versions

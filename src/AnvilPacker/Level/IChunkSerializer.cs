@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using AnvilPacker.Data;
+using AnvilPacker.Data.Nbt;
 
 namespace AnvilPacker.Level
 {

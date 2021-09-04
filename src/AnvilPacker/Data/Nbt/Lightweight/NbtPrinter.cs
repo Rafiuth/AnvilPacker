@@ -2,13 +2,13 @@ using System.Globalization;
 
 namespace AnvilPacker.Data.Nbt
 {
-    public class NbtPrinter
+    public class NbtPrinter2
     {
         private TextWriter _tw;
         private int _level = 0;
         public bool Pretty = true;
 
-        public NbtPrinter(TextWriter tw)
+        public NbtPrinter2(TextWriter tw)
         {
             _tw = tw;
         }
